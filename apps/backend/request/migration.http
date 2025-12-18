@@ -1,0 +1,46 @@
+### Variables
+@baseUrl = http://localhost:3100
+@contentType = application/json
+
+### Import data from LocalStorage migration
+POST {{baseUrl}}/migration/import
+Content-Type: {{contentType}}
+
+{
+  "clients": [
+    {
+      "id": "CLI-001",
+      "name": "Cliente de Prueba",
+      "phone": "+58 412-1234567",
+      "address": "Dirección de prueba"
+    }
+  ],
+  "sales": [
+    {
+      "date": "2025-11-29T18:00:00.000Z",
+      "paymentMethod": "efectivo",
+      "totalBs": 500,
+      "totalUsd": 12.5,
+      "exchangeRate": 40,
+      "products": [
+        {
+          "quantity": 2,
+          "liters": 40,
+          "productType": "botellón 20L",
+          "pricePerUnit": 6.25,
+          "totalBs": 500,
+          "totalUsd": 12.5
+        }
+      ]
+    }
+  ],
+  "rentals": [],
+  "expenses": [],
+  "rates": [
+    {
+      "date": "2025-11-29",
+      "usd": 40,
+      "eur": 45
+    }
+  ]
+}

@@ -1,0 +1,33 @@
+### Variables
+@baseUrl = http://localhost:3000/api
+@contentType = application/json
+
+### Get all clients
+GET {{baseUrl}}/clients
+
+### Get client by ID
+GET {{baseUrl}}/clients/CLI-001
+
+### Create new client
+POST {{baseUrl}}/clients
+Content-Type: {{contentType}}
+
+{
+  "id": "CLI-001",
+  "name": "Juan Pérez",
+  "phone": "+58 412-1234567",
+  "address": "Av. Principal, Caracas"
+}
+
+### Update client
+PATCH {{baseUrl}}/clients/CLI-001
+Content-Type: {{contentType}}
+
+{
+  "name": "Juan Pérez Actualizado",
+  "phone": "+58 412-7654321",
+  "address": "Nueva dirección, Caracas"
+}
+
+### Delete client
+DELETE {{baseUrl}}/clients/CLI-001

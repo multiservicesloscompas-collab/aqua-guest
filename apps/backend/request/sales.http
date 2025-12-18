@@ -1,0 +1,45 @@
+### Variables
+@baseUrl = http://localhost:3100
+@contentType = application/json
+
+### Get all sales
+GET {{baseUrl}}/sales
+
+### Get sale by ID
+GET {{baseUrl}}/sales/1
+
+### Create new sale
+POST {{baseUrl}}/sales
+Content-Type: {{contentType}}
+
+{
+  "date": "2025-11-29T18:00:00.000Z",
+  "paymentMethod": "efectivo",
+  "notes": "Venta de prueba",
+  "totalBs": 500,
+  "totalUsd": 12.5,
+  "exchangeRate": 40,
+  "products": [
+    {
+      "quantity": 2,
+      "liters": 40,
+      "productType": "botellón 20L",
+      "pricePerUnit": 6.25,
+      "totalBs": 500,
+      "totalUsd": 12.5
+    }
+  ]
+}
+
+### Update sale
+PATCH {{baseUrl}}/sales/1
+Content-Type: {{contentType}}
+
+{
+  "notes": "Venta actualizada",
+  "totalBs": 600,
+  "totalUsd": 15
+}
+
+### Delete sale
+DELETE {{baseUrl}}/sales/1

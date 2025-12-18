@@ -1,0 +1,31 @@
+### Variables
+@baseUrl = http://localhost:3100
+@contentType = application/json
+
+### Get all rates
+GET {{baseUrl}}/rates
+
+### Get rate by date
+GET {{baseUrl}}/rates/2025-11-29
+
+### Create new rate
+POST {{baseUrl}}/rates
+Content-Type: {{contentType}}
+
+{
+  "date": "2025-11-29",
+  "usd": 40.5,
+  "eur": 45.2
+}
+
+### Update rate
+PATCH {{baseUrl}}/rates/2025-11-29
+Content-Type: {{contentType}}
+
+{
+  "usd": 41.0,
+  "eur": 45.8
+}
+
+### Delete rate
+DELETE {{baseUrl}}/rates/2025-11-29

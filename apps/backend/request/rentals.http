@@ -1,0 +1,44 @@
+### Variables
+@baseUrl = http://localhost:3100
+@contentType = application/json
+
+### Get all rentals
+GET {{baseUrl}}/rentals
+
+### Get rental by ID
+GET {{baseUrl}}/rentals/1
+
+### Create new rental
+POST {{baseUrl}}/rentals
+Content-Type: {{contentType}}
+
+{
+  "createdAt": "2025-11-29T18:00:00.000Z",
+  "deliveryDatetime": "2025-11-30T10:00:00.000Z",
+  "pickupDatetime": "2025-12-05T10:00:00.000Z",
+  "promo": "Evento Corporativo",
+  "machineId": 1,
+  "deliveryDollars": 50,
+  "deliveryBs": 2000,
+  "paymentMethod": "transferencia",
+  "notes": "Alquiler para evento",
+  "status": "activo",
+  "paymentStatus": "pagado",
+  "pricePerUnit": 50,
+  "totalBs": 2000,
+  "totalUsd": 50,
+  "exchangeRate": 40,
+  "clientId": "CLI-001"
+}
+
+### Update rental
+PATCH {{baseUrl}}/rentals/1
+Content-Type: {{contentType}}
+
+{
+  "status": "completado",
+  "notes": "Alquiler completado exitosamente"
+}
+
+### Delete rental
+DELETE {{baseUrl}}/rentals/1

@@ -1,0 +1,54 @@
+### Variables
+@baseUrl = http://localhost:3100
+@contentType = application/json
+
+### Get all expenses
+GET {{baseUrl}}/expenses
+
+### Get expense by ID
+GET {{baseUrl}}/expenses/1
+
+### Create new expense
+POST {{baseUrl}}/expenses
+Content-Type: {{contentType}}
+
+{
+  "createdAt": "2025-11-29T18:00:00.000Z",
+  "name": "Compra de botellones",
+  "expenseDate": "2025-11-29",
+  "amountBs": 1000,
+  "amountUsd": 25,
+  "category": "inventario",
+  "type": "operativo",
+  "description": "Compra de 10 botellones nuevos",
+  "exchangeRate": 40
+}
+
+### Update expense
+PATCH {{baseUrl}}/expenses/1
+Content-Type: {{contentType}}
+
+{
+  "amountBs": 1200,
+  "amountUsd": 30,
+  "description": "Actualizado: Compra de 12 botellones"
+}
+
+### Delete expense
+DELETE {{baseUrl}}/expenses/1
+
+### Get all recurring expenses
+GET {{baseUrl}}/expenses/recurring/all
+
+### Create recurring expense
+POST {{baseUrl}}/expenses/recurring
+Content-Type: {{contentType}}
+
+{
+  "name": "Alquiler de local",
+  "amountBs": 8000,
+  "category": "operativo"
+}
+
+### Delete recurring expense
+DELETE {{baseUrl}}/expenses/recurring/1
