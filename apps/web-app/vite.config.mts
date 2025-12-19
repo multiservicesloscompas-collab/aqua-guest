@@ -9,10 +9,6 @@ export default defineConfig(() => ({
   server: {
     host: true,
     port: 4200, // Allow this host so Vite accepts requests proxied from it
-    allowedHosts: [
-      'https://mlb-drill-continent-status.trycloudflare.com',
-      '*.trycloudflare.com',
-    ],
   },
   plugins: [react()],
   resolve: {
