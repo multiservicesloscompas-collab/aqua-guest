@@ -4,7 +4,14 @@ import { useAppStore } from '@/store/useAppStore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { DollarSign, Save, RefreshCw, Info, Droplet, History } from 'lucide-react';
+import {
+  DollarSign,
+  Save,
+  RefreshCw,
+  Info,
+  Droplet,
+  History,
+} from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -17,44 +24,53 @@ interface ConfigPageProps {
 export function ConfigPage({ onNavigate }: ConfigPageProps) {
   const { config, setExchangeRate, setLiterPricing } = useAppStore();
   const [rate, setRate] = useState(config.exchangeRate.toString());
-  const [literPrices, setLiterPrices] = useState<LiterPricing[]>(config.literPricing || DEFAULT_LITER_BREAKPOINTS);
+  const [literPrices, setLiterPrices] = useState<LiterPricing[]>(
+    config.literPricing || DEFAULT_LITER_BREAKPOINTS
+  );
 
   useEffect(() => {
     setLiterPrices(config.literPricing || DEFAULT_LITER_BREAKPOINTS);
   }, [config.literPricing]);
 
-  const handleSaveRate = () => {
+  const handleSaveRate = async () => {
     const newRate = Number(rate);
     if (newRate <= 0) {
       toast.error('Ingresa una tasa válida');
       return;
     }
 
-    setExchangeRate(newRate);
-    toast.success('Tasa actualizada');
+    try {
+      await setExchangeRate(newRate);
+      toast.success('Tasa actualizada');
+    } catch (err) {
+      console.error('Error saving exchange rate', err);
+      toast.error('Error al guardar la tasa. Se guardó localmente');
+    }
   };
 
   const handleLiterPriceChange = (breakpoint: number, newPrice: string) => {
     const price = Number(newPrice);
     if (price < 0) return;
-    
-    setLiterPrices(prev => 
-      prev.map(lp => 
-        lp.breakpoint === breakpoint ? { ...lp, price } : lp
-      )
+
+    setLiterPrices((prev) =>
+      prev.map((lp) => (lp.breakpoint === breakpoint ? { ...lp, price } : lp))
     );
   };
 
-  const handleSaveLiterPrices = () => {
+  const handleSaveLiterPrices = async () => {
     // Validar que todos los precios sean positivos
-    const hasInvalidPrice = literPrices.some(lp => lp.price <= 0);
+    const hasInvalidPrice = literPrices.some((lp) => lp.price <= 0);
     if (hasInvalidPrice) {
       toast.error('Todos los precios deben ser mayores a 0');
       return;
     }
-
-    setLiterPricing(literPrices);
-    toast.success('Precios por litros actualizados');
+    try {
+      await setLiterPricing(literPrices);
+      toast.success('Precios por litros actualizados');
+    } catch (err) {
+      console.error('Error saving liter prices', err);
+      toast.error('Error al guardar los precios. Se guardaron localmente');
+    }
   };
 
   const lastUpdate = new Date(config.lastUpdated);
@@ -77,14 +93,14 @@ export function ConfigPage({ onNavigate }: ConfigPageProps) {
               <h2 className="text-base font-bold text-foreground">
                 Tasa de Cambio
               </h2>
-              <p className="text-xs text-muted-foreground">
-                Bs por cada 1 USD
-              </p>
+              <p className="text-xs text-muted-foreground">Bs por cada 1 USD</p>
             </div>
           </div>
 
           <div className="space-y-2">
-            <Label className="text-sm font-semibold">Tasa Actual (Bs/USD)</Label>
+            <Label className="text-sm font-semibold">
+              Tasa Actual (Bs/USD)
+            </Label>
             <div className="flex gap-2">
               <Input
                 type="number"
@@ -155,7 +171,9 @@ export function ConfigPage({ onNavigate }: ConfigPageProps) {
                         step="0.01"
                         min="0"
                         value={lp.price}
-                        onChange={(e) => handleLiterPriceChange(lp.breakpoint, e.target.value)}
+                        onChange={(e) =>
+                          handleLiterPriceChange(lp.breakpoint, e.target.value)
+                        }
                         className="h-10 pl-10 text-right font-semibold"
                       />
                     </div>

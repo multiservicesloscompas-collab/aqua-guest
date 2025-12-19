@@ -1,15 +1,44 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { WashingMachine, Truck, Clock, MapPin, User, Phone, DollarSign, Calendar } from 'lucide-react';
-import { RentalShift, RentalShiftConfig, Customer } from '@/types';
+import {
+  WashingMachine,
+  Truck,
+  Clock,
+  MapPin,
+  User,
+  Phone,
+  DollarSign,
+  Calendar,
+} from 'lucide-react';
+import {
+  RentalShift,
+  RentalShiftConfig,
+  Customer,
+  BUSINESS_HOURS,
+} from '@/types';
 import { useAppStore } from '@/store/useAppStore';
-import { calculatePickupTime, generateTimeSlots, formatPickupInfo } from '@/utils/rentalSchedule';
+import {
+  calculatePickupTime,
+  generateTimeSlots,
+  formatPickupInfo,
+} from '@/utils/rentalSchedule';
 import { format, parse } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -20,8 +49,9 @@ interface RentalSheetProps {
 }
 
 export function RentalSheet({ open, onOpenChange }: RentalSheetProps) {
-  const { selectedDate, addRental, customers, washingMachines, rentals } = useAppStore();
-  
+  const { selectedDate, addRental, customers, washingMachines, rentals } =
+    useAppStore();
+
   const [machineId, setMachineId] = useState<string>('');
   const [shift, setShift] = useState<RentalShift>('completo');
   const [deliveryTime, setDeliveryTime] = useState('09:00');
@@ -31,28 +61,58 @@ export function RentalSheet({ open, onOpenChange }: RentalSheetProps) {
   const [customerAddress, setCustomerAddress] = useState('');
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
   const [notes, setNotes] = useState('');
-  
+
   const timeSlots = useMemo(() => generateTimeSlots(), []);
-  
+
+  // Función para obtener la hora de entrega por defecto
+  const getDefaultDeliveryTime = () => {
+    const now = new Date();
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+
+    // Si está fuera del horario comercial, usar 09:00
+    if (
+      currentHour < BUSINESS_HOURS.openHour ||
+      currentHour >= BUSINESS_HOURS.closeHour
+    ) {
+      return '09:00';
+    }
+
+    // Redondear a la media hora más cercana
+    const roundedMinute = currentMinute < 30 ? 0 : 30;
+    const time = `${currentHour.toString().padStart(2, '0')}:${roundedMinute
+      .toString()
+      .padStart(2, '0')}`;
+
+    return time;
+  };
+
+  // Establecer hora por defecto cuando se abre la hoja
+  useEffect(() => {
+    if (open) {
+      setDeliveryTime(getDefaultDeliveryTime());
+    }
+  }, [open]);
+
   // Calcular hora de retiro
   const pickupInfo = useMemo(() => {
     const date = parse(selectedDate, 'yyyy-MM-dd', new Date());
     return calculatePickupTime(date, deliveryTime, shift);
   }, [selectedDate, deliveryTime, shift]);
-  
+
   // Precio total
   const totalUsd = RentalShiftConfig[shift].priceUsd + deliveryFee;
-  
+
   // Verificar disponibilidad de lavadora
   const unavailableMachines = useMemo(() => {
     return rentals
-      .filter(r => r.date === selectedDate && r.status !== 'finalizado')
-      .map(r => r.machineId);
+      .filter((r) => r.date === selectedDate && r.status !== 'finalizado')
+      .map((r) => r.machineId);
   }, [rentals, selectedDate]);
-  
+
   // Autocompletar cliente
   const handleCustomerSelect = (customerId: string) => {
-    const customer = customers.find(c => c.id === customerId);
+    const customer = customers.find((c) => c.id === customerId);
     if (customer) {
       setSelectedCustomerId(customerId);
       setCustomerName(customer.name);
@@ -60,23 +120,23 @@ export function RentalSheet({ open, onOpenChange }: RentalSheetProps) {
       setCustomerAddress(customer.address);
     }
   };
-  
+
   const handleSubmit = () => {
     if (!machineId) {
       toast.error('Selecciona una lavadora');
       return;
     }
-    
+
     if (!customerName.trim() || !customerAddress.trim()) {
       toast.error('Completa nombre y dirección del cliente');
       return;
     }
-    
+
     if (unavailableMachines.includes(machineId)) {
       toast.error('Esta lavadora no está disponible');
       return;
     }
-    
+
     addRental({
       date: selectedDate,
       customerId: selectedCustomerId || undefined,
@@ -94,16 +154,16 @@ export function RentalSheet({ open, onOpenChange }: RentalSheetProps) {
       isPaid: false,
       notes: notes.trim() || undefined,
     });
-    
+
     toast.success('Alquiler registrado');
     onOpenChange(false);
     resetForm();
   };
-  
+
   const resetForm = () => {
     setMachineId('');
     setShift('completo');
-    setDeliveryTime('09:00');
+    setDeliveryTime(getDefaultDeliveryTime());
     setDeliveryFee(0);
     setCustomerName('');
     setCustomerPhone('');
@@ -111,7 +171,7 @@ export function RentalSheet({ open, onOpenChange }: RentalSheetProps) {
     setSelectedCustomerId('');
     setNotes('');
   };
-  
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="bottom" className="h-[90vh] rounded-t-3xl">
@@ -121,7 +181,7 @@ export function RentalSheet({ open, onOpenChange }: RentalSheetProps) {
             Nuevo Alquiler
           </SheetTitle>
         </SheetHeader>
-        
+
         <div className="overflow-y-auto h-[calc(100%-8rem)] space-y-6 pb-4">
           {/* Selección de Lavadora */}
           <div className="space-y-2">
@@ -130,36 +190,43 @@ export function RentalSheet({ open, onOpenChange }: RentalSheetProps) {
               Lavadora
             </Label>
             <div className="grid grid-cols-3 gap-2">
-            {washingMachines.length === 0 ? (
-              <p className="col-span-3 text-center text-muted-foreground py-4">
-                No hay lavadoras registradas. Agrega una desde el menú.
-              </p>
-            ) : (
-              washingMachines.map((machine) => {
-                const isUnavailable = unavailableMachines.includes(machine.id);
-                return (
-                  <Button
-                    key={machine.id}
-                    type="button"
-                    variant={machineId === machine.id ? 'default' : 'outline'}
-                    disabled={isUnavailable}
-                    onClick={() => setMachineId(machine.id)}
-                    className="h-16 text-sm relative flex flex-col gap-0.5 p-2"
-                  >
-                    <span className="font-medium">{machine.name}</span>
-                    <span className="text-xs opacity-70">{machine.kg}kg - {machine.brand}</span>
-                    {isUnavailable && (
-                      <Badge variant="destructive" className="absolute -top-1 -right-1 text-[10px] px-1">
-                        Ocupada
-                      </Badge>
-                    )}
-                  </Button>
-                );
-              })
-            )}
+              {washingMachines.length === 0 ? (
+                <p className="col-span-3 text-center text-muted-foreground py-4">
+                  No hay lavadoras registradas. Agrega una desde el menú.
+                </p>
+              ) : (
+                washingMachines.map((machine) => {
+                  const isUnavailable = unavailableMachines.includes(
+                    machine.id
+                  );
+                  return (
+                    <Button
+                      key={machine.id}
+                      type="button"
+                      variant={machineId === machine.id ? 'default' : 'outline'}
+                      disabled={isUnavailable}
+                      onClick={() => setMachineId(machine.id)}
+                      className="h-16 text-sm relative flex flex-col gap-0.5 p-2"
+                    >
+                      <span className="font-medium">{machine.name}</span>
+                      <span className="text-xs opacity-70">
+                        {machine.kg}kg - {machine.brand}
+                      </span>
+                      {isUnavailable && (
+                        <Badge
+                          variant="destructive"
+                          className="absolute -top-1 -right-1 text-[10px] px-1"
+                        >
+                          Ocupada
+                        </Badge>
+                      )}
+                    </Button>
+                  );
+                })
+              )}
             </div>
           </div>
-          
+
           {/* Tipo de Jornada */}
           <div className="space-y-2">
             <Label className="text-sm font-medium flex items-center gap-2">
@@ -178,13 +245,15 @@ export function RentalSheet({ open, onOpenChange }: RentalSheetProps) {
                     className="h-14 flex flex-col gap-0.5 p-2"
                   >
                     <span className="text-xs">{config.label}</span>
-                    <span className="text-sm font-bold">${config.priceUsd}</span>
+                    <span className="text-sm font-bold">
+                      ${config.priceUsd}
+                    </span>
                   </Button>
                 );
               })}
             </div>
           </div>
-          
+
           {/* Hora de Entrega */}
           <div className="space-y-2">
             <Label className="text-sm font-medium flex items-center gap-2">
@@ -203,19 +272,23 @@ export function RentalSheet({ open, onOpenChange }: RentalSheetProps) {
                 ))}
               </SelectContent>
             </Select>
-            
+
             {/* Info de retiro calculado */}
             <div className="bg-accent/50 rounded-lg p-3 flex items-center gap-2">
               <Clock className="w-4 h-4 text-primary shrink-0" />
               <div className="text-sm">
                 <span className="text-muted-foreground">Retiro: </span>
                 <span className="font-medium">
-                  {formatPickupInfo(pickupInfo.pickupDate, pickupInfo.pickupTime, selectedDate)}
+                  {formatPickupInfo(
+                    pickupInfo.pickupDate,
+                    pickupInfo.pickupTime,
+                    selectedDate
+                  )}
                 </span>
               </div>
             </div>
           </div>
-          
+
           {/* Cargo de Delivery */}
           <div className="space-y-2">
             <Label className="text-sm font-medium flex items-center gap-2">
@@ -236,16 +309,16 @@ export function RentalSheet({ open, onOpenChange }: RentalSheetProps) {
               ))}
             </div>
           </div>
-          
+
           {/* Datos del Cliente */}
           <div className="space-y-3">
             <Label className="text-sm font-medium flex items-center gap-2">
               <User className="w-4 h-4" />
               Cliente
             </Label>
-            
-            <Select 
-              value={selectedCustomerId} 
+
+            <Select
+              value={selectedCustomerId}
               onValueChange={(value) => {
                 if (value === 'new') {
                   setSelectedCustomerId('');
@@ -267,14 +340,16 @@ export function RentalSheet({ open, onOpenChange }: RentalSheetProps) {
                     <div className="flex flex-col">
                       <span>{customer.name}</span>
                       {customer.address && (
-                        <span className="text-xs text-muted-foreground">{customer.address}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {customer.address}
+                        </span>
                       )}
                     </div>
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            
+
             <div className="space-y-3">
               <Input
                 placeholder="Nombre del cliente"
@@ -300,7 +375,7 @@ export function RentalSheet({ open, onOpenChange }: RentalSheetProps) {
               </div>
             </div>
           </div>
-          
+
           {/* Notas */}
           <div className="space-y-2">
             <Label className="text-sm font-medium">Notas (opcional)</Label>
@@ -312,7 +387,7 @@ export function RentalSheet({ open, onOpenChange }: RentalSheetProps) {
             />
           </div>
         </div>
-        
+
         {/* Footer con Total y Botón */}
         <div className="absolute bottom-0 left-0 right-0 p-4 bg-card border-t border-border safe-bottom">
           <div className="flex items-center justify-between mb-3">
@@ -322,7 +397,10 @@ export function RentalSheet({ open, onOpenChange }: RentalSheetProps) {
               <span className="text-2xl font-bold">{totalUsd.toFixed(2)}</span>
             </div>
           </div>
-          <Button onClick={handleSubmit} className="w-full h-12 text-base font-semibold">
+          <Button
+            onClick={handleSubmit}
+            className="w-full h-12 text-base font-semibold"
+          >
             Confirmar Alquiler
           </Button>
         </div>

@@ -1,5 +1,10 @@
 import { useState } from 'react';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useAppStore } from '@/store/useAppStore';
@@ -20,7 +25,9 @@ const paymentOptions: { method: PaymentMethod; icon: typeof Smartphone }[] = [
 ];
 
 export function CartSheet({ open, onOpenChange }: CartSheetProps) {
-  const { cart, config, removeFromCart, clearCart, completeSale } = useAppStore();
+  const { cart, config, removeFromCart, clearCart, completeSale } =
+    useAppStore();
+  const [saving, setSaving] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('efectivo');
   const [notes, setNotes] = useState('');
 
@@ -30,11 +37,20 @@ export function CartSheet({ open, onOpenChange }: CartSheetProps) {
   const handleComplete = () => {
     if (cart.length === 0) return;
 
-    completeSale(paymentMethod, notes || undefined);
-    setNotes('');
-    setPaymentMethod('efectivo');
-    onOpenChange(false);
-    toast.success('¡Venta registrada correctamente!');
+    (async () => {
+      try {
+        setSaving(true);
+        await completeSale(paymentMethod, notes || undefined);
+        setNotes('');
+        setPaymentMethod('efectivo');
+        onOpenChange(false);
+        toast.success('¡Venta registrada correctamente!');
+      } catch (err) {
+        toast.error('Error registrando la venta');
+      } finally {
+        setSaving(false);
+      }
+    })();
   };
 
   return (
@@ -87,7 +103,9 @@ export function CartSheet({ open, onOpenChange }: CartSheetProps) {
 
             {/* Método de pago */}
             <div className="space-y-2">
-              <p className="text-sm font-semibold text-foreground">Forma de Pago</p>
+              <p className="text-sm font-semibold text-foreground">
+                Forma de Pago
+              </p>
               <div className="grid grid-cols-3 gap-2">
                 {paymentOptions.map(({ method, icon: Icon }) => (
                   <button
@@ -147,10 +165,11 @@ export function CartSheet({ open, onOpenChange }: CartSheetProps) {
 
               <Button
                 onClick={handleComplete}
+                disabled={saving}
                 className="w-full h-14 text-base font-bold gradient-primary rounded-xl shadow-fab"
               >
                 <Check className="w-5 h-5 mr-2" />
-                Confirmar Venta
+                {saving ? 'Registrando...' : 'Confirmar Venta'}
               </Button>
             </div>
           </div>

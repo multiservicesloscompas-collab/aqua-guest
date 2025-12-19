@@ -59,12 +59,12 @@ export interface Expense {
   createdAt: string;
 }
 
-export type ExpenseCategory = 
-  | 'operativo' 
-  | 'insumos' 
-  | 'servicios' 
-  | 'mantenimiento' 
-  | 'personal' 
+export type ExpenseCategory =
+  | 'operativo'
+  | 'insumos'
+  | 'servicios'
+  | 'mantenimiento'
+  | 'personal'
   | 'otros';
 
 export const ExpenseCategoryLabels: Record<ExpenseCategory, string> = {
@@ -108,10 +108,13 @@ export interface WashingMachine {
 // Tipo de jornada
 export type RentalShift = 'medio' | 'completo' | 'doble';
 
-export const RentalShiftConfig: Record<RentalShift, { label: string; priceUsd: number; hours: number }> = {
-  medio: { label: 'Medio Turno', priceUsd: 4, hours: 5 },
-  completo: { label: 'Completo', priceUsd: 6, hours: 11 },
-  doble: { label: 'Doble', priceUsd: 12, hours: 22 },
+export const RentalShiftConfig: Record<
+  RentalShift,
+  { label: string; priceUsd: number; hours: number }
+> = {
+  medio: { label: 'Medio Turno', priceUsd: 4, hours: 8 },
+  completo: { label: 'Completo', priceUsd: 6, hours: 24 },
+  doble: { label: 'Doble', priceUsd: 12, hours: 48 },
 };
 
 // Estado del alquiler
@@ -156,8 +159,9 @@ export interface WasherRental {
 // Horario comercial
 export const BUSINESS_HOURS = {
   openHour: 9, // 9 AM
-  closeHour: 20, // 8 PM (20:00)
-  workDays: [1, 2, 3, 4, 5, 6], // Lunes a Sábado (0 = Domingo)
+  closeHour: 20, // 8 PM (20:00) Lunes-Sábado
+  sundayCloseHour: 14, // 2 PM (14:00) Domingo
+  workDays: [0, 1, 2, 3, 4, 5, 6], // Domingo a Sábado
 };
 
 // ============================================
@@ -171,12 +175,12 @@ export interface LiterPricing {
 }
 
 export const DEFAULT_LITER_BREAKPOINTS: LiterPricing[] = [
-  { breakpoint: 1, price: 1.00 },
-  { breakpoint: 2, price: 2.00 },
-  { breakpoint: 5, price: 4.00 },
-  { breakpoint: 12, price: 8.00 },
-  { breakpoint: 19, price: 12.00 },
-  { breakpoint: 24, price: 15.00 },
+  { breakpoint: 1, price: 1.0 },
+  { breakpoint: 2, price: 2.0 },
+  { breakpoint: 5, price: 4.0 },
+  { breakpoint: 12, price: 8.0 },
+  { breakpoint: 19, price: 12.0 },
+  { breakpoint: 24, price: 15.0 },
 ];
 
 // Historial de tasas de cambio
@@ -247,4 +251,15 @@ export interface PrepaidOrder {
 }
 
 // Navegación
-export type AppRoute = 'dashboard' | 'ventas' | 'alquiler' | 'egresos' | 'clientes' | 'lavadoras' | 'config' | 'seguimiento' | 'historial-tasas' | 'prepagados' | 'deliverys';
+export type AppRoute =
+  | 'dashboard'
+  | 'ventas'
+  | 'alquiler'
+  | 'egresos'
+  | 'clientes'
+  | 'lavadoras'
+  | 'config'
+  | 'seguimiento'
+  | 'historial-tasas'
+  | 'prepagados'
+  | 'deliverys';

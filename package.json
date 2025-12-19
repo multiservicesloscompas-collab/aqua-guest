@@ -123,6 +123,7 @@
     "sqlite3": "^5.1.7",
     "tailwind-merge": "^3.4.0",
     "typeorm": "^0.3.28",
-    "zustand": "^5.0.9"
+    "zustand": "^5.0.9",
+    "@supabase/supabase-js": "^2.31.0"
   }
 }

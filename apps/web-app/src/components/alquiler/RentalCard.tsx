@@ -203,7 +203,7 @@ export function RentalCard({
 
             <div className="flex items-center gap-1 font-bold">
               <DollarSign className="w-4 h-4 text-primary" />
-              {rental.totalUsd.toFixed(2)}
+              {(rental.totalUsd ?? 0).toFixed(2)}
             </div>
           </div>
 

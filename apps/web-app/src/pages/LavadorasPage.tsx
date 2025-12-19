@@ -114,25 +114,32 @@ export default function LavadorasPage() {
       return;
     }
 
-    if (editingMachine) {
-      updateWashingMachine(editingMachine.id, {
-        name: name.trim(),
-        kg: kgNum,
-        brand: brand.trim(),
-        status,
-        isAvailable: status === 'disponible',
-      });
-      toast.success('Lavadora actualizada');
-    } else {
-      addWashingMachine({
-        name: name.trim(),
-        kg: kgNum,
-        brand: brand.trim(),
-        status,
-        isAvailable: status === 'disponible',
-      });
-      toast.success('Lavadora agregada');
-    }
+    // persist via supabase-backed store (async)
+    (async () => {
+      try {
+        if (editingMachine) {
+          await updateWashingMachine(editingMachine.id, {
+            name: name.trim(),
+            kg: kgNum,
+            brand: brand.trim(),
+            status,
+            isAvailable: status === 'disponible',
+          });
+          toast.success('Lavadora actualizada');
+        } else {
+          await addWashingMachine({
+            name: name.trim(),
+            kg: kgNum,
+            brand: brand.trim(),
+            status,
+            isAvailable: status === 'disponible',
+          });
+          toast.success('Lavadora agregada');
+        }
+      } catch (err) {
+        toast.error('Error guardando la lavadora');
+      }
+    })();
 
     setSheetOpen(false);
     resetForm();

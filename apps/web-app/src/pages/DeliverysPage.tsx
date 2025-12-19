@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Header } from '@/components/layout/Header';
 import { useAppStore } from '@/store/useAppStore';
 import { Card, CardContent } from '@/components/ui/card';
@@ -52,13 +52,24 @@ export function DeliverysPage() {
   const [timeFilter, setTimeFilter] = useState<TimeFilter>('dia');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
+  useEffect(() => {
+    const load = async () => {
+      try {
+        await useAppStore.getState().loadFromSupabase();
+      } catch (err) {
+        console.error('Error loading data', err);
+      }
+    };
+    load();
+  }, []);
+
   const filteredRentals = useMemo(() => {
     const now = new Date();
 
     return rentals
       .filter((rental) => {
         // Only include rentals that have delivery service (deliveryFee > 0)
-        if (rental.deliveryFee <= 0) return false;
+        if (!rental.deliveryFee || rental.deliveryFee <= 0) return false;
 
         const rentalDate = parseISO(rental.date);
 
@@ -111,11 +122,23 @@ export function DeliverysPage() {
       (r) => r.status === 'agendado'
     ).length;
     const totalRevenue = filteredRentals.reduce(
-      (sum, r) => sum + r.deliveryFee,
+      (sum, r) => sum + (r.deliveryFee || 0),
       0
     );
+    const unpaid = filteredRentals.filter((r) => !r.isPaid).length;
+    const unpaidAmount = filteredRentals
+      .filter((r) => !r.isPaid)
+      .reduce((sum, r) => sum + (r.deliveryFee || 0), 0);
 
-    return { total, completed, inProgress, scheduled, totalRevenue };
+    return {
+      total,
+      completed,
+      inProgress,
+      scheduled,
+      totalRevenue,
+      unpaid,
+      unpaidAmount,
+    };
   }, [filteredRentals]);
 
   const getStatusColor = (status: string) => {
@@ -205,18 +228,18 @@ export function DeliverysPage() {
           </Card>
           <Card>
             <CardContent className="p-4 text-center">
-              <p className="text-2xl font-bold text-blue-600">
-                {stats.scheduled}
+              <p className="text-2xl font-bold text-red-600">{stats.unpaid}</p>
+              <p className="text-sm text-muted-foreground">
+                Entregas no pagadas
               </p>
-              <p className="text-sm text-muted-foreground">Agendados</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-4 text-center">
-              <p className="text-2xl font-bold text-yellow-600">
-                {stats.inProgress}
+              <p className="text-2xl font-bold text-red-600">
+                ${stats.unpaidAmount.toFixed(2)}
               </p>
-              <p className="text-sm text-muted-foreground">En curso</p>
+              <p className="text-sm text-muted-foreground">Monto no pagado</p>
             </CardContent>
           </Card>
         </div>
@@ -267,7 +290,7 @@ export function DeliverysPage() {
                         {RentalStatusLabels[rental.status]}
                       </Badge>
                       <p className="text-sm font-semibold text-primary mt-1">
-                        ${rental.deliveryFee.toFixed(2)}
+                        ${(rental.deliveryFee || 0).toFixed(2)}
                       </p>
                     </div>
                   </div>

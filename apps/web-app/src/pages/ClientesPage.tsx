@@ -4,7 +4,15 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useAppStore } from '@/store/useAppStore';
-import { Search, User, Phone, MapPin, Trash2, UserPlus, Users } from 'lucide-react';
+import {
+  Search,
+  User,
+  Phone,
+  MapPin,
+  Trash2,
+  UserPlus,
+  Users,
+} from 'lucide-react';
 import { toast } from 'sonner';
 import {
   AlertDialog,
@@ -16,7 +24,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
 import { Label } from '@/components/ui/label';
 
 export default function ClientesPage() {
@@ -28,10 +41,11 @@ export default function ClientesPage() {
   const [newPhone, setNewPhone] = useState('');
   const [newAddress, setNewAddress] = useState('');
 
-  const filteredCustomers = customers.filter(c =>
-    c.name.toLowerCase().includes(search.toLowerCase()) ||
-    c.phone.includes(search) ||
-    c.address.toLowerCase().includes(search.toLowerCase())
+  const filteredCustomers = customers.filter(
+    (c) =>
+      c.name.toLowerCase().includes(search.toLowerCase()) ||
+      c.phone.includes(search) ||
+      c.address.toLowerCase().includes(search.toLowerCase())
   );
 
   const handleAddCustomer = () => {
@@ -39,16 +53,22 @@ export default function ClientesPage() {
       toast.error('El nombre es requerido');
       return;
     }
-    addCustomer({
-      name: newName.trim(),
-      phone: newPhone.trim(),
-      address: newAddress.trim(),
-    });
-    toast.success('Cliente agregado');
-    setShowAddSheet(false);
-    setNewName('');
-    setNewPhone('');
-    setNewAddress('');
+    (async () => {
+      try {
+        await addCustomer({
+          name: newName.trim(),
+          phone: newPhone.trim(),
+          address: newAddress.trim(),
+        });
+        toast.success('Cliente agregado');
+        setShowAddSheet(false);
+        setNewName('');
+        setNewPhone('');
+        setNewAddress('');
+      } catch (err) {
+        toast.error('Error agregando cliente');
+      }
+    })();
   };
 
   const handleDelete = () => {
@@ -88,7 +108,9 @@ export default function ClientesPage() {
               <CardContent className="py-8 text-center">
                 <User className="w-12 h-12 mx-auto text-muted-foreground/50 mb-2" />
                 <p className="text-muted-foreground">
-                  {search ? 'No se encontraron clientes' : 'No hay clientes registrados'}
+                  {search
+                    ? 'No se encontraron clientes'
+                    : 'No hay clientes registrados'}
                 </p>
               </CardContent>
             </Card>
@@ -178,7 +200,10 @@ export default function ClientesPage() {
                 className="h-12"
               />
             </div>
-            <Button onClick={handleAddCustomer} className="w-full h-12 text-base font-semibold">
+            <Button
+              onClick={handleAddCustomer}
+              className="w-full h-12 text-base font-semibold"
+            >
               Guardar Cliente
             </Button>
           </div>
@@ -196,7 +221,10 @@ export default function ClientesPage() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground">
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-destructive text-destructive-foreground"
+            >
               Eliminar
             </AlertDialogAction>
           </AlertDialogFooter>

@@ -6,7 +6,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
 import {
   Select,
   SelectContent,
@@ -74,28 +79,32 @@ export function EgresosPage() {
 
   const handleSubmit = () => {
     if (!description || !amount) return;
-
-    if (editingExpense) {
-      updateExpense(editingExpense.id, {
-        description,
-        amount: Number(amount),
-        category,
-        notes: notes || undefined,
-      });
-      toast.success('Egreso actualizado');
-    } else {
-      addExpense({
-        date: selectedDate,
-        description,
-        amount: Number(amount),
-        category,
-        notes: notes || undefined,
-      });
-      toast.success('Egreso registrado');
-    }
-
-    handleReset();
-    setShowSheet(false);
+    (async () => {
+      try {
+        if (editingExpense) {
+          await updateExpense(editingExpense.id, {
+            description,
+            amount: Number(amount),
+            category,
+            notes: notes || undefined,
+          });
+          toast.success('Egreso actualizado');
+        } else {
+          await addExpense({
+            date: selectedDate,
+            description,
+            amount: Number(amount),
+            category,
+            notes: notes || undefined,
+          });
+          toast.success('Egreso registrado');
+        }
+        handleReset();
+        setShowSheet(false);
+      } catch (err) {
+        toast.error('Error guardando egreso');
+      }
+    })();
   };
 
   const handleDelete = (id: string) => {

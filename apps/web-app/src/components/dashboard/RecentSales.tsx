@@ -34,7 +34,7 @@ export function RecentSales({ sales }: RecentSalesProps) {
       </h3>
       <div className="space-y-2">
         {sales.slice(0, 5).map((sale) => {
-          const PaymentIcon = paymentIcons[sale.paymentMethod];
+          const PaymentIcon = paymentIcons[sale.paymentMethod] || Banknote;
           const time = new Date(sale.createdAt).toLocaleTimeString('es-VE', {
             hour: '2-digit',
             minute: '2-digit',
@@ -51,7 +51,8 @@ export function RecentSales({ sales }: RecentSalesProps) {
                 </div>
                 <div>
                   <p className="text-sm font-medium text-foreground">
-                    {sale.items.length} producto{sale.items.length > 1 ? 's' : ''}
+                    {sale.items.length} producto
+                    {sale.items.length > 1 ? 's' : ''}
                   </p>
                   <p className="text-xs text-muted-foreground">
                     {PaymentMethodLabels[sale.paymentMethod]} • {time}
@@ -60,10 +61,10 @@ export function RecentSales({ sales }: RecentSalesProps) {
               </div>
               <div className="text-right">
                 <p className="text-sm font-bold text-foreground">
-                  Bs {sale.totalBs.toFixed(2)}
+                  Bs {Number(sale.totalBs ?? 0).toFixed(2)}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  ${sale.totalUsd.toFixed(2)}
+                  ${Number(sale.totalUsd ?? 0).toFixed(2)}
                 </p>
               </div>
             </div>

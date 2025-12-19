@@ -1,7 +1,14 @@
 import { useState } from 'react';
 import { Sale, PaymentMethodLabels } from '@/types';
 import { useAppStore } from '@/store/useAppStore';
-import { Trash2, Smartphone, Banknote, CreditCard, FileText, Pencil } from 'lucide-react';
+import {
+  Trash2,
+  Smartphone,
+  Banknote,
+  CreditCard,
+  FileText,
+  Pencil,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   AlertDialog,
@@ -60,13 +67,19 @@ export function SalesList({ sales }: SalesListProps) {
             Ventas del Día ({sales.length})
           </h3>
           <span className="text-sm font-bold text-primary">
-            Bs {sales.reduce((sum, s) => sum + s.totalBs, 0).toFixed(2)}
+            Bs{' '}
+            {sales
+              .reduce((sum, s) => {
+                const num = Number(s.totalBs);
+                return sum + (isNaN(num) ? 0 : num);
+              }, 0)
+              .toFixed(2)}
           </span>
         </div>
 
         <div className="space-y-2">
           {sales.map((sale) => {
-            const PaymentIcon = paymentIcons[sale.paymentMethod];
+            const PaymentIcon = paymentIcons[sale.paymentMethod] || Banknote;
             const time = new Date(sale.createdAt).toLocaleTimeString('es-VE', {
               hour: '2-digit',
               minute: '2-digit',
@@ -89,10 +102,19 @@ export function SalesList({ sales }: SalesListProps) {
                     </div>
                     <div>
                       <p className="text-sm font-bold text-foreground">
-                        Bs {sale.totalBs.toFixed(2)}
+                        Bs{' '}
+                        {(() => {
+                          const num = Number(sale.totalBs);
+                          return (isNaN(num) ? 0 : num).toFixed(2);
+                        })()}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        ${sale.totalUsd.toFixed(2)} • {time}
+                        $
+                        {(() => {
+                          const num = Number(sale.totalUsd);
+                          return (isNaN(num) ? 0 : num).toFixed(2);
+                        })()}{' '}
+                        • {time}
                       </p>
                     </div>
                   </div>
@@ -120,8 +142,8 @@ export function SalesList({ sales }: SalesListProps) {
                         <AlertDialogHeader>
                           <AlertDialogTitle>¿Eliminar venta?</AlertDialogTitle>
                           <AlertDialogDescription>
-                            Esta acción no se puede deshacer. Se eliminará permanentemente
-                            este registro.
+                            Esta acción no se puede deshacer. Se eliminará
+                            permanentemente este registro.
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
@@ -140,7 +162,7 @@ export function SalesList({ sales }: SalesListProps) {
 
                 {/* Items */}
                 <div className="flex flex-wrap gap-1.5">
-                  {sale.items.map((item, idx) => (
+                  {(sale.items || []).map((item, idx) => (
                     <span
                       key={idx}
                       className="text-xs bg-muted px-2 py-1 rounded-full text-muted-foreground"
@@ -162,10 +184,10 @@ export function SalesList({ sales }: SalesListProps) {
         </div>
       </div>
 
-      <EditSaleSheet 
-        sale={editingSale} 
-        open={editSheetOpen} 
-        onOpenChange={setEditSheetOpen} 
+      <EditSaleSheet
+        sale={editingSale}
+        open={editSheetOpen}
+        onOpenChange={setEditSheetOpen}
       />
     </>
   );
