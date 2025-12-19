@@ -1,8 +1,8 @@
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap');
 
 @layer base {
   :root {
@@ -50,14 +50,29 @@
     --radius: 1rem;
 
     /* Custom Gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(199 89% 48%) 0%, hsl(174 72% 46%) 100%);
-    --gradient-card: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(210 40% 98%) 100%);
-    --gradient-hero: linear-gradient(135deg, hsl(199 89% 48%) 0%, hsl(199 89% 35%) 50%, hsl(174 72% 46%) 100%);
+    --gradient-primary: linear-gradient(
+      135deg,
+      hsl(199 89% 48%) 0%,
+      hsl(174 72% 46%) 100%
+    );
+    --gradient-card: linear-gradient(
+      180deg,
+      hsl(0 0% 100%) 0%,
+      hsl(210 40% 98%) 100%
+    );
+    --gradient-hero: linear-gradient(
+      135deg,
+      hsl(199 89% 48%) 0%,
+      hsl(199 89% 35%) 50%,
+      hsl(174 72% 46%) 100%
+    );
 
     /* Shadows */
     --shadow-sm: 0 1px 2px 0 hsl(215 25% 15% / 0.05);
-    --shadow-md: 0 4px 6px -1px hsl(215 25% 15% / 0.1), 0 2px 4px -2px hsl(215 25% 15% / 0.1);
-    --shadow-lg: 0 10px 15px -3px hsl(215 25% 15% / 0.1), 0 4px 6px -4px hsl(215 25% 15% / 0.1);
+    --shadow-md: 0 4px 6px -1px hsl(215 25% 15% / 0.1),
+      0 2px 4px -2px hsl(215 25% 15% / 0.1);
+    --shadow-lg: 0 10px 15px -3px hsl(215 25% 15% / 0.1),
+      0 4px 6px -4px hsl(215 25% 15% / 0.1);
     --shadow-card: 0 4px 20px -4px hsl(199 89% 48% / 0.15);
     --shadow-fab: 0 6px 20px -2px hsl(199 89% 48% / 0.4);
 
@@ -107,9 +122,22 @@
     --input: 215 20% 22%;
     --ring: 199 89% 55%;
 
-    --gradient-primary: linear-gradient(135deg, hsl(199 89% 55%) 0%, hsl(174 72% 50%) 100%);
-    --gradient-card: linear-gradient(180deg, hsl(215 25% 13%) 0%, hsl(215 25% 10%) 100%);
-    --gradient-hero: linear-gradient(135deg, hsl(199 89% 55%) 0%, hsl(199 89% 40%) 50%, hsl(174 72% 50%) 100%);
+    --gradient-primary: linear-gradient(
+      135deg,
+      hsl(199 89% 55%) 0%,
+      hsl(174 72% 50%) 100%
+    );
+    --gradient-card: linear-gradient(
+      180deg,
+      hsl(215 25% 13%) 0%,
+      hsl(215 25% 10%) 100%
+    );
+    --gradient-hero: linear-gradient(
+      135deg,
+      hsl(199 89% 55%) 0%,
+      hsl(199 89% 40%) 50%,
+      hsl(174 72% 50%) 100%
+    );
 
     --shadow-card: 0 4px 20px -4px hsl(199 89% 55% / 0.2);
     --shadow-fab: 0 6px 20px -2px hsl(199 89% 55% / 0.5);
