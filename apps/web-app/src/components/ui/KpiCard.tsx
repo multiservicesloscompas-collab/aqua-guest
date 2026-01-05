@@ -8,8 +8,9 @@ interface KpiCardProps {
   icon?: ReactNode;
   trend?: 'up' | 'down' | 'neutral';
   trendValue?: string;
-  variant?: 'default' | 'primary' | 'success' | 'warning';
+  variant?: 'default' | 'primary' | 'success' | 'warning' | 'danger' | 'info';
   className?: string;
+  onClick?: () => void;
 }
 
 const variantStyles = {
@@ -17,6 +18,8 @@ const variantStyles = {
   primary: 'gradient-primary text-primary-foreground',
   success: 'bg-success/10 border-success/20',
   warning: 'bg-warning/10 border-warning/20',
+  danger: 'bg-destructive/10 border-destructive/20',
+  info: 'bg-blue-500/10 border-blue-500/20',
 };
 
 export function KpiCard({
@@ -28,13 +31,16 @@ export function KpiCard({
   trendValue,
   variant = 'default',
   className,
+  onClick,
 }: KpiCardProps) {
   const isPrimary = variant === 'primary';
 
   return (
     <div
+      onClick={onClick}
       className={cn(
         'relative overflow-hidden rounded-xl p-4 border shadow-card transition-transform active:scale-[0.98]',
+        onClick && 'cursor-pointer hover:bg-muted/50',
         variantStyles[variant],
         className
       )}

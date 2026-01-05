@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Header } from '@/components/layout/Header';
 import { DateSelector } from '@/components/ventas/DateSelector';
 import { SalesList } from '@/components/ventas/SalesList';
@@ -13,6 +13,17 @@ export function VentasPage() {
   const { selectedDate, setSelectedDate, getSalesByDate, cart } = useAppStore();
   const [showAddProduct, setShowAddProduct] = useState(false);
   const [showCart, setShowCart] = useState(false);
+
+  useEffect(() => {
+    const today = new Date();
+    const formattedDate =
+      today.getFullYear() +
+      '-' +
+      String(today.getMonth() + 1).padStart(2, '0') +
+      '-' +
+      String(today.getDate()).padStart(2, '0');
+    setSelectedDate(formattedDate);
+  }, [setSelectedDate]);
 
   const sales = getSalesByDate(selectedDate);
   const cartCount = cart.length;

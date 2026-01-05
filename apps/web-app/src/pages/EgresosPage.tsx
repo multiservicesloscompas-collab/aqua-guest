@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Header } from '@/components/layout/Header';
 import { DateSelector } from '@/components/ventas/DateSelector';
 import { useAppStore } from '@/store/useAppStore';
@@ -51,6 +51,17 @@ export function EgresosPage() {
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState<ExpenseCategory>('operativo');
   const [notes, setNotes] = useState('');
+
+  useEffect(() => {
+    const today = new Date();
+    const formattedDate =
+      today.getFullYear() +
+      '-' +
+      String(today.getMonth() + 1).padStart(2, '0') +
+      '-' +
+      String(today.getDate()).padStart(2, '0');
+    setSelectedDate(formattedDate);
+  }, [setSelectedDate]);
 
   const expenses = getExpensesByDate(selectedDate);
   const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);

@@ -182,7 +182,7 @@ export function RentalSheet({ open, onOpenChange }: RentalSheetProps) {
           </SheetTitle>
         </SheetHeader>
 
-        <div className="overflow-y-auto h-[calc(100%-8rem)] space-y-6 pb-4">
+        <div className="overflow-y-auto h-[calc(100%-8rem)] space-y-6 pb-32">
           {/* Selección de Lavadora */}
           <div className="space-y-2">
             <Label className="text-sm font-medium flex items-center gap-2">
@@ -389,7 +389,7 @@ export function RentalSheet({ open, onOpenChange }: RentalSheetProps) {
         </div>
 
         {/* Footer con Total y Botón */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 bg-card border-t border-border safe-bottom">
+        <div className="absolute bottom-0 left-0 right-0 p-4 pb-8 bg-card border-t border-border safe-bottom">
           <div className="flex items-center justify-between mb-3">
             <span className="text-muted-foreground">Total</span>
             <div className="flex items-center gap-1">
