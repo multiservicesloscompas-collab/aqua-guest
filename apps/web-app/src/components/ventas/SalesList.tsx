@@ -109,7 +109,7 @@ export function SalesList({ sales }: SalesListProps) {
                         })()}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        $
+                        {PaymentMethodLabels[sale.paymentMethod]} • $
                         {(() => {
                           const num = Number(sale.totalUsd);
                           return (isNaN(num) ? 0 : num).toFixed(2);

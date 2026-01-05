@@ -149,6 +149,7 @@ export interface WasherRental {
   pickupDate: string; // Puede ser el mismo día o el siguiente
   deliveryFee: number; // $0 - $5
   totalUsd: number; // Precio jornada + delivery
+  paymentMethod: PaymentMethod; // Método de pago
   status: RentalStatus;
   isPaid: boolean;
   notes?: string;

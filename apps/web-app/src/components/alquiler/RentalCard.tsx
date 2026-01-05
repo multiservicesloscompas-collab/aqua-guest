@@ -4,6 +4,7 @@ import {
   RentalShiftConfig,
   RentalStatusLabels,
   RentalStatus,
+  PaymentMethodLabels,
 } from '@/types';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -18,6 +19,9 @@ import {
   Circle,
   Pencil,
   Trash2,
+  Smartphone,
+  Banknote,
+  CreditCard,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatPickupInfo } from '@/utils/rentalSchedule';
@@ -52,6 +56,12 @@ const statusIcons: Record<RentalStatus, string> = {
   agendado: '📅',
   enviado: '🚚',
   finalizado: '✅',
+};
+
+const paymentIcons = {
+  pago_movil: Smartphone,
+  efectivo: Banknote,
+  punto_venta: CreditCard,
 };
 
 export function RentalCard({
@@ -179,6 +189,16 @@ export function RentalCard({
               Entrega: {rental.deliveryTime} → Retiro: {rental.pickupTime}
             </span>
           </div>
+          {rental.paymentMethod && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              {(() => {
+                const PaymentIcon =
+                  paymentIcons[rental.paymentMethod] || Banknote;
+                return <PaymentIcon className="w-4 h-4" />;
+              })()}
+              <span>{PaymentMethodLabels[rental.paymentMethod]}</span>
+            </div>
+          )}
         </div>
 
         {/* Footer */}

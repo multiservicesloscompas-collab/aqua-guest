@@ -26,12 +26,17 @@ import {
   Phone,
   DollarSign,
   Calendar,
+  Smartphone,
+  Banknote,
+  CreditCard,
 } from 'lucide-react';
 import {
   RentalShift,
   RentalShiftConfig,
   Customer,
   BUSINESS_HOURS,
+  PaymentMethod,
+  PaymentMethodLabels,
 } from '@/types';
 import { useAppStore } from '@/store/useAppStore';
 import {
@@ -56,6 +61,7 @@ export function RentalSheet({ open, onOpenChange }: RentalSheetProps) {
   const [shift, setShift] = useState<RentalShift>('completo');
   const [deliveryTime, setDeliveryTime] = useState('09:00');
   const [deliveryFee, setDeliveryFee] = useState(0);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('efectivo');
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerAddress, setCustomerAddress] = useState('');
@@ -150,6 +156,7 @@ export function RentalSheet({ open, onOpenChange }: RentalSheetProps) {
       pickupDate: pickupInfo.pickupDate,
       deliveryFee,
       totalUsd,
+      paymentMethod,
       status: 'agendado',
       isPaid: false,
       notes: notes.trim() || undefined,
@@ -165,6 +172,7 @@ export function RentalSheet({ open, onOpenChange }: RentalSheetProps) {
     setShift('completo');
     setDeliveryTime(getDefaultDeliveryTime());
     setDeliveryFee(0);
+    setPaymentMethod('efectivo');
     setCustomerName('');
     setCustomerPhone('');
     setCustomerAddress('');
@@ -182,7 +190,7 @@ export function RentalSheet({ open, onOpenChange }: RentalSheetProps) {
           </SheetTitle>
         </SheetHeader>
 
-        <div className="overflow-y-auto h-[calc(100%-8rem)] space-y-6 pb-32">
+        <div className="overflow-y-auto h-[calc(100%-8rem)] space-y-6 pb-40">
           {/* Selección de Lavadora */}
           <div className="space-y-2">
             <Label className="text-sm font-medium flex items-center gap-2">
@@ -310,6 +318,49 @@ export function RentalSheet({ open, onOpenChange }: RentalSheetProps) {
             </div>
           </div>
 
+          {/* Método de Pago */}
+          <div className="space-y-2">
+            <Label className="text-sm font-medium flex items-center gap-2">
+              <CreditCard className="w-4 h-4" />
+              Método de Pago
+            </Label>
+            <div className="grid grid-cols-3 gap-2">
+              <Button
+                type="button"
+                variant={paymentMethod === 'pago_movil' ? 'default' : 'outline'}
+                onClick={() => setPaymentMethod('pago_movil')}
+                className="h-14 flex flex-col gap-1 p-2"
+              >
+                <Smartphone className="w-5 h-5" />
+                <span className="text-xs">
+                  {PaymentMethodLabels.pago_movil}
+                </span>
+              </Button>
+              <Button
+                type="button"
+                variant={paymentMethod === 'efectivo' ? 'default' : 'outline'}
+                onClick={() => setPaymentMethod('efectivo')}
+                className="h-14 flex flex-col gap-1 p-2"
+              >
+                <Banknote className="w-5 h-5" />
+                <span className="text-xs">{PaymentMethodLabels.efectivo}</span>
+              </Button>
+              <Button
+                type="button"
+                variant={
+                  paymentMethod === 'punto_venta' ? 'default' : 'outline'
+                }
+                onClick={() => setPaymentMethod('punto_venta')}
+                className="h-14 flex flex-col gap-1 p-2"
+              >
+                <CreditCard className="w-5 h-5" />
+                <span className="text-xs">
+                  {PaymentMethodLabels.punto_venta}
+                </span>
+              </Button>
+            </div>
+          </div>
+
           {/* Datos del Cliente */}
           <div className="space-y-3">
             <Label className="text-sm font-medium flex items-center gap-2">
@@ -389,7 +440,7 @@ export function RentalSheet({ open, onOpenChange }: RentalSheetProps) {
         </div>
 
         {/* Footer con Total y Botón */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 pb-8 bg-card border-t border-border safe-bottom">
+        <div className="absolute bottom-0 left-0 right-0 p-4 pb-12 bg-card border-t border-border safe-bottom">
           <div className="flex items-center justify-between mb-3">
             <span className="text-muted-foreground">Total</span>
             <div className="flex items-center gap-1">
@@ -400,6 +451,10 @@ export function RentalSheet({ open, onOpenChange }: RentalSheetProps) {
           <Button
             onClick={handleSubmit}
             className="w-full h-12 text-base font-semibold"
+            style={{
+              marginBottom: '4rem',
+              marginTop: '2rem',
+            }}
           >
             Confirmar Alquiler
           </Button>
