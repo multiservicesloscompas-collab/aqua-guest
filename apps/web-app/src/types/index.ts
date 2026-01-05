@@ -175,11 +175,11 @@ export interface LiterPricing {
 }
 
 export const DEFAULT_LITER_BREAKPOINTS: LiterPricing[] = [
-  { breakpoint: 1, price: 30.0 },
   { breakpoint: 2, price: 40.0 },
   { breakpoint: 5, price: 60.0 },
   { breakpoint: 8, price: 150.0 },
   { breakpoint: 12, price: 101.0 },
+  { breakpoint: 15, price: 200.0 },
   { breakpoint: 19, price: 240.0 },
   { breakpoint: 24, price: 300.0 },
 ];

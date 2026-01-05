@@ -1,5 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -15,7 +20,7 @@ interface AddProductSheetProps {
 }
 
 export function AddProductSheet({ open, onOpenChange }: AddProductSheetProps) {
-  const { products, addToCart, getPriceForLiters } = useAppStore();
+  const { products, addToCart, getPriceForLiters, config } = useAppStore();
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [liters, setLiters] = useState(19);
@@ -66,10 +71,18 @@ export function AddProductSheet({ open, onOpenChange }: AddProductSheetProps) {
   const subtotal = quantity * unitPrice;
 
   return (
-    <Sheet open={open} onOpenChange={(o) => { if (!o) handleReset(); onOpenChange(o); }}>
+    <Sheet
+      open={open}
+      onOpenChange={(o) => {
+        if (!o) handleReset();
+        onOpenChange(o);
+      }}
+    >
       <SheetContent side="bottom" className="h-[90vh] rounded-t-2xl px-4 pb-8">
         <SheetHeader className="pb-4">
-          <SheetTitle className="text-lg font-bold">Agregar Producto</SheetTitle>
+          <SheetTitle className="text-lg font-bold">
+            Agregar Producto
+          </SheetTitle>
         </SheetHeader>
 
         {!selectedProduct ? (
@@ -146,10 +159,27 @@ export function AddProductSheet({ open, onOpenChange }: AddProductSheetProps) {
                 <div className="flex items-center gap-2">
                   <input
                     type="range"
-                    min={selectedProduct.minLiters || 1}
-                    max={selectedProduct.maxLiters || 24}
-                    value={liters}
-                    onChange={(e) => setLiters(Number(e.target.value))}
+                    min="0"
+                    max={config.literPricing.length - 1}
+                    step="1"
+                    value={
+                      config.literPricing
+                        .map((lp) => lp.breakpoint)
+                        .sort((a, b) => a - b)
+                        .indexOf(liters) !== -1
+                        ? config.literPricing
+                            .map((lp) => lp.breakpoint)
+                            .sort((a, b) => a - b)
+                            .indexOf(liters)
+                        : 0
+                    }
+                    onChange={(e) => {
+                      const index = Number(e.target.value);
+                      const breakpoints = config.literPricing
+                        .map((lp) => lp.breakpoint)
+                        .sort((a, b) => a - b);
+                      setLiters(breakpoints[index]);
+                    }}
                     className="flex-1 h-2 bg-muted rounded-full accent-primary"
                   />
                   <span className="text-lg font-bold text-primary w-12 text-center">
@@ -161,7 +191,9 @@ export function AddProductSheet({ open, onOpenChange }: AddProductSheetProps) {
 
             {/* Precio unitario */}
             <div className="space-y-2">
-              <Label className="text-sm font-semibold">Precio por Unidad (Bs)</Label>
+              <Label className="text-sm font-semibold">
+                Precio por Unidad (Bs)
+              </Label>
               <Input
                 type="number"
                 step="0.01"

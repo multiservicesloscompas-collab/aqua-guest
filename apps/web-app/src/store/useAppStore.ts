@@ -516,6 +516,7 @@ export const useAppStore = create<AppState>()(
           if (updates.totalUsd !== undefined)
             payload.total_usd = updates.totalUsd;
           if (updates.notes !== undefined) payload.notes = updates.notes;
+          if (updates.items !== undefined) payload.items = updates.items;
           payload.updated_at = new Date().toISOString();
 
           const { error } = await supabase
