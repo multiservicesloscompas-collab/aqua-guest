@@ -4,7 +4,7 @@ export const defaultProducts: Product[] = [
   {
     id: 'recarga-agua',
     name: 'Recarga de Agua',
-    defaultPrice: 160.0,
+    defaultPrice: 240.0,
     requiresLiters: true,
     minLiters: 1,
     maxLiters: 24,
@@ -13,14 +13,14 @@ export const defaultProducts: Product[] = [
   {
     id: 'botellon-nuevo',
     name: 'Botellón Nuevo',
-    defaultPrice: 2160.0,
+    defaultPrice: 3000.0,
     requiresLiters: false,
     icon: '🫗',
   },
   {
     id: 'tapa-botellon',
     name: 'Tapa de Botellón',
-    defaultPrice: 20.0,
+    defaultPrice: 40.0,
     requiresLiters: false,
     icon: '🔵',
   },

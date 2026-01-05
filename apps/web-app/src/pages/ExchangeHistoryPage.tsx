@@ -1,6 +1,6 @@
 import { Header } from '@/components/layout/Header';
 import { useAppStore } from '@/store/useAppStore';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { TrendingUp, TrendingDown, Minus, Calendar } from 'lucide-react';
 import { AppRoute } from '@/types';
@@ -11,18 +11,19 @@ interface ExchangeHistoryPageProps {
 
 export function ExchangeHistoryPage({ onNavigate }: ExchangeHistoryPageProps) {
   const { config } = useAppStore();
-  
+
   // Ordenar historial por fecha descendente
-  const sortedHistory = [...(config.exchangeRateHistory || [])].sort((a, b) => 
-    new Date(b.date).getTime() - new Date(a.date).getTime()
+  const sortedHistory = [...(config.exchangeRateHistory || [])].sort(
+    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
   );
 
   const getTrendIcon = (index: number) => {
-    if (index >= sortedHistory.length - 1) return <Minus className="w-4 h-4 text-muted-foreground" />;
-    
+    if (index >= sortedHistory.length - 1)
+      return <Minus className="w-4 h-4 text-muted-foreground" />;
+
     const current = sortedHistory[index].rate;
     const previous = sortedHistory[index + 1].rate;
-    
+
     if (current > previous) {
       return <TrendingUp className="w-4 h-4 text-red-500" />;
     } else if (current < previous) {
@@ -33,21 +34,21 @@ export function ExchangeHistoryPage({ onNavigate }: ExchangeHistoryPageProps) {
 
   const getVariation = (index: number) => {
     if (index >= sortedHistory.length - 1) return null;
-    
+
     const current = sortedHistory[index].rate;
     const previous = sortedHistory[index + 1].rate;
     const variation = ((current - previous) / previous) * 100;
-    
+
     return variation;
   };
 
   return (
     <div className="flex flex-col min-h-screen pb-20">
-      <Header 
-        title="Historial de Tasas" 
-        subtitle="Registro histórico del dólar" 
-        showBack 
-        onBack={() => onNavigate('config')} 
+      <Header
+        title="Historial de Tasas"
+        subtitle="Registro histórico del dólar"
+        showBack
+        onBack={() => onNavigate('config')}
       />
 
       <main className="flex-1 px-4 py-4 space-y-4 max-w-lg mx-auto w-full">
@@ -61,11 +62,16 @@ export function ExchangeHistoryPage({ onNavigate }: ExchangeHistoryPageProps) {
               </p>
             </div>
             <div className="p-4 gradient-primary rounded-xl">
-              <span className="text-2xl font-bold text-primary-foreground">$</span>
+              <span className="text-2xl font-bold text-primary-foreground">
+                $
+              </span>
             </div>
           </div>
           <p className="text-xs text-muted-foreground mt-2">
-            Última actualización: {format(new Date(config.lastUpdated), "d 'de' MMMM, HH:mm", { locale: es })}
+            Última actualización:{' '}
+            {format(new Date(config.lastUpdated), "d 'de' MMMM, HH:mm", {
+              locale: es,
+            })}
           </p>
         </div>
 
@@ -74,7 +80,7 @@ export function ExchangeHistoryPage({ onNavigate }: ExchangeHistoryPageProps) {
           <h2 className="text-sm font-semibold text-muted-foreground px-1">
             Historial de Cambios
           </h2>
-          
+
           {sortedHistory.length === 0 ? (
             <div className="bg-muted/50 rounded-xl p-8 text-center">
               <Calendar className="w-12 h-12 mx-auto text-muted-foreground mb-3" />
@@ -101,7 +107,11 @@ export function ExchangeHistoryPage({ onNavigate }: ExchangeHistoryPageProps) {
                           Bs {entry.rate.toFixed(2)}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          {format(new Date(entry.date), "EEEE, d 'de' MMMM yyyy", { locale: es })}
+                          {format(
+                            parseISO(entry.date),
+                            "EEEE, d 'de' MMMM yyyy",
+                            { locale: es }
+                          )}
                         </p>
                       </div>
                     </div>
@@ -115,7 +125,8 @@ export function ExchangeHistoryPage({ onNavigate }: ExchangeHistoryPageProps) {
                             : 'bg-muted text-muted-foreground'
                         }`}
                       >
-                        {variation > 0 ? '+' : ''}{variation.toFixed(2)}%
+                        {variation > 0 ? '+' : ''}
+                        {variation.toFixed(2)}%
                       </span>
                     )}
                   </div>
@@ -128,8 +139,8 @@ export function ExchangeHistoryPage({ onNavigate }: ExchangeHistoryPageProps) {
         {/* Info */}
         <div className="bg-muted/50 rounded-xl p-4 border text-sm text-muted-foreground">
           <p>
-            💡 La tasa de cada día se hereda automáticamente del día anterior, 
-            a menos que se cambie explícitamente en Configuración.
+            💡 La tasa de cada día se hereda automáticamente del día anterior, a
+            menos que se cambie explícitamente en Configuración.
           </p>
         </div>
       </main>

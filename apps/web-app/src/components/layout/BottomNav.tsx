@@ -14,12 +14,22 @@ const navItems: { route: AppRoute; label: string; icon: typeof Home }[] = [
   { route: 'alquiler', label: 'Alquiler', icon: WashingMachine },
 ];
 
-export function BottomNav({ currentRoute, onNavigate, onOpenMenu }: BottomNavProps) {
+export function BottomNav({
+  currentRoute,
+  onNavigate,
+  onOpenMenu,
+}: BottomNavProps) {
   // Check if current route is a secondary menu item
-  const isMenuActive = ['clientes', 'egresos', 'config', 'seguimiento', 'lavadoras'].includes(currentRoute);
-  
+  const isMenuActive = [
+    'clientes',
+    'egresos',
+    'config',
+    'seguimiento',
+    'lavadoras',
+  ].includes(currentRoute);
+
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-lg border-t border-border safe-bottom">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-lg border-t border-border pb-[calc(env(safe-area-inset-bottom,1rem)+0.5rem)]">
       <div className="flex items-center justify-around h-16 max-w-lg mx-auto px-2">
         {navItems.map(({ route, label, icon: Icon }) => {
           const isActive = currentRoute === route;
@@ -59,7 +69,7 @@ export function BottomNav({ currentRoute, onNavigate, onOpenMenu }: BottomNavPro
             </button>
           );
         })}
-        
+
         {/* Menu Button */}
         <button
           onClick={onOpenMenu}

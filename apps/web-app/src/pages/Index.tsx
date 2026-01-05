@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useAppStore } from '@/store/useAppStore';
 import { BottomNav } from '@/components/layout/BottomNav';
 import { MenuSheet } from '@/components/layout/MenuSheet';
 import { DashboardPage } from '@/pages/DashboardPage';
@@ -15,8 +16,13 @@ import { DeliverysPage } from '@/pages/DeliverysPage';
 import { AppRoute } from '@/types';
 
 const Index = () => {
+  const { loadFromSupabase } = useAppStore();
   const [currentRoute, setCurrentRoute] = useState<AppRoute>('dashboard');
   const [menuOpen, setMenuOpen] = useState(false);
+
+  useEffect(() => {
+    loadFromSupabase();
+  }, [loadFromSupabase]);
 
   const renderPage = () => {
     switch (currentRoute) {
@@ -50,9 +56,9 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background">
       {renderPage()}
-      <BottomNav 
-        currentRoute={currentRoute} 
-        onNavigate={setCurrentRoute} 
+      <BottomNav
+        currentRoute={currentRoute}
+        onNavigate={setCurrentRoute}
         onOpenMenu={() => setMenuOpen(true)}
       />
       <MenuSheet

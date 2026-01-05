@@ -155,11 +155,16 @@ export const useAppStore = create<AppState>()(
 
         // Try to save to Supabase
         try {
-          const { error } = await supabase.from('exchange_rates').upsert({
-            date: today,
-            rate,
-            updated_at: new Date().toISOString(),
-          });
+          // Use onConflict to handle unique constraint on 'date'
+          const { error } = await supabase.from('exchange_rates').upsert(
+            {
+              date: today,
+              rate,
+              updated_at: new Date().toISOString(),
+            },
+            { onConflict: 'date' }
+          );
+
           if (error) throw error;
         } catch (err) {
           console.error('Failed to save exchange rate to Supabase', err);
@@ -345,15 +350,40 @@ export const useAppStore = create<AppState>()(
             breakpoint: Number(l.breakpoint),
             price: Number(l.price),
           }));
-          const exchangeHistory = (exchangeRatesRes.data || []).map(
-            (x: any) => ({
+          // Process Exchange Rates with explicit logging
+          let latestExchangeRate = get().config.exchangeRate;
+          let exchangeHistory: ExchangeRateHistory[] =
+            get().config.exchangeRateHistory;
+
+          if (exchangeRatesRes.error) {
+            console.error(
+              'Error fetching exchange rates:',
+              exchangeRatesRes.error
+            );
+          } else if (exchangeRatesRes.data) {
+            console.log(
+              'Supabase Response - Exchange Rates:',
+              exchangeRatesRes.data
+            );
+            const mappedHistory = exchangeRatesRes.data.map((x: any) => ({
               date: x.date,
               rate: Number(x.rate),
               updatedAt: x.updated_at ?? x.updatedAt,
-            })
-          );
+            }));
 
-          set(() => ({
+            // Sort history by date descending to find the latest
+            mappedHistory.sort(
+              (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+            );
+
+            exchangeHistory = mappedHistory;
+            if (exchangeHistory.length > 0) {
+              latestExchangeRate = exchangeHistory[0].rate;
+              console.log('New Latest Exchange Rate:', latestExchangeRate);
+            }
+          }
+
+          set((state) => ({
             customers,
             washingMachines: machines,
             rentals,
@@ -362,11 +392,14 @@ export const useAppStore = create<AppState>()(
             expenses,
             prepaidOrders: prepaid,
             config: {
-              ...get().config,
+              ...state.config,
               literPricing: literPricing.length
                 ? literPricing
-                : get().config.literPricing,
+                : state.config.literPricing,
               exchangeRateHistory: exchangeHistory,
+              // Use latest rate from DB if available, otherwise keep current
+              exchangeRate: latestExchangeRate,
+              lastUpdated: new Date().toISOString(),
             },
           }));
         } catch (err) {

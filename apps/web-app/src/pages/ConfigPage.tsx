@@ -29,6 +29,10 @@ export function ConfigPage({ onNavigate }: ConfigPageProps) {
   );
 
   useEffect(() => {
+    setRate(config.exchangeRate.toString());
+  }, [config.exchangeRate]);
+
+  useEffect(() => {
     setLiterPrices(config.literPricing || DEFAULT_LITER_BREAKPOINTS);
   }, [config.literPricing]);
 
