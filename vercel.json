@@ -1,5 +1,4 @@
 {
-  "root": "apps/web-app",
   "buildCommand": "npx nx build web-app",
   "outputDirectory": "dist/apps/web-app"
 }
