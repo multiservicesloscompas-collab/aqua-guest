@@ -55,21 +55,24 @@ export function CartSheet({ open, onOpenChange }: CartSheetProps) {
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="h-[85vh] rounded-t-2xl px-4 pb-8">
-        <SheetHeader className="pb-4">
+      <SheetContent
+        side="bottom"
+        className="h-[85vh] rounded-t-2xl flex flex-col p-0 gap-0"
+      >
+        <SheetHeader className="px-5 py-4 border-b">
           <SheetTitle className="text-lg font-bold">
             Carrito ({cart.length} items)
           </SheetTitle>
         </SheetHeader>
 
         {cart.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-40 text-muted-foreground">
+          <div className="flex flex-col items-center justify-center h-40 text-muted-foreground p-4">
             <p>El carrito está vacío</p>
           </div>
         ) : (
-          <div className="flex flex-col h-full space-y-4">
+          <div className="flex-1 overflow-y-auto px-5 pt-4 pb-12 space-y-6">
             {/* Lista de items */}
-            <div className="flex-1 overflow-y-auto space-y-2 -mx-1 px-1">
+            <div className="space-y-3">
               {cart.map((item) => (
                 <div
                   key={item.id}
@@ -102,7 +105,7 @@ export function CartSheet({ open, onOpenChange }: CartSheetProps) {
             </div>
 
             {/* Método de pago */}
-            <div className="space-y-2">
+            <div className="space-y-3">
               <p className="text-sm font-semibold text-foreground">
                 Forma de Pago
               </p>
@@ -142,22 +145,27 @@ export function CartSheet({ open, onOpenChange }: CartSheetProps) {
             </div>
 
             {/* Notas */}
-            <Textarea
-              placeholder="Notas opcionales..."
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              className="h-16 resize-none"
-            />
+            <div className="space-y-3">
+              <p className="text-sm font-semibold text-foreground">Notas</p>
+              <Textarea
+                placeholder="Observaciones de la venta..."
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                className="h-20 resize-none bg-muted/30"
+              />
+            </div>
 
             {/* Total y botón */}
-            <div className="space-y-3 pt-2 border-t">
+            <div className="space-y-4 pt-4 border-t">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Total</span>
+                <span className="text-sm text-muted-foreground font-medium">
+                  Total a Pagar
+                </span>
                 <div className="text-right">
-                  <p className="text-xl font-extrabold text-foreground">
+                  <p className="text-2xl font-extrabold text-foreground">
                     Bs {totalBs.toFixed(2)}
                   </p>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-sm text-muted-foreground">
                     ${totalUsd.toFixed(2)} USD
                   </p>
                 </div>
@@ -171,6 +179,9 @@ export function CartSheet({ open, onOpenChange }: CartSheetProps) {
                 <Check className="w-5 h-5 mr-2" />
                 {saving ? 'Registrando...' : 'Confirmar Venta'}
               </Button>
+              <p className="text-center text-xs text-muted-foreground pt-2">
+                Revise los detalles antes de confirmar
+              </p>
             </div>
           </div>
         )}

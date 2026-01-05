@@ -1021,7 +1021,12 @@ export const useAppStore = create<AppState>()(
       setSelectedDate: (date) => set({ selectedDate: date }),
 
       getSalesByDate: (date) =>
-        get().sales.filter((sale) => sale.date === date),
+        get()
+          .sales.filter((sale) => sale.date === date)
+          .sort(
+            (a, b) =>
+              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          ),
 
       getExpensesByDate: (date) =>
         get().expenses.filter((exp) => exp.date === date),
