@@ -183,18 +183,31 @@ export const useAppStore = create<AppState>()(
 
       setLiterPricing: async (pricing) => {
         try {
-          const payload = pricing.map((p) => ({
-            breakpoint: p.breakpoint,
-            price: p.price,
-          }));
+          // Fetch existing liter pricing records
+          const { data: existingPricing, error: fetchError } = await supabase
+            .from('liter_pricing')
+            .select('id, breakpoint, price');
+          if (fetchError) throw fetchError;
 
-          // Try to upsert the pricing table in Supabase
-          const { error } = await supabase
+          // Create payload with id if exists
+          const payload = pricing.map((p) => {
+            const existing = existingPricing?.find(
+              (ep) => ep.breakpoint === p.breakpoint
+            );
+            return {
+              ...(existing ? { id: existing.id } : {}),
+              breakpoint: p.breakpoint,
+              price: p.price,
+            };
+          });
+
+          // Upsert the pricing records
+          const { error: upsertError } = await supabase
             .from('liter_pricing')
             .upsert(payload);
-          if (error) throw error;
+          if (upsertError) throw upsertError;
 
-          // If upsert succeeds, update local state
+          // If succeeds, update local state
           set((state) => ({
             config: {
               ...state.config,
