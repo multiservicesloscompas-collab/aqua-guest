@@ -55,6 +55,7 @@ export interface Expense {
   description: string;
   amount: number; // En Bolívares
   category: ExpenseCategory;
+  paymentMethod: PaymentMethod;
   notes?: string;
   createdAt: string;
 }

@@ -349,6 +349,7 @@ export const useAppStore = create<AppState>()(
           }));
           const expenses = (expensesRes.data || []).map((e: any) => ({
             ...e,
+            paymentMethod: e.payment_method || 'efectivo',
             createdAt: e.created_at ?? e.createdAt,
           }));
           const prepaid = (prepaidRes.data || []).map((p: any) => ({
@@ -591,6 +592,7 @@ export const useAppStore = create<AppState>()(
             description: expense.description,
             amount: expense.amount,
             category: expense.category,
+            payment_method: expense.paymentMethod,
             notes: expense.notes,
           };
           const { data, error } = await supabase
@@ -602,7 +604,12 @@ export const useAppStore = create<AppState>()(
           set((state) => ({
             expenses: [
               ...state.expenses,
-              { ...data, id: data.id, createdAt: data.created_at },
+              {
+                ...data,
+                id: data.id,
+                paymentMethod: data.payment_method || 'efectivo',
+                createdAt: data.created_at,
+              },
             ],
           }));
         } catch (err) {
@@ -627,6 +634,8 @@ export const useAppStore = create<AppState>()(
           if (updates.amount !== undefined) payload.amount = updates.amount;
           if (updates.category !== undefined)
             payload.category = updates.category;
+          if (updates.paymentMethod !== undefined)
+            payload.payment_method = updates.paymentMethod;
           if (updates.notes !== undefined) payload.notes = updates.notes;
           if (updates.date !== undefined) payload.date = updates.date;
 

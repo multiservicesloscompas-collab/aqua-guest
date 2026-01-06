@@ -30,7 +30,13 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { ExpenseCategory, ExpenseCategoryLabels, Expense } from '@/types';
+import {
+  ExpenseCategory,
+  ExpenseCategoryLabels,
+  Expense,
+  PaymentMethod,
+  PaymentMethodLabels,
+} from '@/types';
 import { Plus, Trash2, Wallet, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -50,6 +56,7 @@ export function EgresosPage() {
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState<ExpenseCategory>('operativo');
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('efectivo');
   const [notes, setNotes] = useState('');
 
   useEffect(() => {
@@ -70,6 +77,7 @@ export function EgresosPage() {
     setDescription('');
     setAmount('');
     setCategory('operativo');
+    setPaymentMethod('efectivo');
     setNotes('');
     setEditingExpense(null);
   };
@@ -84,6 +92,7 @@ export function EgresosPage() {
     setDescription(expense.description);
     setAmount(expense.amount.toString());
     setCategory(expense.category);
+    setPaymentMethod(expense.paymentMethod || 'efectivo');
     setNotes(expense.notes || '');
     setShowSheet(true);
   };
@@ -97,6 +106,7 @@ export function EgresosPage() {
             description,
             amount: Number(amount),
             category,
+            paymentMethod,
             notes: notes || undefined,
           });
           toast.success('Egreso actualizado');
@@ -106,6 +116,7 @@ export function EgresosPage() {
             description,
             amount: Number(amount),
             category,
+            paymentMethod,
             notes: notes || undefined,
           });
           toast.success('Egreso registrado');
@@ -167,9 +178,15 @@ export function EgresosPage() {
                     <p className="text-sm font-bold text-foreground">
                       {expense.description}
                     </p>
-                    <p className="text-xs text-muted-foreground">
-                      {ExpenseCategoryLabels[expense.category]}
-                    </p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <p className="text-xs text-muted-foreground">
+                        {ExpenseCategoryLabels[expense.category]}
+                      </p>
+                      <span className="text-xs text-muted-foreground">•</span>
+                      <p className="text-xs text-muted-foreground">
+                        {PaymentMethodLabels[expense.paymentMethod || 'efectivo']}
+                      </p>
+                    </div>
                     {expense.notes && (
                       <p className="text-xs text-muted-foreground mt-1 italic">
                         {expense.notes}
@@ -295,6 +312,26 @@ export function EgresosPage() {
                       {label}
                     </SelectItem>
                   ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold">Método de Pago</Label>
+              <Select
+                value={paymentMethod}
+                onValueChange={(v) => setPaymentMethod(v as PaymentMethod)}
+              >
+                <SelectTrigger className="h-12">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="efectivo">
+                    {PaymentMethodLabels.efectivo}
+                  </SelectItem>
+                  <SelectItem value="pago_movil">
+                    {PaymentMethodLabels.pago_movil}
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>

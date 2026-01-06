@@ -11,10 +11,10 @@
 ## Estructura del proyecto
 
 | apps
---| backend ( NestJS )
---| web-app ( React con vite )
+|--| backend ( NestJS )
+|--| web-app ( React con vite )
 | libs
---| models ( Entidades de dominio )
+|--| models ( Entidades de dominio )
 
 ## Seguimientos
 
