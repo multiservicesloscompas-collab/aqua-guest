@@ -797,6 +797,7 @@ export const useAppStore = create<AppState>()(
           if (updates.machineId !== undefined)
             payload.machine_id = updates.machineId;
           if (updates.shift !== undefined) payload.shift = updates.shift;
+          if (updates.date !== undefined) payload.date = updates.date;
           if (updates.deliveryTime !== undefined)
             payload.delivery_time = updates.deliveryTime;
           if (updates.pickupTime !== undefined)
@@ -814,14 +815,26 @@ export const useAppStore = create<AppState>()(
           if (updates.notes !== undefined) payload.notes = updates.notes;
           if (updates.customerId !== undefined)
             payload.customer_id = updates.customerId;
+
+          // Handle customer data updates separately
+          const customerUpdates: any = {};
           if (updates.customerName !== undefined)
-            payload.customer_name = updates.customerName;
+            customerUpdates.name = updates.customerName;
           if (updates.customerPhone !== undefined)
-            payload.customer_phone = updates.customerPhone;
+            customerUpdates.phone = updates.customerPhone;
           if (updates.customerAddress !== undefined)
-            payload.customer_address = updates.customerAddress;
+            customerUpdates.address = updates.customerAddress;
 
           payload.updated_at = new Date().toISOString();
+
+          // Update customer if there are customer updates
+          if (Object.keys(customerUpdates).length > 0 && updates.customerId) {
+            const { error: customerError } = await supabase
+              .from('customers')
+              .update(customerUpdates)
+              .eq('id', updates.customerId);
+            if (customerError) throw customerError;
+          }
 
           const { error } = await supabase
             .from('washer_rentals')
