@@ -1,5 +1,4 @@
 import { Sale, PaymentMethodLabels } from '@/types';
-import { cn } from '@/lib/utils';
 import { Clock, CreditCard, Banknote, Smartphone } from 'lucide-react';
 
 interface RecentSalesProps {
@@ -33,7 +32,7 @@ export function RecentSales({ sales }: RecentSalesProps) {
         Ventas Recientes
       </h3>
       <div className="space-y-2">
-        {sales.slice(0, 5).map((sale) => {
+        {sales.slice(0, 3).map((sale) => {
           const PaymentIcon = paymentIcons[sale.paymentMethod] || Banknote;
           const time = new Date(sale.createdAt).toLocaleTimeString('es-VE', {
             hour: '2-digit',

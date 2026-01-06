@@ -51,40 +51,46 @@ interface AppState {
   clearCart: () => void;
 
   // Acciones de ventas
-  completeSale: (paymentMethod: PaymentMethod, notes?: string) => Sale;
-  updateSale: (id: string, updates: Partial<Sale>) => void;
-  deleteSale: (id: string) => void;
+  completeSale: (paymentMethod: PaymentMethod, notes?: string) => Promise<Sale>;
+  updateSale: (id: string, updates: Partial<Sale>) => Promise<void>;
+  deleteSale: (id: string) => Promise<void>;
 
   // Acciones de egresos
-  addExpense: (expense: Omit<Expense, 'id' | 'createdAt'>) => void;
-  updateExpense: (id: string, updates: Partial<Expense>) => void;
-  deleteExpense: (id: string) => void;
+  addExpense: (expense: Omit<Expense, 'id' | 'createdAt'>) => Promise<void>;
+  updateExpense: (id: string, updates: Partial<Expense>) => Promise<void>;
+  deleteExpense: (id: string) => Promise<void>;
 
   // Acciones de alquileres
   addRental: (
     rental: Omit<WasherRental, 'id' | 'createdAt' | 'updatedAt'>
-  ) => void;
-  updateRental: (id: string, updates: Partial<WasherRental>) => void;
-  deleteRental: (id: string) => void;
+  ) => Promise<void>;
+  updateRental: (id: string, updates: Partial<WasherRental>) => Promise<void>;
+  deleteRental: (id: string) => Promise<void>;
 
   // Acciones de prepagados
   addPrepaidOrder: (
     order: Omit<PrepaidOrder, 'id' | 'createdAt' | 'updatedAt'>
-  ) => void;
-  updatePrepaidOrder: (id: string, updates: Partial<PrepaidOrder>) => void;
-  deletePrepaidOrder: (id: string) => void;
-  markPrepaidAsDelivered: (id: string) => void;
+  ) => Promise<any>;
+  updatePrepaidOrder: (
+    id: string,
+    updates: Partial<PrepaidOrder>
+  ) => Promise<void>;
+  deletePrepaidOrder: (id: string) => Promise<void>;
+  markPrepaidAsDelivered: (id: string) => Promise<void>;
   getRentalsByDate: (date: string) => WasherRental[];
 
   // Acciones de clientes
-  addCustomer: (customer: Omit<Customer, 'id'>) => void;
-  updateCustomer: (id: string, updates: Partial<Customer>) => void;
-  deleteCustomer: (id: string) => void;
+  addCustomer: (customer: Omit<Customer, 'id'>) => Promise<void>;
+  updateCustomer: (id: string, updates: Partial<Customer>) => Promise<void>;
+  deleteCustomer: (id: string) => Promise<void>;
 
   // Acciones de lavadoras
-  addWashingMachine: (machine: Omit<WashingMachine, 'id'>) => void;
-  updateWashingMachine: (id: string, updates: Partial<WashingMachine>) => void;
-  deleteWashingMachine: (id: string) => void;
+  addWashingMachine: (machine: Omit<WashingMachine, 'id'>) => Promise<void>;
+  updateWashingMachine: (
+    id: string,
+    updates: Partial<WashingMachine>
+  ) => Promise<void>;
+  deleteWashingMachine: (id: string) => Promise<void>;
 
   // Utilidades
   setSelectedDate: (date: string) => void;
@@ -121,7 +127,7 @@ export const useAppStore = create<AppState>()(
       setExchangeRate: async (rate) => {
         const today = new Date().toISOString().split('T')[0];
         const existingIndex = get().config.exchangeRateHistory.findIndex(
-          (h) => h.date === today
+          (h: ExchangeRateHistory) => h.date === today
         );
         const newHistoryEntry: ExchangeRateHistory = {
           date: today,
@@ -132,8 +138,9 @@ export const useAppStore = create<AppState>()(
         let updatedHistory: ExchangeRateHistory[];
         if (existingIndex >= 0) {
           // Actualizar entrada existente del día
-          updatedHistory = get().config.exchangeRateHistory.map((h, i) =>
-            i === existingIndex ? newHistoryEntry : h
+          updatedHistory = get().config.exchangeRateHistory.map(
+            (h: ExchangeRateHistory, i: number) =>
+              i === existingIndex ? newHistoryEntry : h
           );
         } else {
           // Agregar nueva entrada
@@ -174,7 +181,7 @@ export const useAppStore = create<AppState>()(
       getExchangeRateForDate: (date) => {
         const { config } = get();
         const historyEntry = config.exchangeRateHistory.find(
-          (h) => h.date === date
+          (h: ExchangeRateHistory) => h.date === date
         );
         if (historyEntry) return historyEntry.rate;
 
@@ -194,10 +201,10 @@ export const useAppStore = create<AppState>()(
             .select('id, breakpoint, price');
           if (fetchError) throw fetchError;
 
-          // Create payload with id if exists
+          // Create payload
           const payload = pricing.map((p) => {
             const existing = existingPricing?.find(
-              (ep) => ep.breakpoint === p.breakpoint
+              (ep: any) => Number(ep.breakpoint) === Number(p.breakpoint)
             );
             return {
               ...(existing ? { id: existing.id } : {}),
@@ -206,11 +213,24 @@ export const useAppStore = create<AppState>()(
             };
           });
 
-          // Upsert the pricing records
-          const { error: upsertError } = await supabase
-            .from('liter_pricing')
-            .upsert(payload);
-          if (upsertError) throw upsertError;
+          // To avoid the "null value in column 'id'" error caused by PostgREST padding
+          // missing keys in a batch, we separate updates (with id) from inserts (without id).
+          const updates = payload.filter((p) => 'id' in p);
+          const inserts = payload.filter((p) => !('id' in p));
+
+          if (updates.length > 0) {
+            const { error: updateError } = await supabase
+              .from('liter_pricing')
+              .upsert(updates);
+            if (updateError) throw updateError;
+          }
+
+          if (inserts.length > 0) {
+            const { error: insertError } = await supabase
+              .from('liter_pricing')
+              .insert(inserts);
+            if (insertError) throw insertError;
+          }
 
           // If succeeds, update local state
           set((state) => ({
@@ -298,6 +318,7 @@ export const useAppStore = create<AppState>()(
             pickupDate: r.pickup_date,
             deliveryFee: Number(r.delivery_fee),
             totalUsd: Number(r.total_usd),
+            paymentMethod: r.payment_method || 'efectivo',
             status: r.status,
             isPaid: r.is_paid,
             notes: r.notes,
@@ -373,7 +394,8 @@ export const useAppStore = create<AppState>()(
 
             // Sort history by date descending to find the latest
             mappedHistory.sort(
-              (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+              (a: ExchangeRateHistory, b: ExchangeRateHistory) =>
+                new Date(b.date).getTime() - new Date(a.date).getTime()
             );
 
             exchangeHistory = mappedHistory;
@@ -597,17 +619,57 @@ export const useAppStore = create<AppState>()(
         }
       },
 
-      updateExpense: (id, updates) =>
-        set((state) => ({
-          expenses: state.expenses.map((exp) =>
-            exp.id === id ? { ...exp, ...updates } : exp
-          ),
-        })),
+      updateExpense: async (id, updates) => {
+        try {
+          const payload: any = {};
+          if (updates.description !== undefined)
+            payload.description = updates.description;
+          if (updates.amount !== undefined) payload.amount = updates.amount;
+          if (updates.category !== undefined)
+            payload.category = updates.category;
+          if (updates.notes !== undefined) payload.notes = updates.notes;
+          if (updates.date !== undefined) payload.date = updates.date;
 
-      deleteExpense: (id) =>
-        set((state) => ({
-          expenses: state.expenses.filter((exp) => exp.id !== id),
-        })),
+          const { error } = await supabase
+            .from('expenses')
+            .update(payload)
+            .eq('id', id);
+          if (error) throw error;
+
+          set((state) => ({
+            expenses: state.expenses.map((exp) =>
+              exp.id === id ? { ...exp, ...updates } : exp
+            ),
+          }));
+        } catch (err) {
+          console.error('Failed to update expense in Supabase', err);
+          // Still update local state as fallback
+          set((state) => ({
+            expenses: state.expenses.map((exp) =>
+              exp.id === id ? { ...exp, ...updates } : exp
+            ),
+          }));
+        }
+      },
+
+      deleteExpense: async (id) => {
+        try {
+          const { error } = await supabase
+            .from('expenses')
+            .delete()
+            .eq('id', id);
+          if (error) throw error;
+          set((state) => ({
+            expenses: state.expenses.filter((exp) => exp.id !== id),
+          }));
+        } catch (err) {
+          console.error('Failed to delete expense from Supabase', err);
+          // Still remove from local state as fallback
+          set((state) => ({
+            expenses: state.expenses.filter((exp) => exp.id !== id),
+          }));
+        }
+      },
 
       // Alquileres
       addRental: async (rental) => {
@@ -622,6 +684,7 @@ export const useAppStore = create<AppState>()(
             pickup_date: rental.pickupDate,
             delivery_fee: rental.deliveryFee,
             total_usd: rental.totalUsd,
+            payment_method: rental.paymentMethod,
             status: rental.status,
             is_paid: rental.isPaid,
             notes: rental.notes,
@@ -646,6 +709,7 @@ export const useAppStore = create<AppState>()(
             pickupDate: data.pickup_date,
             deliveryFee: Number(data.delivery_fee),
             totalUsd: Number(data.total_usd),
+            paymentMethod: data.payment_method || rental.paymentMethod,
             status: data.status,
             isPaid: data.is_paid,
             notes: data.notes,
@@ -910,19 +974,49 @@ export const useAppStore = create<AppState>()(
         }
       },
 
-      markPrepaidAsDelivered: (id) =>
-        set((state) => ({
-          prepaidOrders: state.prepaidOrders.map((order) =>
-            order.id === id
-              ? {
-                  ...order,
-                  status: 'entregado' as PrepaidStatus,
-                  dateDelivered: new Date().toISOString().split('T')[0],
-                  updatedAt: new Date().toISOString(),
-                }
-              : order
-          ),
-        })),
+      markPrepaidAsDelivered: async (id) => {
+        const dateDelivered = new Date().toISOString().split('T')[0];
+        const updatedAt = new Date().toISOString();
+        try {
+          const { error } = await supabase
+            .from('prepaid_orders')
+            .update({
+              status: 'entregado',
+              date_delivered: dateDelivered,
+              updated_at: updatedAt,
+            })
+            .eq('id', id);
+          if (error) throw error;
+
+          set((state) => ({
+            prepaidOrders: state.prepaidOrders.map((order) =>
+              order.id === id
+                ? {
+                    ...order,
+                    status: 'entregado' as PrepaidStatus,
+                    dateDelivered: dateDelivered,
+                    updatedAt,
+                  }
+                : order
+            ),
+          }));
+        } catch (err) {
+          console.error('Failed to mark prepaid as delivered in Supabase', err);
+          // Fallback local
+          set((state) => ({
+            prepaidOrders: state.prepaidOrders.map((order) =>
+              order.id === id
+                ? {
+                    ...order,
+                    status: 'entregado' as PrepaidStatus,
+                    dateDelivered: dateDelivered,
+                    updatedAt,
+                  }
+                : order
+            ),
+          }));
+        }
+      },
 
       // Clientes
       addCustomer: async (customer) => {
@@ -955,17 +1049,53 @@ export const useAppStore = create<AppState>()(
         }
       },
 
-      updateCustomer: (id, updates) =>
-        set((state) => ({
-          customers: state.customers.map((c) =>
-            c.id === id ? { ...c, ...updates } : c
-          ),
-        })),
+      updateCustomer: async (id, updates) => {
+        try {
+          const payload: any = {};
+          if (updates.name !== undefined) payload.name = updates.name;
+          if (updates.phone !== undefined) payload.phone = updates.phone;
+          if (updates.address !== undefined) payload.address = updates.address;
 
-      deleteCustomer: (id) =>
-        set((state) => ({
-          customers: state.customers.filter((c) => c.id !== id),
-        })),
+          const { error } = await supabase
+            .from('customers')
+            .update(payload)
+            .eq('id', id);
+          if (error) throw error;
+
+          set((state) => ({
+            customers: state.customers.map((c) =>
+              c.id === id ? { ...c, ...updates } : c
+            ),
+          }));
+        } catch (err) {
+          console.error('Failed to update customer in Supabase', err);
+          // Fallback local
+          set((state) => ({
+            customers: state.customers.map((c) =>
+              c.id === id ? { ...c, ...updates } : c
+            ),
+          }));
+        }
+      },
+
+      deleteCustomer: async (id) => {
+        try {
+          const { error } = await supabase
+            .from('customers')
+            .delete()
+            .eq('id', id);
+          if (error) throw error;
+          set((state) => ({
+            customers: state.customers.filter((c) => c.id !== id),
+          }));
+        } catch (err) {
+          console.error('Failed to delete customer from Supabase', err);
+          // Fallback local
+          set((state) => ({
+            customers: state.customers.filter((c) => c.id !== id),
+          }));
+        }
+      },
 
       // Lavadoras
       addWashingMachine: async (machine) => {
@@ -1005,17 +1135,56 @@ export const useAppStore = create<AppState>()(
         }
       },
 
-      updateWashingMachine: (id, updates) =>
-        set((state) => ({
-          washingMachines: state.washingMachines.map((m) =>
-            m.id === id ? { ...m, ...updates } : m
-          ),
-        })),
+      updateWashingMachine: async (id, updates) => {
+        try {
+          const payload: any = {};
+          if (updates.name !== undefined) payload.name = updates.name;
+          if (updates.kg !== undefined) payload.kg = updates.kg;
+          if (updates.brand !== undefined) payload.brand = updates.brand;
+          if (updates.status !== undefined) payload.status = updates.status;
+          if (updates.isAvailable !== undefined)
+            payload.is_available = updates.isAvailable;
 
-      deleteWashingMachine: (id) =>
-        set((state) => ({
-          washingMachines: state.washingMachines.filter((m) => m.id !== id),
-        })),
+          const { error } = await supabase
+            .from('washing_machines')
+            .update(payload)
+            .eq('id', id);
+          if (error) throw error;
+
+          set((state) => ({
+            washingMachines: state.washingMachines.map((m) =>
+              m.id === id ? { ...m, ...updates } : m
+            ),
+          }));
+        } catch (err) {
+          console.error('Failed to update washing machine in Supabase', err);
+          // Fallback local
+          set((state) => ({
+            washingMachines: state.washingMachines.map((m) =>
+              m.id === id ? { ...m, ...updates } : m
+            ),
+          }));
+        }
+      },
+
+      deleteWashingMachine: async (id) => {
+        try {
+          const { error } = await supabase
+            .from('washing_machines')
+            .delete()
+            .eq('id', id);
+          if (error) throw error;
+          set((state) => ({
+            washingMachines: state.washingMachines.filter((m) => m.id !== id),
+          }));
+        } catch (err) {
+          console.error('Failed to delete washing machine from Supabase', err);
+          // Fallback local
+          set((state) => ({
+            washingMachines: state.washingMachines.filter((m) => m.id !== id),
+          }));
+        }
+      },
 
       // Utilidades
       setSelectedDate: (date) => set({ selectedDate: date }),
