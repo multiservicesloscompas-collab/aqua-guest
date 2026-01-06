@@ -46,6 +46,7 @@ import {
   generateTimeSlots,
   formatPickupInfo,
 } from '@/utils/rentalSchedule';
+import { calculateRentalPrice } from '@/utils/rentalPricing';
 import { parse, format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -102,8 +103,10 @@ export function EditRentalSheet({
     return calculatePickupTime(date, deliveryTime, shift);
   }, [rental?.date, deliveryTime, shift]);
 
-  // Precio total
-  const totalUsd = RentalShiftConfig[shift].priceUsd + deliveryFee;
+  // Precio total con regla de negocio especial
+  const totalUsd = useMemo(() => {
+    return calculateRentalPrice(shift, paymentMethod, deliveryFee);
+  }, [shift, paymentMethod, deliveryFee]);
 
   // Verificar disponibilidad de lavadora (excluyendo el alquiler actual)
   const unavailableMachines = useMemo(() => {
@@ -272,11 +275,57 @@ export function EditRentalSheet({
                   >
                     <span className="text-xs">{config.label}</span>
                     <span className="text-sm font-bold">
-                      ${config.priceUsd}
+                      {s === 'completo' && paymentMethod === 'efectivo' 
+                        ? '$5' 
+                        : `$${config.priceUsd}`
+                      }
                     </span>
                   </Button>
                 );
               })}
+            </div>
+          </div>
+
+          {/* Método de Pago */}
+          <div className="space-y-2">
+            <Label className="text-sm font-medium flex items-center gap-2">
+              <CreditCard className="w-4 h-4" />
+              Método de Pago
+            </Label>
+            <div className="grid grid-cols-3 gap-2">
+              <Button
+                type="button"
+                variant={paymentMethod === 'pago_movil' ? 'default' : 'outline'}
+                onClick={() => setPaymentMethod('pago_movil')}
+                className="h-14 flex flex-col gap-1 p-2"
+              >
+                <Smartphone className="w-5 h-5" />
+                <span className="text-xs">
+                  {PaymentMethodLabels.pago_movil}
+                </span>
+              </Button>
+              <Button
+                type="button"
+                variant={paymentMethod === 'efectivo' ? 'default' : 'outline'}
+                onClick={() => setPaymentMethod('efectivo')}
+                className="h-14 flex flex-col gap-1 p-2"
+              >
+                <Banknote className="w-5 h-5" />
+                <span className="text-xs">{PaymentMethodLabels.efectivo}</span>
+              </Button>
+              <Button
+                type="button"
+                variant={
+                  paymentMethod === 'punto_venta' ? 'default' : 'outline'
+                }
+                onClick={() => setPaymentMethod('punto_venta')}
+                className="h-14 flex flex-col gap-1 p-2"
+              >
+                <CreditCard className="w-5 h-5" />
+                <span className="text-xs">
+                  {PaymentMethodLabels.punto_venta}
+                </span>
+              </Button>
             </div>
           </div>
 
@@ -332,49 +381,6 @@ export function EditRentalSheet({
                   ${fee}
                 </Button>
               ))}
-            </div>
-          </div>
-
-          {/* Método de Pago */}
-          <div className="space-y-2">
-            <Label className="text-sm font-medium flex items-center gap-2">
-              <CreditCard className="w-4 h-4" />
-              Método de Pago
-            </Label>
-            <div className="grid grid-cols-3 gap-2">
-              <Button
-                type="button"
-                variant={paymentMethod === 'pago_movil' ? 'default' : 'outline'}
-                onClick={() => setPaymentMethod('pago_movil')}
-                className="h-14 flex flex-col gap-1 p-2"
-              >
-                <Smartphone className="w-5 h-5" />
-                <span className="text-xs">
-                  {PaymentMethodLabels.pago_movil}
-                </span>
-              </Button>
-              <Button
-                type="button"
-                variant={paymentMethod === 'efectivo' ? 'default' : 'outline'}
-                onClick={() => setPaymentMethod('efectivo')}
-                className="h-14 flex flex-col gap-1 p-2"
-              >
-                <Banknote className="w-5 h-5" />
-                <span className="text-xs">{PaymentMethodLabels.efectivo}</span>
-              </Button>
-              <Button
-                type="button"
-                variant={
-                  paymentMethod === 'punto_venta' ? 'default' : 'outline'
-                }
-                onClick={() => setPaymentMethod('punto_venta')}
-                className="h-14 flex flex-col gap-1 p-2"
-              >
-                <CreditCard className="w-5 h-5" />
-                <span className="text-xs">
-                  {PaymentMethodLabels.punto_venta}
-                </span>
-              </Button>
             </div>
           </div>
 
