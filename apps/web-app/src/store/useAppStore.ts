@@ -313,8 +313,10 @@ export const useAppStore = create<AppState>()(
             customerAddress: r.customers?.address || r.customer_address,
             machineId: r.machine_id,
             shift: r.shift,
-            deliveryTime: r.delivery_time,
-            pickupTime: r.pickup_time,
+            deliveryTime: r.delivery_time
+              ? r.delivery_time.substring(0, 5)
+              : '',
+            pickupTime: r.pickup_time ? r.pickup_time.substring(0, 5) : '',
             pickupDate: r.pickup_date,
             deliveryFee: Number(r.delivery_fee),
             totalUsd: Number(r.total_usd),
@@ -792,9 +794,33 @@ export const useAppStore = create<AppState>()(
       updateRental: async (id, updates) => {
         try {
           const payload: any = {};
+          if (updates.machineId !== undefined)
+            payload.machine_id = updates.machineId;
+          if (updates.shift !== undefined) payload.shift = updates.shift;
+          if (updates.deliveryTime !== undefined)
+            payload.delivery_time = updates.deliveryTime;
+          if (updates.pickupTime !== undefined)
+            payload.pickup_time = updates.pickupTime;
+          if (updates.pickupDate !== undefined)
+            payload.pickup_date = updates.pickupDate;
+          if (updates.deliveryFee !== undefined)
+            payload.delivery_fee = updates.deliveryFee;
+          if (updates.totalUsd !== undefined)
+            payload.total_usd = updates.totalUsd;
+          if (updates.paymentMethod !== undefined)
+            payload.payment_method = updates.paymentMethod;
           if (updates.status !== undefined) payload.status = updates.status;
           if (updates.isPaid !== undefined) payload.is_paid = updates.isPaid;
           if (updates.notes !== undefined) payload.notes = updates.notes;
+          if (updates.customerId !== undefined)
+            payload.customer_id = updates.customerId;
+          if (updates.customerName !== undefined)
+            payload.customer_name = updates.customerName;
+          if (updates.customerPhone !== undefined)
+            payload.customer_phone = updates.customerPhone;
+          if (updates.customerAddress !== undefined)
+            payload.customer_address = updates.customerAddress;
+
           payload.updated_at = new Date().toISOString();
 
           const { error } = await supabase
