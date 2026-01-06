@@ -12,6 +12,7 @@ import {
   Trash2,
   UserPlus,
   Users,
+  Pencil,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -33,10 +34,12 @@ import {
 import { Label } from '@/components/ui/label';
 
 export default function ClientesPage() {
-  const { customers, addCustomer, deleteCustomer } = useAppStore();
+  const { customers, addCustomer, updateCustomer, deleteCustomer } =
+    useAppStore();
   const [search, setSearch] = useState('');
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [showAddSheet, setShowAddSheet] = useState(false);
+  const [editingCustomer, setEditingCustomer] = useState<string | null>(null);
   const [newName, setNewName] = useState('');
   const [newPhone, setNewPhone] = useState('');
   const [newAddress, setNewAddress] = useState('');
@@ -48,25 +51,54 @@ export default function ClientesPage() {
       c.address.toLowerCase().includes(search.toLowerCase())
   );
 
-  const handleAddCustomer = () => {
+  const handleReset = () => {
+    setNewName('');
+    setNewPhone('');
+    setNewAddress('');
+    setEditingCustomer(null);
+  };
+
+  const handleEdit = (customerId: string) => {
+    const customer = customers.find((c) => c.id === customerId);
+    if (customer) {
+      setEditingCustomer(customerId);
+      setNewName(customer.name);
+      setNewPhone(customer.phone || '');
+      setNewAddress(customer.address || '');
+      setShowAddSheet(true);
+    }
+  };
+
+  const handleSaveCustomer = () => {
     if (!newName.trim()) {
       toast.error('El nombre es requerido');
       return;
     }
     (async () => {
       try {
-        await addCustomer({
-          name: newName.trim(),
-          phone: newPhone.trim(),
-          address: newAddress.trim(),
-        });
-        toast.success('Cliente agregado');
+        if (editingCustomer) {
+          await updateCustomer(editingCustomer, {
+            name: newName.trim(),
+            phone: newPhone.trim(),
+            address: newAddress.trim(),
+          });
+          toast.success('Cliente actualizado');
+        } else {
+          await addCustomer({
+            name: newName.trim(),
+            phone: newPhone.trim(),
+            address: newAddress.trim(),
+          });
+          toast.success('Cliente agregado');
+        }
         setShowAddSheet(false);
-        setNewName('');
-        setNewPhone('');
-        setNewAddress('');
+        handleReset();
       } catch (err) {
-        toast.error('Error agregando cliente');
+        toast.error(
+          editingCustomer
+            ? 'Error actualizando cliente'
+            : 'Error agregando cliente'
+        );
       }
     })();
   };
@@ -137,14 +169,24 @@ export default function ClientesPage() {
                         </div>
                       )}
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="text-muted-foreground hover:text-destructive"
-                      onClick={() => setDeleteId(customer.id)}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-muted-foreground hover:text-primary hover:bg-primary/10"
+                        onClick={() => handleEdit(customer.id)}
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                        onClick={() => setDeleteId(customer.id)}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -161,13 +203,30 @@ export default function ClientesPage() {
         <UserPlus className="w-6 h-6" />
       </Button>
 
-      {/* Add Customer Sheet */}
-      <Sheet open={showAddSheet} onOpenChange={setShowAddSheet}>
+      {/* Add/Edit Customer Sheet */}
+      <Sheet
+        open={showAddSheet}
+        onOpenChange={(open) => {
+          if (!open) {
+            handleReset();
+          }
+          setShowAddSheet(open);
+        }}
+      >
         <SheetContent side="bottom" className="rounded-t-3xl">
           <SheetHeader className="pb-4">
             <SheetTitle className="flex items-center gap-2">
-              <UserPlus className="w-5 h-5 text-primary" />
-              Nuevo Cliente
+              {editingCustomer ? (
+                <>
+                  <Pencil className="w-5 h-5 text-primary" />
+                  Editar Cliente
+                </>
+              ) : (
+                <>
+                  <UserPlus className="w-5 h-5 text-primary" />
+                  Nuevo Cliente
+                </>
+              )}
             </SheetTitle>
           </SheetHeader>
 
@@ -201,10 +260,17 @@ export default function ClientesPage() {
               />
             </div>
             <Button
-              onClick={handleAddCustomer}
+              onClick={handleSaveCustomer}
               className="w-full h-12 text-base font-semibold"
             >
-              Guardar Cliente
+              {editingCustomer ? (
+                <>
+                  <Pencil className="w-5 h-5 mr-2" />
+                  Guardar Cambios
+                </>
+              ) : (
+                'Guardar Cliente'
+              )}
             </Button>
           </div>
         </SheetContent>

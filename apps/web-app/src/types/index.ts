@@ -265,4 +265,5 @@ export type AppRoute =
   | 'seguimiento'
   | 'historial-tasas'
   | 'prepagados'
-  | 'deliverys';
+  | 'deliverys'
+  | 'metricas-agua';

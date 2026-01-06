@@ -1,7 +1,6 @@
 import { DollarSign, ArrowLeft } from 'lucide-react';
 import { useAppStore } from '@/store/useAppStore';
-import { useMemo } from 'react';
-import { format } from 'date-fns';
+import { useMemo, useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 
 interface HeaderProps {
@@ -12,16 +11,57 @@ interface HeaderProps {
 }
 
 export function Header({ title, subtitle, showBack, onBack }: HeaderProps) {
-  const { config, sales } = useAppStore();
+  const { config, sales, rentals } = useAppStore();
+  // Estado para forzar actualización cuando cambia el día
+  const [currentDate, setCurrentDate] = useState(() => {
+    const now = new Date();
+    return (
+      now.getFullYear() +
+      '-' +
+      String(now.getMonth() + 1).padStart(2, '0') +
+      '-' +
+      String(now.getDate()).padStart(2, '0')
+    );
+  });
+
+  // Actualizar la fecha cada minuto y verificar si cambió el día
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const now = new Date();
+      const todayStr =
+        now.getFullYear() +
+        '-' +
+        String(now.getMonth() + 1).padStart(2, '0') +
+        '-' +
+        String(now.getDate()).padStart(2, '0');
+      setCurrentDate((prev) => {
+        // Solo actualizar si cambió el día
+        if (prev !== todayStr) {
+          return todayStr;
+        }
+        return prev;
+      });
+    }, 60000); // Verificar cada minuto
+
+    return () => clearInterval(interval);
+  }, []);
 
   const todayEarningsUSD = useMemo(() => {
-    const todayStr = format(new Date(), 'yyyy-MM-dd');
+    // Ventas de agua del día
+    const todaySales = sales.filter((sale) => sale.date === currentDate);
+    const waterToday = todaySales.reduce((sum, sale) => sum + sale.totalBs, 0);
     
-    const todaySales = sales.filter(sale => sale.date === todayStr);
+    // Alquileres del día (convertir USD a Bs y luego a USD para el total)
+    const todayRentals = rentals.filter((rental) => rental.date === currentDate);
+    const rentalTodayBs = todayRentals.reduce(
+      (sum, rental) => sum + rental.totalUsd * config.exchangeRate,
+      0
+    );
     
-    const totalBs = todaySales.reduce((sum, sale) => sum + sale.totalBs, 0);
-    return totalBs / config.exchangeRate;
-  }, [sales, config.exchangeRate]);
+    // Total combinado en Bs, luego convertir a USD
+    const totalToday = waterToday + rentalTodayBs;
+    return totalToday / config.exchangeRate;
+  }, [sales, rentals, config.exchangeRate, currentDate]);
 
   return (
     <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-lg border-b border-border/50 safe-top">

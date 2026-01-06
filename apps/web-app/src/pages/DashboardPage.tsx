@@ -5,6 +5,7 @@ import { SalesChart } from '@/components/dashboard/SalesChart';
 import { RecentSales } from '@/components/dashboard/RecentSales';
 import { useAppStore } from '@/store/useAppStore';
 import { DateSelector } from '@/components/ventas/DateSelector';
+import { Card, CardContent } from '@/components/ui/card';
 import {
   Droplets,
   TrendingUp,
@@ -15,10 +16,15 @@ import {
   Smartphone,
   CreditCard,
   Banknote,
+  BarChart3,
 } from 'lucide-react';
-import { ChartDataPoint, Sale, WasherRental, PrepaidOrder } from '@/types';
+import { ChartDataPoint, Sale, WasherRental, PrepaidOrder, AppRoute } from '@/types';
 
-export function DashboardPage() {
+interface DashboardPageProps {
+  onNavigate?: (route: AppRoute) => void;
+}
+
+export function DashboardPage({ onNavigate }: DashboardPageProps = {}) {
   const { sales, expenses, config, rentals, prepaidOrders } = useAppStore();
   const [currency, setCurrency] = useState<'Bs' | 'USD'>('Bs');
   const [selectedDate, setSelectedDate] = useState<string>(
@@ -308,6 +314,31 @@ export function DashboardPage() {
             className="cursor-pointer hover:bg-muted/50 active:scale-95 transition-all"
           />
         </div>
+
+        {/* Card de métricas de agua */}
+        <Card
+          className="cursor-pointer hover:bg-muted/50 active:scale-95 transition-all border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10"
+          onClick={() => onNavigate?.('metricas-agua')}
+        >
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-primary/20 rounded-full flex items-center justify-center">
+                  <BarChart3 className="w-6 h-6 text-primary" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-foreground">
+                    Métricas de Agua
+                  </h3>
+                  <p className="text-xs text-muted-foreground">
+                    Análisis detallado de ventas
+                  </p>
+                </div>
+              </div>
+              <ArrowLeftRight className="w-5 h-5 text-primary" />
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Resumen por método de pago */}
         <section className="bg-card rounded-2xl border p-5 space-y-4 shadow-sm mb-6">

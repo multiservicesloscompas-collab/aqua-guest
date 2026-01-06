@@ -13,6 +13,7 @@ import { SeguimientoPage } from '@/pages/SeguimientoPage';
 import { ExchangeHistoryPage } from '@/pages/ExchangeHistoryPage';
 import { PrepagadosPage } from '@/pages/PrepagadosPage';
 import { DeliverysPage } from '@/pages/DeliverysPage';
+import { WaterMetricsPage } from '@/pages/WaterMetricsPage';
 import { AppRoute } from '@/types';
 
 const Index = () => {
@@ -27,7 +28,7 @@ const Index = () => {
   const renderPage = () => {
     switch (currentRoute) {
       case 'dashboard':
-        return <DashboardPage />;
+        return <DashboardPage onNavigate={setCurrentRoute} />;
       case 'ventas':
         return <VentasPage />;
       case 'alquiler':
@@ -48,6 +49,8 @@ const Index = () => {
         return <PrepagadosPage />;
       case 'deliverys':
         return <DeliverysPage />;
+      case 'metricas-agua':
+        return <WaterMetricsPage onNavigate={setCurrentRoute} />;
       default:
         return <DashboardPage />;
     }
