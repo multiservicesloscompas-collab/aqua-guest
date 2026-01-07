@@ -16,6 +16,8 @@ import {
   ExchangeRateHistory,
   PrepaidOrder,
   PrepaidStatus,
+  PaymentBalanceTransaction,
+  PaymentBalanceSummary,
 } from '@/types';
 import supabase from '@/lib/supabaseClient';
 import { defaultProducts } from '@/data/products';
@@ -33,6 +35,7 @@ interface AppState {
   expenses: Expense[];
   rentals: WasherRental[];
   prepaidOrders: PrepaidOrder[];
+  paymentBalanceTransactions: PaymentBalanceTransaction[];
 
   // Carrito actual
   cart: CartItem[];
@@ -92,6 +95,18 @@ interface AppState {
   ) => Promise<void>;
   deleteWashingMachine: (id: string) => Promise<void>;
 
+  // Acciones de equilibrio de pagos
+  addPaymentBalanceTransaction: (
+    transaction: Omit<PaymentBalanceTransaction, 'id' | 'createdAt' | 'updatedAt'>
+  ) => Promise<void>;
+  updatePaymentBalanceTransaction: (
+    id: string,
+    updates: Partial<PaymentBalanceTransaction>
+  ) => Promise<void>;
+  deletePaymentBalanceTransaction: (id: string) => Promise<void>;
+  getPaymentBalanceSummary: (date: string) => PaymentBalanceSummary[];
+  loadPaymentBalanceTransactions: () => Promise<void>;
+
   // Utilidades
   setSelectedDate: (date: string) => void;
   getSalesByDate: (date: string) => Sale[];
@@ -120,6 +135,7 @@ export const useAppStore = create<AppState>()(
       expenses: [],
       rentals: [],
       prepaidOrders: [],
+      paymentBalanceTransactions: [],
       cart: [],
       selectedDate: today,
 
@@ -288,6 +304,7 @@ export const useAppStore = create<AppState>()(
             prepaidRes,
             literPricingRes,
             exchangeRatesRes,
+            balanceTransactionsRes,
           ] = await Promise.all([
             supabase.from('customers').select('*'),
             supabase.from('washing_machines').select('*'),
@@ -300,6 +317,7 @@ export const useAppStore = create<AppState>()(
             supabase.from('prepaid_orders').select('*'),
             supabase.from('liter_pricing').select('*'),
             supabase.from('exchange_rates').select('*'),
+            supabase.from('payment_balance_transactions').select('*').order('created_at', { ascending: false }),
           ]);
 
           const customers = customersRes.data || [];
@@ -374,6 +392,18 @@ export const useAppStore = create<AppState>()(
             breakpoint: Number(l.breakpoint),
             price: Number(l.price),
           }));
+          
+          // Process payment balance transactions
+          const paymentBalanceTransactions = (balanceTransactionsRes.data || []).map((t: any) => ({
+            id: t.id,
+            date: t.date,
+            fromMethod: t.from_method,
+            toMethod: t.to_method,
+            amount: Number(t.amount),
+            notes: t.notes,
+            createdAt: t.created_at || new Date().toISOString(),
+            updatedAt: t.updated_at || new Date().toISOString(),
+          }));
           // Process Exchange Rates with explicit logging
           let latestExchangeRate = get().config.exchangeRate;
           let exchangeHistory: ExchangeRateHistory[] =
@@ -416,6 +446,7 @@ export const useAppStore = create<AppState>()(
             sales,
             expenses,
             prepaidOrders: prepaid,
+            paymentBalanceTransactions,
             config: {
               ...state.config,
               literPricing: literPricing.length
@@ -615,16 +646,8 @@ export const useAppStore = create<AppState>()(
             ],
           }));
         } catch (err) {
-          set((state) => ({
-            expenses: [
-              ...state.expenses,
-              {
-                ...expense,
-                id: generateId(),
-                createdAt: new Date().toISOString(),
-              },
-            ],
-          }));
+          console.error('Failed to add expense to Supabase', err);
+          throw err; // Re-throw error to let UI handle it
         }
       },
 
@@ -1234,6 +1257,175 @@ export const useAppStore = create<AppState>()(
         }
       },
 
+      // Acciones de equilibrio de pagos
+      addPaymentBalanceTransaction: async (transaction) => {
+        try {
+          const payload = {
+            date: transaction.date,
+            from_method: transaction.fromMethod,
+            to_method: transaction.toMethod,
+            amount: transaction.amount,
+            notes: transaction.notes,
+          };
+          const { data, error } = await supabase
+            .from('payment_balance_transactions')
+            .insert(payload)
+            .select('*')
+            .single();
+          if (error) throw error;
+
+          const newTransaction: PaymentBalanceTransaction = {
+            id: data.id,
+            date: data.date,
+            fromMethod: data.from_method,
+            toMethod: data.to_method,
+            amount: Number(data.amount),
+            notes: data.notes,
+            createdAt: data.created_at || new Date().toISOString(),
+            updatedAt: data.updated_at || new Date().toISOString(),
+          };
+
+          set((state) => ({
+            paymentBalanceTransactions: [
+              ...state.paymentBalanceTransactions,
+              newTransaction,
+            ],
+          }));
+        } catch (err) {
+          console.error('Failed to add payment balance transaction to Supabase', err);
+          // Fallback local
+          const newTransaction: PaymentBalanceTransaction = {
+            id: generateId(),
+            ...transaction,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          };
+          set((state) => ({
+            paymentBalanceTransactions: [
+              ...state.paymentBalanceTransactions,
+              newTransaction,
+            ],
+          }));
+        }
+      },
+
+      updatePaymentBalanceTransaction: async (id, updates) => {
+        try {
+          const payload: any = {};
+          if (updates.fromMethod !== undefined)
+            payload.from_method = updates.fromMethod;
+          if (updates.toMethod !== undefined)
+            payload.to_method = updates.toMethod;
+          if (updates.amount !== undefined) payload.amount = updates.amount;
+          if (updates.notes !== undefined) payload.notes = updates.notes;
+          if (updates.date !== undefined) payload.date = updates.date;
+          payload.updated_at = new Date().toISOString();
+
+          const { error } = await supabase
+            .from('payment_balance_transactions')
+            .update(payload)
+            .eq('id', id);
+          if (error) throw error;
+
+          set((state) => ({
+            paymentBalanceTransactions: state.paymentBalanceTransactions.map(
+              (transaction) =>
+                transaction.id === id
+                  ? { ...transaction, ...updates, updatedAt: new Date().toISOString() }
+                  : transaction
+            ),
+          }));
+        } catch (err) {
+          console.error('Failed to update payment balance transaction in Supabase', err);
+          // Fallback local
+          set((state) => ({
+            paymentBalanceTransactions: state.paymentBalanceTransactions.map(
+              (transaction) =>
+                transaction.id === id
+                  ? { ...transaction, ...updates, updatedAt: new Date().toISOString() }
+                  : transaction
+            ),
+          }));
+        }
+      },
+
+      deletePaymentBalanceTransaction: async (id) => {
+        try {
+          const { error } = await supabase
+            .from('payment_balance_transactions')
+            .delete()
+            .eq('id', id);
+          if (error) throw error;
+          set((state) => ({
+            paymentBalanceTransactions: state.paymentBalanceTransactions.filter(
+              (transaction) => transaction.id !== id
+            ),
+          }));
+        } catch (err) {
+          console.error('Failed to delete payment balance transaction from Supabase', err);
+          // Fallback local
+          set((state) => ({
+            paymentBalanceTransactions: state.paymentBalanceTransactions.filter(
+              (transaction) => transaction.id !== id
+            ),
+          }));
+        }
+      },
+
+      getPaymentBalanceSummary: (date) => {
+        const { sales, rentals, prepaidOrders, paymentBalanceTransactions, config } = get();
+
+        // Calcular totales originales por método de pago
+        const salesOfDay = sales.filter((s) => s.date === date);
+        const rentalsOfDay = rentals.filter((r) => r.date === date);
+        const prepaidOfDay = prepaidOrders.filter((p) => p.datePaid === date);
+
+        const calculateOriginalTotal = (method: PaymentMethod) => {
+          const salesTotal = salesOfDay
+            .filter((s) => s.paymentMethod === method)
+            .reduce((sum, s) => sum + s.totalBs, 0);
+          const rentalsTotal = rentalsOfDay
+            .filter((r) => r.paymentMethod === method)
+            .reduce((sum, r) => sum + r.totalUsd * config.exchangeRate, 0);
+          const prepaidTotal = prepaidOfDay
+            .filter((p) => p.paymentMethod === method)
+            .reduce((sum, p) => sum + p.amountBs, 0);
+
+          return salesTotal + rentalsTotal + prepaidTotal;
+        };
+
+        // Calcular ajustes por transacciones de equilibrio
+        const balanceTransactionsOfDay = paymentBalanceTransactions.filter(
+          (t) => t.date === date
+        );
+
+        const calculateAdjustments = (method: PaymentMethod) => {
+          return balanceTransactionsOfDay.reduce((adjustment, transaction) => {
+            if (transaction.fromMethod === method) {
+              return adjustment - transaction.amount; // Sale dinero de este método
+            } else if (transaction.toMethod === method) {
+              return adjustment + transaction.amount; // Entra dinero a este método
+            }
+            return adjustment;
+          }, 0);
+        };
+
+        // Generar resumen para cada método de pago
+        const methods: PaymentMethod[] = ['efectivo', 'pago_movil', 'punto_venta'];
+        return methods.map((method) => {
+          const originalTotal = calculateOriginalTotal(method);
+          const adjustments = calculateAdjustments(method);
+          const finalTotal = originalTotal + adjustments;
+
+          return {
+            method,
+            originalTotal,
+            adjustments,
+            finalTotal,
+          } as PaymentBalanceSummary;
+        });
+      },
+
       // Utilidades
       setSelectedDate: (date) => set({ selectedDate: date }),
 
@@ -1247,6 +1439,36 @@ export const useAppStore = create<AppState>()(
 
       getExpensesByDate: (date) =>
         get().expenses.filter((exp) => exp.date === date),
+
+      // Cargar transacciones de equilibrio desde Supabase
+      loadPaymentBalanceTransactions: async () => {
+        try {
+          const { data, error } = await supabase
+            .from('payment_balance_transactions')
+            .select('*')
+            .order('created_at', { ascending: false });
+          
+          if (error) throw error;
+          
+          const transactions = (data || []).map((t: any) => ({
+            id: t.id,
+            date: t.date,
+            fromMethod: t.from_method,
+            toMethod: t.to_method,
+            amount: Number(t.amount),
+            notes: t.notes,
+            createdAt: t.created_at || new Date().toISOString(),
+            updatedAt: t.updated_at || new Date().toISOString(),
+          }));
+
+          set((state) => ({
+            paymentBalanceTransactions: transactions,
+          }));
+        } catch (err) {
+          console.error('Error loading payment balance transactions from Supabase', err);
+          // Keep local state if Supabase fails
+        }
+      },
     }),
     {
       name: 'agua-app-storage',

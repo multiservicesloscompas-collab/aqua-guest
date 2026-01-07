@@ -14,6 +14,7 @@ import { ExchangeHistoryPage } from '@/pages/ExchangeHistoryPage';
 import { PrepagadosPage } from '@/pages/PrepagadosPage';
 import { DeliverysPage } from '@/pages/DeliverysPage';
 import { WaterMetricsPage } from '@/pages/WaterMetricsPage';
+import { PaymentBalancePage } from '@/components/equilibrio-pagos/PaymentBalancePage';
 import { AppRoute } from '@/types';
 
 const Index = () => {
@@ -51,6 +52,8 @@ const Index = () => {
         return <DeliverysPage />;
       case 'metricas-agua':
         return <WaterMetricsPage onNavigate={setCurrentRoute} />;
+      case 'equilibrio-pagos':
+        return <PaymentBalancePage />;
       default:
         return <DashboardPage />;
     }

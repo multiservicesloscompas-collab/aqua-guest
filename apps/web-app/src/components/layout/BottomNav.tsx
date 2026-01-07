@@ -26,6 +26,7 @@ export function BottomNav({
     'config',
     'seguimiento',
     'lavadoras',
+    'equilibrio-pagos',
   ].includes(currentRoute);
 
   return (

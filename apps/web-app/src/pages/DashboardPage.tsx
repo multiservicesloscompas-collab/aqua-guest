@@ -18,14 +18,28 @@ import {
   Banknote,
   BarChart3,
 } from 'lucide-react';
-import { ChartDataPoint, Sale, WasherRental, PrepaidOrder, AppRoute } from '@/types';
+import {
+  ChartDataPoint,
+  Sale,
+  WasherRental,
+  PrepaidOrder,
+  AppRoute,
+  PaymentMethod,
+} from '@/types';
 
 interface DashboardPageProps {
   onNavigate?: (route: AppRoute) => void;
 }
 
 export function DashboardPage({ onNavigate }: DashboardPageProps = {}) {
-  const { sales, expenses, config, rentals, prepaidOrders } = useAppStore();
+  const {
+    sales,
+    expenses,
+    config,
+    rentals,
+    prepaidOrders,
+    paymentBalanceTransactions,
+  } = useAppStore();
   const [currency, setCurrency] = useState<'Bs' | 'USD'>('Bs');
   const [selectedDate, setSelectedDate] = useState<string>(
     new Date().toISOString().split('T')[0]
@@ -113,6 +127,90 @@ export function DashboardPage({ onNavigate }: DashboardPageProps = {}) {
     // Conteo de transacciones (agua + alquileres)
     const transactionsToday = salesToday.length + rentalsToday.length;
 
+    // Calcular totales originales por método de pago (sin ajustes)
+    const originalMethodTotals = {
+      efectivo:
+        salesToday
+          .filter((s: Sale) => s.paymentMethod === 'efectivo')
+          .reduce((sum: number, s: Sale) => sum + s.totalBs, 0) +
+        rentalsToday
+          .filter((r: WasherRental) => r.paymentMethod === 'efectivo')
+          .reduce(
+            (sum: number, r: WasherRental) =>
+              sum + r.totalUsd * config.exchangeRate,
+            0
+          ) +
+        prepaidOrders
+          .filter(
+            (p: PrepaidOrder) =>
+              p.datePaid === selectedDate && p.paymentMethod === 'efectivo'
+          )
+          .reduce((sum: number, p: PrepaidOrder) => sum + p.amountBs, 0),
+      pago_movil:
+        salesToday
+          .filter((s: Sale) => s.paymentMethod === 'pago_movil')
+          .reduce((sum: number, s: Sale) => sum + s.totalBs, 0) +
+        rentalsToday
+          .filter((r: WasherRental) => r.paymentMethod === 'pago_movil')
+          .reduce(
+            (sum: number, r: WasherRental) =>
+              sum + r.totalUsd * config.exchangeRate,
+            0
+          ) +
+        prepaidOrders
+          .filter(
+            (p: PrepaidOrder) =>
+              p.datePaid === selectedDate && p.paymentMethod === 'pago_movil'
+          )
+          .reduce((sum: number, p: PrepaidOrder) => sum + p.amountBs, 0),
+      punto_venta:
+        salesToday
+          .filter((s: Sale) => s.paymentMethod === 'punto_venta')
+          .reduce((sum: number, s: Sale) => sum + s.totalBs, 0) +
+        rentalsToday
+          .filter((r: WasherRental) => r.paymentMethod === 'punto_venta')
+          .reduce(
+            (sum: number, r: WasherRental) =>
+              sum + r.totalUsd * config.exchangeRate,
+            0
+          ) +
+        prepaidOrders
+          .filter(
+            (p: PrepaidOrder) =>
+              p.datePaid === selectedDate && p.paymentMethod === 'punto_venta'
+          )
+          .reduce((sum: number, p: PrepaidOrder) => sum + p.amountBs, 0),
+    };
+
+    // Calcular ajustes por transacciones de equilibrio del día
+    const balanceTransactionsForDay = paymentBalanceTransactions.filter(
+      (t: any) => t.date === selectedDate
+    );
+
+    const calculateAdjustments = (method: PaymentMethod) => {
+      return balanceTransactionsForDay.reduce(
+        (adjustment: number, transaction: any) => {
+          if (transaction.fromMethod === method) {
+            return adjustment - transaction.amount; // Sale dinero de este método
+          } else if (transaction.toMethod === method) {
+            return adjustment + transaction.amount; // Entra dinero a este método
+          }
+          return adjustment;
+        },
+        0
+      );
+    };
+
+    // Calcular totales finales con ajustes
+    const methodTotals = {
+      efectivo:
+        originalMethodTotals.efectivo + calculateAdjustments('efectivo'),
+      pago_movil:
+        originalMethodTotals.pago_movil + calculateAdjustments('pago_movil'),
+      punto_venta:
+        originalMethodTotals.punto_venta + calculateAdjustments('punto_venta'),
+    };
+
     return {
       totalToday,
       totalTodayUsd: totalToday / config.exchangeRate,
@@ -129,65 +227,15 @@ export function DashboardPage({ onNavigate }: DashboardPageProps = {}) {
       netWeekUsd: (totalWeek - expenseWeekTotal) / config.exchangeRate,
       netMonth: totalMonth - expenseMonthTotal,
       netMonthUsd: (totalMonth - expenseMonthTotal) / config.exchangeRate,
-      methodTotals: {
-        efectivo:
-          salesToday
-            .filter((s: Sale) => s.paymentMethod === 'efectivo')
-            .reduce((sum: number, s: Sale) => sum + s.totalBs, 0) +
-          rentalsToday
-            .filter((r: WasherRental) => r.paymentMethod === 'efectivo')
-            .reduce(
-              (sum: number, r: WasherRental) =>
-                sum + r.totalUsd * config.exchangeRate,
-              0
-            ) +
-          prepaidOrders
-            .filter(
-              (p: PrepaidOrder) =>
-                p.datePaid === selectedDate && p.paymentMethod === 'efectivo'
-            )
-            .reduce((sum: number, p: PrepaidOrder) => sum + p.amountBs, 0),
-        pago_movil:
-          salesToday
-            .filter((s: Sale) => s.paymentMethod === 'pago_movil')
-            .reduce((sum: number, s: Sale) => sum + s.totalBs, 0) +
-          rentalsToday
-            .filter((r: WasherRental) => r.paymentMethod === 'pago_movil')
-            .reduce(
-              (sum: number, r: WasherRental) =>
-                sum + r.totalUsd * config.exchangeRate,
-              0
-            ) +
-          prepaidOrders
-            .filter(
-              (p: PrepaidOrder) =>
-                p.datePaid === selectedDate && p.paymentMethod === 'pago_movil'
-            )
-            .reduce((sum: number, p: PrepaidOrder) => sum + p.amountBs, 0),
-        punto_venta:
-          salesToday
-            .filter((s: Sale) => s.paymentMethod === 'punto_venta')
-            .reduce((sum: number, s: Sale) => sum + s.totalBs, 0) +
-          rentalsToday
-            .filter((r: WasherRental) => r.paymentMethod === 'punto_venta')
-            .reduce(
-              (sum: number, r: WasherRental) =>
-                sum + r.totalUsd * config.exchangeRate,
-              0
-            ) +
-          prepaidOrders
-            .filter(
-              (p: PrepaidOrder) =>
-                p.datePaid === selectedDate && p.paymentMethod === 'punto_venta'
-            )
-            .reduce((sum: number, p: PrepaidOrder) => sum + p.amountBs, 0),
-      },
+      methodTotals,
+      originalMethodTotals, // Para referencia en el dashboard
     };
   }, [
     sales,
     expenses,
     rentals,
     prepaidOrders,
+    paymentBalanceTransactions, // Agregar esta dependencia
     selectedDate,
     config.exchangeRate,
   ]);
@@ -447,6 +495,31 @@ export function DashboardPage({ onNavigate }: DashboardPageProps = {}) {
             </div>
           </div>
         </section>
+
+        {/* Card de equilibrio de pagos */}
+        <Card
+          className="cursor-pointer hover:bg-muted/50 active:scale-95 transition-all border-green-500/20 bg-gradient-to-br from-green-500/5 to-green-500/10"
+          onClick={() => onNavigate?.('equilibrio-pagos')}
+        >
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-green-500/20 rounded-full flex items-center justify-center">
+                  <ArrowLeftRight className="w-6 h-6 text-green-600" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-foreground">
+                    Equilibrar Pagos
+                  </h3>
+                  <p className="text-xs text-muted-foreground">
+                    Transferir entre métodos de pago
+                  </p>
+                </div>
+              </div>
+              <ArrowLeftRight className="w-5 h-5 text-green-600" />
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Ventas recientes */}
         <RecentSales sales={selectedSales} />

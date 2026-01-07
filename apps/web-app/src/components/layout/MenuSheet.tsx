@@ -1,5 +1,5 @@
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { Users, TrendingDown, Settings, WashingMachine, ChevronRight, ClipboardList, Droplets, Truck } from 'lucide-react';
+import { Users, TrendingDown, Settings, WashingMachine, ChevronRight, ClipboardList, Droplets, Truck, ArrowLeftRight } from 'lucide-react';
 import { AppRoute } from '@/types';
 import { cn } from '@/lib/utils';
 
@@ -11,6 +11,12 @@ interface MenuSheetProps {
 }
 
 const menuItems: { route: AppRoute; label: string; description: string; icon: typeof Users }[] = [
+  { 
+    route: 'equilibrio-pagos', 
+    label: 'Equilibrar Pagos', 
+    description: 'Transferir entre métodos de pago',
+    icon: ArrowLeftRight 
+  },
   { 
     route: 'prepagados', 
     label: 'Agua Prepagada', 

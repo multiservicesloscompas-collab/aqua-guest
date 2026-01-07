@@ -253,6 +253,30 @@ export interface PrepaidOrder {
   updatedAt: string;
 }
 
+// ============================================
+// EQUILIBRIO DE TIPOS DE PAGO
+// ============================================
+
+// Transacción de equilibrio entre métodos de pago
+export interface PaymentBalanceTransaction {
+  id: string;
+  date: string; // YYYY-MM-DD
+  fromMethod: PaymentMethod; // Método de pago origen
+  toMethod: PaymentMethod; // Método de pago destino
+  amount: number; // Monto en Bolívares
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Resumen de equilibrio por método de pago
+export interface PaymentBalanceSummary {
+  method: PaymentMethod;
+  originalTotal: number; // Total de transacciones reales
+  adjustments: number; // Ajustes netos (+/-)
+  finalTotal: number; // Total después de ajustes
+}
+
 // Navegación
 export type AppRoute =
   | 'dashboard'
@@ -266,4 +290,5 @@ export type AppRoute =
   | 'historial-tasas'
   | 'prepagados'
   | 'deliverys'
-  | 'metricas-agua';
+  | 'metricas-agua'
+  | 'equilibrio-pagos';
