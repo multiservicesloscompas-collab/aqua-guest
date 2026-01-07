@@ -34,7 +34,7 @@ export function PaymentBalancePage() {
 
   const balanceSummary = useMemo(() => {
     return getPaymentBalanceSummary(selectedDate);
-  }, [selectedDate, getPaymentBalanceSummary]);
+  }, [selectedDate, getPaymentBalanceSummary, paymentBalanceTransactions]);
 
   const transactionsForDate = useMemo(() => {
     return paymentBalanceTransactions
