@@ -754,7 +754,7 @@ export const useAppStore = create<AppState>()(
           };
           set((state) => ({ rentals: [...state.rentals, newRental] }));
 
-          // Save customer locally if provided and not exists
+          // Save customer locally if provided and not exists, then update rental with customer ID
           if (!rental.customerId && rental.customerName) {
             const exists = get().customers.find(
               (c) => c.name.toLowerCase() === rental.customerName.toLowerCase()
@@ -771,17 +771,46 @@ export const useAppStore = create<AppState>()(
                   .select('*')
                   .single();
                 if (!cerr && cdata) {
-                  set((state) => ({
-                    customers: [
-                      ...state.customers,
-                      {
-                        id: cdata.id,
-                        name: cdata.name,
-                        phone: cdata.phone,
-                        address: cdata.address,
-                      },
-                    ],
-                  }));
+                  // Update the rental with the new customer ID
+                  const { error: updateError } = await supabase
+                    .from('washer_rentals')
+                    .update({ customer_id: cdata.id })
+                    .eq('id', newRental.id);
+                  
+                  if (!updateError) {
+                    newRental.customerId = cdata.id;
+                    // Update local state with the customer ID
+                    set((state) => ({
+                      rentals: state.rentals.map((r) =>
+                        r.id === newRental.id
+                          ? { ...r, customerId: cdata.id }
+                          : r
+                      ),
+                      customers: [
+                        ...state.customers,
+                        {
+                          id: cdata.id,
+                          name: cdata.name,
+                          phone: cdata.phone,
+                          address: cdata.address,
+                        },
+                      ],
+                    }));
+                  } else {
+                    console.error('Failed to update rental with customer ID:', updateError);
+                    // Still add customer to local state
+                    set((state) => ({
+                      customers: [
+                        ...state.customers,
+                        {
+                          id: cdata.id,
+                          name: cdata.name,
+                          phone: cdata.phone,
+                          address: cdata.address,
+                        },
+                      ],
+                    }));
+                  }
                 } else {
                   set((state) => ({
                     customers: [
@@ -1295,19 +1324,7 @@ export const useAppStore = create<AppState>()(
           }));
         } catch (err) {
           console.error('Failed to add payment balance transaction to Supabase', err);
-          // Fallback local
-          const newTransaction: PaymentBalanceTransaction = {
-            id: generateId(),
-            ...transaction,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          };
-          set((state) => ({
-            paymentBalanceTransactions: [
-              ...state.paymentBalanceTransactions,
-              newTransaction,
-            ],
-          }));
+          throw err; // Lanzar el error para que el componente lo maneje
         }
       },
 

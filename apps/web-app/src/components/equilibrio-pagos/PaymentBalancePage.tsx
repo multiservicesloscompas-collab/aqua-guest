@@ -11,6 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeftRight, Plus, Trash2, Edit2, Save, X } from 'lucide-react';
 import { DateSelector } from '@/components/ventas/DateSelector';
+import { toast } from 'sonner';
 
 export function PaymentBalancePage() {
   const { 
@@ -45,17 +46,18 @@ export function PaymentBalancePage() {
 
   const handleAddTransaction = async () => {
     if (!formData.fromMethod || !formData.toMethod || !formData.amount) {
+      toast.error('Completa todos los campos requeridos');
       return;
     }
 
     if (formData.fromMethod === formData.toMethod) {
-      alert('Los métodos de pago origen y destino deben ser diferentes');
+      toast.error('Los métodos de pago origen y destino deben ser diferentes');
       return;
     }
 
     const amount = parseFloat(formData.amount);
     if (isNaN(amount) || amount <= 0) {
-      alert('El monto debe ser un número positivo');
+      toast.error('El monto debe ser un número positivo');
       return;
     }
 
@@ -91,25 +93,28 @@ export function PaymentBalancePage() {
         notes: ''
       });
       setShowAddForm(false);
+      
+      toast.success('Transferencia registrada exitosamente');
     } catch (error) {
       console.error('Error adding transaction:', error);
-      alert('Error al agregar la transacción');
+      toast.error('No se pudo registrar la transferencia. Intenta nuevamente.');
     }
   };
 
   const handleUpdateTransaction = async (id: string) => {
     if (!formData.fromMethod || !formData.toMethod || !formData.amount) {
+      toast.error('Completa todos los campos requeridos');
       return;
     }
 
     if (formData.fromMethod === formData.toMethod) {
-      alert('Los métodos de pago origen y destino deben ser diferentes');
+      toast.error('Los métodos de pago origen y destino deben ser diferentes');
       return;
     }
 
     const amount = parseFloat(formData.amount);
     if (isNaN(amount) || amount <= 0) {
-      alert('El monto debe ser un número positivo');
+      toast.error('El monto debe ser un número positivo');
       return;
     }
 
@@ -144,9 +149,11 @@ export function PaymentBalancePage() {
         notes: ''
       });
       setEditingTransaction(null);
+      
+      toast.success('Transferencia actualizada exitosamente');
     } catch (error) {
       console.error('Error updating transaction:', error);
-      alert('Error al actualizar la transacción');
+      toast.error('No se pudo actualizar la transferencia. Intenta nuevamente.');
     }
   };
 
@@ -154,9 +161,10 @@ export function PaymentBalancePage() {
     if (confirm('¿Está seguro de eliminar esta transacción de equilibrio?')) {
       try {
         await deletePaymentBalanceTransaction(id);
+        toast.success('Transferencia eliminada exitosamente');
       } catch (error) {
         console.error('Error deleting transaction:', error);
-        alert('Error al eliminar la transacción');
+        toast.error('No se pudo eliminar la transferencia. Intenta nuevamente.');
       }
     }
   };

@@ -111,13 +111,18 @@ export function EditRentalSheet({
   // Verificar disponibilidad de lavadora (excluyendo el alquiler actual)
   const unavailableMachines = useMemo(() => {
     if (!rental) return [];
+    
     return rentals
-      .filter(
-        (r) =>
-          r.date === rental.date &&
-          r.status !== 'finalizado' &&
-          r.id !== rental.id
-      )
+      .filter((r) => {
+        // Excluir el alquiler actual que se está editando
+        if (r.id === rental.id) return false;
+        
+        // Si el alquiler está finalizado, no afecta la disponibilidad
+        if (r.status === 'finalizado') return false;
+        
+        // Cualquier alquiler activo (agendado o enviado) hace que la lavadora no esté disponible
+        return true;
+      })
       .map((r) => r.machineId);
   }, [rentals, rental]);
 

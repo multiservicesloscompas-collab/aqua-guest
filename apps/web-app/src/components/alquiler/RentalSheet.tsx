@@ -115,9 +115,15 @@ export function RentalSheet({ open, onOpenChange }: RentalSheetProps) {
   // Verificar disponibilidad de lavadora
   const unavailableMachines = useMemo(() => {
     return rentals
-      .filter((r) => r.date === selectedDate && r.status !== 'finalizado')
+      .filter((r) => {
+        // Si el alquiler está finalizado, no afecta la disponibilidad
+        if (r.status === 'finalizado') return false;
+        
+        // Cualquier alquiler activo (agendado o enviado) hace que la lavadora no esté disponible
+        return true;
+      })
       .map((r) => r.machineId);
-  }, [rentals, selectedDate]);
+  }, [rentals]);
 
   // Autocompletar cliente
   const handleCustomerSelect = (customerId: string) => {
