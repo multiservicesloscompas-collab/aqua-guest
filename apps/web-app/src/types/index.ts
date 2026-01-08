@@ -264,7 +264,9 @@ export interface PaymentBalanceTransaction {
   date: string; // YYYY-MM-DD
   fromMethod: PaymentMethod; // Método de pago origen
   toMethod: PaymentMethod; // Método de pago destino
-  amount: number; // Monto en Bolívares
+  amount: number; // Monto en Bolívares (para compatibilidad)
+  amountBs?: number; // Monto en Bolívares
+  amountUsd?: number; // Monto en USD
   notes?: string;
   createdAt: string;
   updatedAt: string;

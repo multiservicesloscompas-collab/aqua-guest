@@ -400,6 +400,8 @@ export const useAppStore = create<AppState>()(
             fromMethod: t.from_method,
             toMethod: t.to_method,
             amount: Number(t.amount),
+            amountBs: t.amount_bs ? Number(t.amount_bs) : Number(t.amount),
+            amountUsd: t.amount_usd ? Number(t.amount_usd) : undefined,
             notes: t.notes,
             createdAt: t.created_at || new Date().toISOString(),
             updatedAt: t.updated_at || new Date().toISOString(),
@@ -1402,16 +1404,32 @@ export const useAppStore = create<AppState>()(
         const calculateAdjustments = (method: PaymentMethod) => {
           return balanceTransactionsOfDay.reduce((adjustment, transaction) => {
             if (transaction.fromMethod === method) {
-              return adjustment - transaction.amount; // Sale dinero de este método
+              // Sale dinero de este método
+              if (method === 'divisa') {
+                // Si sale de divisa, restar el monto en USD convertido a Bs
+                const usdAmount = transaction.amountUsd || transaction.amount / config.exchangeRate;
+                return adjustment - (usdAmount * config.exchangeRate);
+              } else {
+                // Si sale de Bs, restar el monto en Bs directamente
+                return adjustment - transaction.amount;
+              }
             } else if (transaction.toMethod === method) {
-              return adjustment + transaction.amount; // Entra dinero a este método
+              // Entra dinero a este método
+              if (method === 'divisa') {
+                // Si entra a divisa, sumar el monto en USD convertido a Bs
+                const usdAmount = transaction.amountUsd || transaction.amount / config.exchangeRate;
+                return adjustment + (usdAmount * config.exchangeRate);
+              } else {
+                // Si entra a Bs, sumar el monto en Bs directamente
+                return adjustment + transaction.amount;
+              }
             }
             return adjustment;
           }, 0);
         };
 
         // Generar resumen para cada método de pago
-        const methods: PaymentMethod[] = ['efectivo', 'pago_movil', 'punto_venta'];
+        const methods: PaymentMethod[] = ['efectivo', 'pago_movil', 'punto_venta', 'divisa'];
         return methods.map((method) => {
           const originalTotal = calculateOriginalTotal(method);
           const adjustments = calculateAdjustments(method);
@@ -1456,6 +1474,8 @@ export const useAppStore = create<AppState>()(
             fromMethod: t.from_method,
             toMethod: t.to_method,
             amount: Number(t.amount),
+            amountBs: t.amount_bs ? Number(t.amount_bs) : Number(t.amount),
+            amountUsd: t.amount_usd ? Number(t.amount_usd) : undefined,
             notes: t.notes,
             createdAt: t.created_at || new Date().toISOString(),
             updatedAt: t.updated_at || new Date().toISOString(),

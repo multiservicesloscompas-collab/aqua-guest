@@ -20,7 +20,8 @@ export function PaymentBalancePage() {
     deletePaymentBalanceTransaction,
     getPaymentBalanceSummary,
     selectedDate,
-    setSelectedDate
+    setSelectedDate,
+    config
   } = useAppStore();
   
   const [showAddForm, setShowAddForm] = useState(false);
@@ -58,12 +59,27 @@ export function PaymentBalancePage() {
       return;
     }
 
+    // Obtener tasa de cambio actual
+    const exchangeRate = config.exchangeRate;
+    
+    // Calcular montos según los métodos de pago involucrados
+    let amountBs = amount;
+    let amountUsd = 0;
+    
+    if (formData.fromMethod === 'divisa' || formData.toMethod === 'divisa') {
+      // Si involucra divisas, el monto ingresado se considera en USD
+      amountUsd = amount;
+      amountBs = amount * exchangeRate;
+    }
+
     try {
       await addPaymentBalanceTransaction({
         date: selectedDate,
         fromMethod: formData.fromMethod,
         toMethod: formData.toMethod,
-        amount,
+        amount: amountBs, // Mantener compatibilidad
+        amountBs,
+        amountUsd: amountUsd || undefined,
         notes: formData.notes
       });
 
@@ -97,11 +113,26 @@ export function PaymentBalancePage() {
       return;
     }
 
+    // Obtener tasa de cambio actual
+    const exchangeRate = config.exchangeRate;
+    
+    // Calcular montos según los métodos de pago involucrados
+    let amountBs = amount;
+    let amountUsd = 0;
+    
+    if (formData.fromMethod === 'divisa' || formData.toMethod === 'divisa') {
+      // Si involucra divisas, el monto ingresado se considera en USD
+      amountUsd = amount;
+      amountBs = amount * exchangeRate;
+    }
+
     try {
       await updatePaymentBalanceTransaction(id, {
         fromMethod: formData.fromMethod,
         toMethod: formData.toMethod,
-        amount,
+        amount: amountBs, // Mantener compatibilidad
+        amountBs,
+        amountUsd: amountUsd || undefined,
         notes: formData.notes
       });
 
@@ -132,10 +163,18 @@ export function PaymentBalancePage() {
 
   const startEdit = (transaction: PaymentBalanceTransaction) => {
     setEditingTransaction(transaction.id);
+    
+    // Determinar el monto a mostrar en el formulario
+    let displayAmount = transaction.amount;
+    if (transaction.amountUsd) {
+      // Si la transacción tiene monto en USD, mostrar ese valor
+      displayAmount = transaction.amountUsd;
+    }
+    
     setFormData({
       fromMethod: transaction.fromMethod,
       toMethod: transaction.toMethod,
-      amount: transaction.amount.toString(),
+      amount: displayAmount.toString(),
       notes: transaction.notes || ''
     });
   };
@@ -158,6 +197,8 @@ export function PaymentBalancePage() {
         return '📱';
       case 'punto_venta':
         return '💳';
+      case 'divisa':
+        return '💲';
       default:
         return '💰';
     }
@@ -171,6 +212,8 @@ export function PaymentBalancePage() {
         return 'bg-blue-500/10 text-blue-600 border-blue-500/20';
       case 'punto_venta':
         return 'bg-purple-500/10 text-purple-600 border-purple-500/20';
+      case 'divisa':
+        return 'bg-green-500/10 text-green-600 border-green-500/20';
       default:
         return 'bg-gray-500/10 text-gray-600 border-gray-500/20';
     }
@@ -203,12 +246,18 @@ export function PaymentBalancePage() {
                     <div>
                       <p className="font-medium">{PaymentMethodLabels[summary.method]}</p>
                       <p className="text-xs text-muted-foreground">
-                        Original: Bs {summary.originalTotal.toFixed(2)}
+                        Original: {summary.method === 'divisa' 
+                          ? `$${(summary.originalTotal / config.exchangeRate).toFixed(2)}`
+                          : `Bs ${summary.originalTotal.toFixed(2)}`
+                        }
                       </p>
                       {summary.adjustments !== 0 && (
                         <p className="text-xs">
                           <span className={summary.adjustments > 0 ? 'text-green-600' : 'text-red-600'}>
-                            Ajuste: {summary.adjustments > 0 ? '+' : ''}Bs {summary.adjustments.toFixed(2)}
+                            Ajuste: {summary.adjustments > 0 ? '+' : ''}{summary.method === 'divisa' 
+                              ? `$${(summary.adjustments / config.exchangeRate).toFixed(2)}`
+                              : `Bs ${summary.adjustments.toFixed(2)}`
+                            }
                           </span>
                         </p>
                       )}
@@ -216,13 +265,16 @@ export function PaymentBalancePage() {
                   </div>
                   <div className="text-right">
                     <p className="font-bold text-lg">
-                      Bs {summary.finalTotal.toFixed(2)}
+                      {summary.method === 'divisa' 
+                        ? `$${(summary.finalTotal / config.exchangeRate).toFixed(2)}`
+                        : `Bs ${summary.finalTotal.toFixed(2)}`
+                      }
                     </p>
                     <Badge 
                       variant="outline" 
                       className={getMethodColor(summary.method)}
                     >
-                      Final
+                      {summary.method === 'divisa' ? 'USD' : 'Bs'}
                     </Badge>
                   </div>
                 </div>
@@ -295,16 +347,28 @@ export function PaymentBalancePage() {
                 </div>
 
                 <div>
-                  <Label htmlFor="amount">Monto (Bs)</Label>
+                  <Label htmlFor="amount">
+                    {formData.fromMethod === 'divisa' || formData.toMethod === 'divisa' 
+                      ? 'Monto (USD)' 
+                      : 'Monto (Bs)'}
+                  </Label>
                   <Input
                     id="amount"
                     type="number"
                     step="0.01"
                     min="0.01"
-                    placeholder="0.00"
+                    placeholder={formData.fromMethod === 'divisa' || formData.toMethod === 'divisa' ? '0.00 USD' : '0.00 Bs'}
                     value={formData.amount}
                     onChange={(e) => setFormData(prev => ({ ...prev, amount: e.target.value }))}
                   />
+                  {(formData.fromMethod === 'divisa' || formData.toMethod === 'divisa') && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {formData.fromMethod === 'divisa' && formData.toMethod === 'divisa' 
+                        ? 'Transferencia entre divisas'
+                        : `1 USD = ${config.exchangeRate.toFixed(2)} Bs`
+                      }
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -365,7 +429,10 @@ export function PaymentBalancePage() {
                           {PaymentMethodLabels[transaction.fromMethod]} → {PaymentMethodLabels[transaction.toMethod]}
                         </p>
                         <p className="text-sm text-muted-foreground">
-                          Bs {transaction.amount.toFixed(2)}
+                          {transaction.amountUsd 
+                            ? `$${transaction.amountUsd.toFixed(2)}`
+                            : `Bs ${transaction.amount.toFixed(2)}`
+                          }
                         </p>
                         {transaction.notes && (
                           <p className="text-xs text-muted-foreground">{transaction.notes}</p>
