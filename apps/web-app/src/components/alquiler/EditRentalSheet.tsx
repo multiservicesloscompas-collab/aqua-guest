@@ -275,10 +275,9 @@ export function EditRentalSheet({
                   >
                     <span className="text-xs">{config.label}</span>
                     <span className="text-sm font-bold">
-                      {s === 'completo' && paymentMethod === 'efectivo' 
-                        ? '$5' 
-                        : `$${config.priceUsd}`
-                      }
+                      {s === 'completo' && paymentMethod === 'efectivo'
+                        ? '$5'
+                        : `$${config.priceUsd}`}
                     </span>
                   </Button>
                 );
@@ -292,7 +291,7 @@ export function EditRentalSheet({
               <CreditCard className="w-4 h-4" />
               Método de Pago
             </Label>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 gap-2">
               <Button
                 type="button"
                 variant={paymentMethod === 'pago_movil' ? 'default' : 'outline'}
@@ -313,6 +312,8 @@ export function EditRentalSheet({
                 <Banknote className="w-5 h-5" />
                 <span className="text-xs">{PaymentMethodLabels.efectivo}</span>
               </Button>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
               <Button
                 type="button"
                 variant={
@@ -325,6 +326,15 @@ export function EditRentalSheet({
                 <span className="text-xs">
                   {PaymentMethodLabels.punto_venta}
                 </span>
+              </Button>
+              <Button
+                type="button"
+                variant={paymentMethod === 'divisa' ? 'default' : 'outline'}
+                onClick={() => setPaymentMethod('divisa')}
+                className="h-14 flex flex-col gap-1 p-2"
+              >
+                <DollarSign className="w-5 h-5" />
+                <span className="text-xs">{PaymentMethodLabels.divisa}</span>
               </Button>
             </div>
           </div>

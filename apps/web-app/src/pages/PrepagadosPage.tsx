@@ -422,6 +422,7 @@ export function PrepagadosPage() {
                   <SelectItem value="pago_movil">Pago Móvil</SelectItem>
                   <SelectItem value="efectivo">Efectivo</SelectItem>
                   <SelectItem value="punto_venta">Punto de Venta</SelectItem>
+                  <SelectItem value="divisa">Divisa</SelectItem>
                 </SelectContent>
               </Select>
             </div>

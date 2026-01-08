@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useAppStore } from '@/store/useAppStore';
 import { PaymentMethod, PaymentMethodLabels } from '@/types';
-import { Trash2, Smartphone, Banknote, CreditCard, Check } from 'lucide-react';
+import { Trash2, Smartphone, Banknote, CreditCard, Check, DollarSign } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -22,6 +22,7 @@ const paymentOptions: { method: PaymentMethod; icon: typeof Smartphone }[] = [
   { method: 'pago_movil', icon: Smartphone },
   { method: 'efectivo', icon: Banknote },
   { method: 'punto_venta', icon: CreditCard },
+  { method: 'divisa', icon: DollarSign },
 ];
 
 export function CartSheet({ open, onOpenChange }: CartSheetProps) {

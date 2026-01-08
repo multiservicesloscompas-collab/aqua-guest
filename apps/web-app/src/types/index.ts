@@ -25,12 +25,13 @@ export interface CartItem {
 }
 
 // Método de pago
-export type PaymentMethod = 'pago_movil' | 'efectivo' | 'punto_venta';
+export type PaymentMethod = 'pago_movil' | 'efectivo' | 'punto_venta' | 'divisa';
 
 export const PaymentMethodLabels: Record<PaymentMethod, string> = {
   pago_movil: 'Pago Móvil',
   efectivo: 'Efectivo',
   punto_venta: 'Punto de Venta',
+  divisa: 'Divisa',
 };
 
 // Registro de venta completo

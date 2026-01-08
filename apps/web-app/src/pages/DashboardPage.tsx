@@ -180,6 +180,23 @@ export function DashboardPage({ onNavigate }: DashboardPageProps = {}) {
               p.datePaid === selectedDate && p.paymentMethod === 'punto_venta'
           )
           .reduce((sum: number, p: PrepaidOrder) => sum + p.amountBs, 0),
+      divisa:
+        salesToday
+          .filter((s: Sale) => s.paymentMethod === 'divisa')
+          .reduce((sum: number, s: Sale) => sum + s.totalBs, 0) +
+        rentalsToday
+          .filter((r: WasherRental) => r.paymentMethod === 'divisa')
+          .reduce(
+            (sum: number, r: WasherRental) =>
+              sum + r.totalUsd * config.exchangeRate,
+            0
+          ) +
+        prepaidOrders
+          .filter(
+            (p: PrepaidOrder) =>
+              p.datePaid === selectedDate && p.paymentMethod === 'divisa'
+          )
+          .reduce((sum: number, p: PrepaidOrder) => sum + p.amountBs, 0),
     };
 
     // Calcular ajustes por transacciones de equilibrio del día
@@ -209,6 +226,8 @@ export function DashboardPage({ onNavigate }: DashboardPageProps = {}) {
         originalMethodTotals.pago_movil + calculateAdjustments('pago_movil'),
       punto_venta:
         originalMethodTotals.punto_venta + calculateAdjustments('punto_venta'),
+      divisa:
+        originalMethodTotals.divisa + calculateAdjustments('divisa'),
     };
 
     return {
@@ -489,6 +508,37 @@ export function DashboardPage({ onNavigate }: DashboardPageProps = {}) {
                   {(currency === 'Bs'
                     ? stats.methodTotals.punto_venta / config.exchangeRate
                     : stats.methodTotals.punto_venta
+                  ).toFixed(2)}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between p-3 rounded-xl bg-green-500/5 border border-green-500/10">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-green-500/10 rounded-lg">
+                  <DollarSign className="w-5 h-5 text-green-600" />
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-green-600/70 uppercase tracking-wider">
+                    Divisa
+                  </p>
+                  <p className="text-lg font-bold text-green-950">
+                    {currency === 'Bs' ? 'Bs ' : '$ '}
+                    {(currency === 'Bs'
+                      ? stats.methodTotals.divisa
+                      : stats.methodTotals.divisa / config.exchangeRate
+                    ).toLocaleString('es-VE', {
+                      minimumFractionDigits: 2,
+                    })}
+                  </p>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="text-xs font-medium text-muted-foreground">
+                  {currency === 'Bs' ? '$' : 'Bs'}
+                  {(currency === 'Bs'
+                    ? stats.methodTotals.divisa / config.exchangeRate
+                    : stats.methodTotals.divisa
                   ).toFixed(2)}
                 </p>
               </div>

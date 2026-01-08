@@ -332,6 +332,9 @@ export function EgresosPage() {
                   <SelectItem value="pago_movil">
                     {PaymentMethodLabels.pago_movil}
                   </SelectItem>
+                  <SelectItem value="divisa">
+                    {PaymentMethodLabels.divisa}
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
