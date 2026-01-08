@@ -22,10 +22,12 @@ import {
   Smartphone,
   Banknote,
   CreditCard,
+  Plus,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatPickupInfo } from '@/utils/rentalSchedule';
 import { useAppStore } from '@/store/useAppStore';
+import { canExtendRental } from '@/utils/rentalExtensions';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -43,6 +45,7 @@ interface RentalCardProps {
   onPaymentToggle: (id: string) => void;
   onEdit?: (rental: WasherRental) => void;
   onDelete?: (id: string) => void;
+  onExtend?: (rental: WasherRental) => void;
   onClick?: () => void;
 }
 
@@ -70,6 +73,7 @@ export function RentalCard({
   onPaymentToggle,
   onEdit,
   onDelete,
+  onExtend,
   onClick,
 }: RentalCardProps) {
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
@@ -119,6 +123,11 @@ export function RentalCard({
   const handleEditClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     onEdit?.(rental);
+  };
+
+  const handleExtendClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onExtend?.(rental);
   };
 
   const handleDeleteClick = (e: React.MouseEvent) => {
@@ -228,6 +237,17 @@ export function RentalCard({
           </div>
 
           <div className="flex items-center gap-1">
+            {canExtendRental(rental) && (
+              <Button
+                size="icon"
+                variant="ghost"
+                onClick={handleExtendClick}
+                className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/10"
+                title="Extender tiempo"
+              >
+                <Plus className="w-4 h-4" />
+              </Button>
+            )}
             <Button
               size="icon"
               variant="ghost"

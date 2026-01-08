@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 import { RentalCard } from './RentalCard';
 import { EditRentalSheet } from './EditRentalSheet';
+import { ExtensionDialog } from './ExtensionDialog';
 import { WashingMachine } from 'lucide-react';
 import { RentalStatus, WasherRental } from '@/types';
 import { toast } from 'sonner';
@@ -11,6 +12,8 @@ export function RentalList() {
   const rentals = getRentalsByDate(selectedDate);
   const [editingRental, setEditingRental] = useState<WasherRental | null>(null);
   const [editSheetOpen, setEditSheetOpen] = useState(false);
+  const [extensionDialogOpen, setExtensionDialogOpen] = useState(false);
+  const [selectedRental, setSelectedRental] = useState<WasherRental | null>(null);
   
   const handleStatusChange = (id: string, status: RentalStatus) => {
     updateRental(id, { status });
@@ -31,6 +34,15 @@ export function RentalList() {
   const handleDelete = (id: string) => {
     deleteRental(id);
     toast.success('Alquiler eliminado');
+  };
+
+  const handleExtendRental = (rental: WasherRental) => {
+    setSelectedRental(rental);
+    setExtensionDialogOpen(true);
+  };
+
+  const handleExtensionApplied = (updatedRental: WasherRental) => {
+    updateRental(updatedRental.id, updatedRental);
   };
   
   if (rentals.length === 0) {
@@ -64,6 +76,7 @@ export function RentalList() {
             onPaymentToggle={handlePaymentToggle}
             onEdit={handleEdit}
             onDelete={handleDelete}
+            onExtend={handleExtendRental}
           />
         ))}
       </div>
@@ -72,6 +85,13 @@ export function RentalList() {
         rental={editingRental}
         open={editSheetOpen}
         onOpenChange={setEditSheetOpen}
+      />
+
+      <ExtensionDialog
+        rental={selectedRental}
+        open={extensionDialogOpen}
+        onOpenChange={setExtensionDialogOpen}
+        onExtensionApplied={handleExtensionApplied}
       />
     </>
   );

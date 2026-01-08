@@ -155,8 +155,22 @@ export interface WasherRental {
   status: RentalStatus;
   isPaid: boolean;
   notes?: string;
+  // Campos para extensión de tiempo
+  extensions?: RentalExtension[];
+  originalPickupTime?: string; // Hora de retiro original sin extensiones
+  originalPickupDate?: string; // Fecha de retiro original sin extensiones
   createdAt: string;
   updatedAt: string;
+}
+
+// Extensión de alquiler
+export interface RentalExtension {
+  id: string;
+  rentalId: string;
+  additionalHours: number; // Horas adicionales
+  additionalFee: number; // Cargo adicional en USD
+  notes?: string; // Notas de la extensión
+  createdAt: string;
 }
 
 // Horario comercial

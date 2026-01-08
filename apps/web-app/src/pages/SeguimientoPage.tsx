@@ -1,8 +1,9 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Header } from '@/components/layout/Header';
 import { useAppStore } from '@/store/useAppStore';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
   AlertCircle,
   Clock,
@@ -11,12 +12,17 @@ import {
   MapPin,
   DollarSign,
   WashingMachine,
+  Plus,
 } from 'lucide-react';
 import { RentalShiftConfig, WasherRental } from '@/types';
 import { cn } from '@/lib/utils';
+import { ExtensionDialog } from '@/components/alquiler/ExtensionDialog';
+import { canExtendRental } from '@/utils/rentalExtensions';
 
 export function SeguimientoPage() {
-  const { rentals, washingMachines } = useAppStore();
+  const { rentals, washingMachines, updateRental } = useAppStore();
+  const [extensionDialogOpen, setExtensionDialogOpen] = useState(false);
+  const [selectedRental, setSelectedRental] = useState<WasherRental | null>(null);
 
   const { noPagados, agendados, enviados } = useMemo(() => {
     const noPagados = rentals.filter(
@@ -30,6 +36,15 @@ export function SeguimientoPage() {
   const getMachineName = (machineId: string) => {
     const machine = washingMachines.find((m) => m.id === machineId);
     return machine ? `${machine.name} (${machine.kg}kg)` : 'Lavadora';
+  };
+
+  const handleExtendRental = (rental: WasherRental) => {
+    setSelectedRental(rental);
+    setExtensionDialogOpen(true);
+  };
+
+  const handleExtensionApplied = (updatedRental: WasherRental) => {
+    updateRental(updatedRental.id, updatedRental);
   };
 
   const RentalCard = ({
@@ -87,9 +102,23 @@ export function SeguimientoPage() {
             </div>
             <span>{RentalShiftConfig[rental.shift].label}</span>
           </div>
-          <div className="flex items-center gap-1 text-sm font-semibold text-primary">
-            <DollarSign className="w-3.5 h-3.5" />
-            <span>{(rental.totalUsd ?? 0).toFixed(2)}</span>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 text-sm font-semibold text-primary">
+              <DollarSign className="w-3.5 h-3.5" />
+              <span>{(rental.totalUsd ?? 0).toFixed(2)}</span>
+            </div>
+            {canExtendRental(rental) && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => handleExtendRental(rental)}
+                className="h-7 px-2 text-xs"
+                title="Extender tiempo"
+              >
+                <Plus className="w-3 h-3 mr-1" />
+                Extender
+              </Button>
+            )}
           </div>
         </div>
 
@@ -218,6 +247,14 @@ export function SeguimientoPage() {
           )}
         </section>
       </main>
+
+      {/* Extension Dialog */}
+      <ExtensionDialog
+        rental={selectedRental}
+        open={extensionDialogOpen}
+        onOpenChange={setExtensionDialogOpen}
+        onExtensionApplied={handleExtensionApplied}
+      />
     </div>
   );
 }

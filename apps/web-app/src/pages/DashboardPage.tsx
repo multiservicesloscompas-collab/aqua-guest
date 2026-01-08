@@ -221,13 +221,17 @@ export function DashboardPage({ onNavigate }: DashboardPageProps = {}) {
     // Calcular totales finales con ajustes
     const methodTotals = {
       efectivo:
-        originalMethodTotals.efectivo + calculateAdjustments('efectivo'),
+        originalMethodTotals.efectivo + calculateAdjustments('efectivo') - 
+        expensesToday.filter((e: any) => e.paymentMethod === 'efectivo').reduce((sum: number, e: any) => sum + e.amount, 0),
       pago_movil:
-        originalMethodTotals.pago_movil + calculateAdjustments('pago_movil'),
+        originalMethodTotals.pago_movil + calculateAdjustments('pago_movil') -
+        expensesToday.filter((e: any) => e.paymentMethod === 'pago_movil').reduce((sum: number, e: any) => sum + e.amount, 0),
       punto_venta:
-        originalMethodTotals.punto_venta + calculateAdjustments('punto_venta'),
+        originalMethodTotals.punto_venta + calculateAdjustments('punto_venta') -
+        expensesToday.filter((e: any) => e.paymentMethod === 'punto_venta').reduce((sum: number, e: any) => sum + e.amount, 0),
       divisa:
-        originalMethodTotals.divisa + calculateAdjustments('divisa'),
+        originalMethodTotals.divisa + calculateAdjustments('divisa') -
+        expensesToday.filter((e: any) => e.paymentMethod === 'divisa').reduce((sum: number, e: any) => sum + e.amount, 0),
     };
 
     return {
