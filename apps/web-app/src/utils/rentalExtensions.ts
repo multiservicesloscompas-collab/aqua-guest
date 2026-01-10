@@ -1,5 +1,6 @@
 import { RentalExtension, WasherRental } from '@/types';
-import { addHours, parse, format } from 'date-fns';
+import { parse, format, getDay, setHours, setMinutes, addDays, isBefore, isAfter } from 'date-fns';
+import { BUSINESS_HOURS } from '@/types';
 
 /**
  * Calcula el precio de extensión basado en las reglas de jornadas
@@ -18,6 +19,69 @@ export function calculateExtensionFee(additionalHours: number): number {
     const extraBlocks = Math.ceil(extraHours / 8);
     return 5 + (extraBlocks * 3);
   }
+}
+
+/**
+ * Calcula la nueva hora de retiro con extensión respetando el horario comercial
+ */
+export function calculateExtendedPickupTime(
+  currentPickupDate: string,
+  currentPickupTime: string,
+  additionalHours: number
+): { pickupTime: string; pickupDate: string } {
+  // Parsear la fecha/hora actual de retiro
+  const currentPickupDateTime = parse(
+    `${currentPickupDate} ${currentPickupTime}`,
+    'yyyy-MM-dd HH:mm',
+    new Date()
+  );
+
+  // Agregar las horas de extensión
+  let newPickupDateTime = new Date(
+    currentPickupDateTime.getTime() + additionalHours * 60 * 60 * 1000
+  );
+
+  // Determinar horario del día de retiro calculado
+  const pickupDay = getDay(newPickupDateTime);
+  const isSunday = pickupDay === 0;
+  const openHour = BUSINESS_HOURS.openHour;
+  const closeHour = isSunday
+    ? BUSINESS_HOURS.sundayCloseHour
+    : BUSINESS_HOURS.closeHour;
+  const openTime = setMinutes(setHours(new Date(newPickupDateTime), openHour), 0);
+  const closeTime = setMinutes(
+    setHours(new Date(newPickupDateTime), closeHour),
+    0
+  );
+
+  // Verificar si el pickupTime está dentro del horario laboral
+  const isWithinBusinessHours =
+    !isBefore(newPickupDateTime, openTime) && !isAfter(newPickupDateTime, closeTime);
+
+  if (!isWithinBusinessHours) {
+    // Si el día calculado es laboral y la hora es antes de apertura, establecer a apertura del mismo día
+    if (
+      BUSINESS_HOURS.workDays.includes(pickupDay) &&
+      isBefore(newPickupDateTime, openTime)
+    ) {
+      newPickupDateTime = openTime;
+    } else {
+      // Mover al siguiente día laboral a la hora de apertura
+      let nextDay = addDays(new Date(newPickupDateTime), 1);
+      while (!BUSINESS_HOURS.workDays.includes(getDay(nextDay))) {
+        nextDay = addDays(nextDay, 1);
+      }
+      newPickupDateTime = setMinutes(
+        setHours(nextDay, BUSINESS_HOURS.openHour),
+        0
+      );
+    }
+  }
+
+  return {
+    pickupTime: format(newPickupDateTime, 'HH:mm'),
+    pickupDate: format(newPickupDateTime, 'yyyy-MM-dd'),
+  };
 }
 
 /**
@@ -57,17 +121,15 @@ export function applyExtensionToRental(
     updatedAt: new Date().toISOString(),
   };
 
-  // Calcular nueva hora de retiro
-  const currentPickupDateTime = parse(
-    `${rental.pickupDate} ${rental.pickupTime}`,
-    'yyyy-MM-dd HH:mm',
-    new Date()
+  // Calcular nueva hora de retiro respetando el horario comercial
+  const newPickupInfo = calculateExtendedPickupTime(
+    rental.pickupDate,
+    rental.pickupTime,
+    extension.additionalHours
   );
   
-  const newPickupDateTime = addHours(currentPickupDateTime, extension.additionalHours);
-  
-  updatedRental.pickupTime = format(newPickupDateTime, 'HH:mm');
-  updatedRental.pickupDate = format(newPickupDateTime, 'yyyy-MM-dd');
+  updatedRental.pickupTime = newPickupInfo.pickupTime;
+  updatedRental.pickupDate = newPickupInfo.pickupDate;
 
   return updatedRental;
 }

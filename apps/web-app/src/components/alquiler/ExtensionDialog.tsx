@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { WasherRental, RentalExtension } from '@/types';
 import {
   Dialog,
@@ -29,6 +29,7 @@ import {
   applyExtensionToRental,
   canExtendRental,
   removeExtensionFromRental,
+  calculateExtendedPickupTime,
 } from '@/utils/rentalExtensions';
 import { Badge } from '@/components/ui/badge';
 
@@ -63,10 +64,24 @@ export function ExtensionDialog({
   const calculatedCustomFee = customHours ? calculateExtensionFee(Number(customHours)) : 0;
   const finalFee = pricingType === 'manual' ? Number(customFee) : (extensionType === 'preset' ? currentFee : calculatedCustomFee);
 
+  // Calcular la nueva hora de retiro para mostrar en el resumen
+  const newPickupInfo = useMemo(() => {
+    const hours = extensionType === 'preset' ? selectedHours : (customHours ? Number(customHours) : 0);
+    if (hours <= 0) return { pickupTime: rental.pickupTime, pickupDate: rental.pickupDate };
+    
+    return calculateExtendedPickupTime(
+      rental.pickupDate,
+      rental.pickupTime,
+      hours
+    );
+  }, [rental.pickupDate, rental.pickupTime, selectedHours, customHours, extensionType]);
+
   const handleDeleteExtension = (extensionId: string) => {
     if (!rental) return;
     
+    console.log('Deleting extension:', extensionId);
     const updatedRental = removeExtensionFromRental(rental, extensionId);
+    console.log('Updated rental after deletion:', updatedRental);
     onExtensionApplied(updatedRental);
   };
 
@@ -119,8 +134,8 @@ export function ExtensionDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-[425px] max-h-[90vh] flex flex-col">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <Clock className="w-5 h-5" />
             Extender Tiempo de Alquiler
@@ -130,7 +145,7 @@ export function ExtensionDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-6">
+        <div className="flex-1 overflow-y-auto space-y-6 py-1">
           {/* Información actual */}
           <div className="bg-muted/50 p-3 rounded-lg">
             <div className="text-sm space-y-1">
@@ -326,6 +341,17 @@ export function ExtensionDialog({
                       ${(rental.totalUsd + finalFee).toFixed(2)}
                     </span>
                   </p>
+                  {(extensionType === 'preset' ? selectedHours : (customHours ? Number(customHours) : 0)) > 0 && (
+                    <p>
+                      <span className="text-muted-foreground">Nuevo retiro:</span>{' '}
+                      <span className="font-bold text-primary">
+                        {newPickupInfo.pickupDate === rental.pickupDate 
+                          ? `Hoy a las ${newPickupInfo.pickupTime}`
+                          : `${new Date(newPickupInfo.pickupDate).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'short' })} a las ${newPickupInfo.pickupTime}`
+                        }
+                      </span>
+                    </p>
+                  )}
                 </div>
               </div>
             </>
@@ -341,7 +367,7 @@ export function ExtensionDialog({
           )}
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="flex-shrink-0 pt-4">
           <Button variant="outline" onClick={handleCancel} disabled={isSubmitting}>
             Cancelar
           </Button>

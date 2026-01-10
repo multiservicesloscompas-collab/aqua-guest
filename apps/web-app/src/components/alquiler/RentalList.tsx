@@ -42,7 +42,10 @@ export function RentalList() {
   };
 
   const handleExtensionApplied = (updatedRental: WasherRental) => {
+    console.log('Parent received updated rental:', updatedRental);
     updateRental(updatedRental.id, updatedRental);
+    // Also update the selected rental state to reflect the changes
+    setSelectedRental(updatedRental);
   };
   
   if (rentals.length === 0) {
