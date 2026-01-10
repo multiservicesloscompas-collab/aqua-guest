@@ -25,11 +25,11 @@ import {
   DollarSign,
   Calendar,
   User,
-  Phone,
   Smartphone,
   Banknote,
   CreditCard,
   Pencil,
+  Loader2,
 } from 'lucide-react';
 import {
   WasherRental,
@@ -47,8 +47,7 @@ import {
   formatPickupInfo,
 } from '@/utils/rentalSchedule';
 import { calculateRentalPrice } from '@/utils/rentalPricing';
-import { parse, format } from 'date-fns';
-import { es } from 'date-fns/locale';
+import { parse } from 'date-fns';
 import { toast } from 'sonner';
 
 interface EditRentalSheetProps {
@@ -76,6 +75,7 @@ export function EditRentalSheet({
   const [notes, setNotes] = useState('');
   const [status, setStatus] = useState<RentalStatus>('agendado');
   const [isPaid, setIsPaid] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const timeSlots = useMemo(() => generateTimeSlots(), []);
 
@@ -111,15 +111,15 @@ export function EditRentalSheet({
   // Verificar disponibilidad de lavadora (excluyendo el alquiler actual)
   const unavailableMachines = useMemo(() => {
     if (!rental) return [];
-    
+
     return rentals
       .filter((r) => {
         // Excluir el alquiler actual que se está editando
         if (r.id === rental.id) return false;
-        
+
         // Si el alquiler está finalizado, no afecta la disponibilidad
         if (r.status === 'finalizado') return false;
-        
+
         // Cualquier alquiler activo (agendado o enviado) hace que la lavadora no esté disponible
         return true;
       })
@@ -137,7 +137,7 @@ export function EditRentalSheet({
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!rental) return;
 
     if (!machineId) {
@@ -145,7 +145,7 @@ export function EditRentalSheet({
       return;
     }
 
-    if (!customerName.trim() || !customerAddress.trim()) {
+    if (!customerName?.trim() || !customerAddress?.trim()) {
       toast.error('Completa nombre y dirección del cliente');
       return;
     }
@@ -155,26 +155,34 @@ export function EditRentalSheet({
       return;
     }
 
-    updateRental(rental.id, {
-      machineId,
-      shift,
-      deliveryTime,
-      pickupTime: pickupInfo.pickupTime,
-      pickupDate: pickupInfo.pickupDate,
-      deliveryFee,
-      totalUsd,
-      paymentMethod,
-      customerId: selectedCustomerId || undefined,
-      customerName: customerName.trim(),
-      customerPhone: customerPhone.trim(),
-      customerAddress: customerAddress.trim(),
-      notes: notes.trim() || undefined,
-      status,
-      isPaid,
-    });
+    setIsLoading(true);
+    try {
+      await updateRental(rental.id, {
+        machineId,
+        shift,
+        deliveryTime,
+        pickupTime: pickupInfo.pickupTime,
+        pickupDate: pickupInfo.pickupDate,
+        deliveryFee,
+        totalUsd,
+        paymentMethod,
+        customerId: selectedCustomerId || undefined,
+        customerName: customerName?.trim() || '',
+        customerPhone: customerPhone?.trim() || '',
+        customerAddress: customerAddress?.trim() || '',
+        notes: notes?.trim() || undefined,
+        status,
+        isPaid,
+      });
 
-    toast.success('Alquiler actualizado');
-    onOpenChange(false);
+      toast.success('Alquiler actualizado');
+      onOpenChange(false);
+    } catch (error) {
+      console.error('Error al actualizar el alquiler:', error);
+      toast.error('Error al actualizar el alquiler');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   if (!rental) return null;
@@ -487,14 +495,17 @@ export function EditRentalSheet({
             </div>
           </div>
           <Button
+            type="button"
             onClick={handleSubmit}
+            disabled={isLoading}
             className="w-full h-12 text-base font-semibold"
             style={{
               marginBottom: '4rem',
               marginTop: '2rem',
             }}
           >
-            Guardar Cambios
+            {isLoading && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+            {isLoading ? 'Guardando...' : 'Guardar Cambios'}
           </Button>
         </div>
       </SheetContent>

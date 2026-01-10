@@ -8,7 +8,6 @@ import {
   Product,
   PaymentMethod,
   WasherRental,
-  RentalStatus,
   WashingMachine,
   Customer,
   LiterPricing,
@@ -97,7 +96,10 @@ interface AppState {
 
   // Acciones de equilibrio de pagos
   addPaymentBalanceTransaction: (
-    transaction: Omit<PaymentBalanceTransaction, 'id' | 'createdAt' | 'updatedAt'>
+    transaction: Omit<
+      PaymentBalanceTransaction,
+      'id' | 'createdAt' | 'updatedAt'
+    >
   ) => Promise<void>;
   updatePaymentBalanceTransaction: (
     id: string,
@@ -317,7 +319,10 @@ export const useAppStore = create<AppState>()(
             supabase.from('prepaid_orders').select('*'),
             supabase.from('liter_pricing').select('*'),
             supabase.from('exchange_rates').select('*'),
-            supabase.from('payment_balance_transactions').select('*').order('created_at', { ascending: false }),
+            supabase
+              .from('payment_balance_transactions')
+              .select('*')
+              .order('created_at', { ascending: false }),
           ]);
 
           const customers = customersRes.data || [];
@@ -392,9 +397,11 @@ export const useAppStore = create<AppState>()(
             breakpoint: Number(l.breakpoint),
             price: Number(l.price),
           }));
-          
+
           // Process payment balance transactions
-          const paymentBalanceTransactions = (balanceTransactionsRes.data || []).map((t: any) => ({
+          const paymentBalanceTransactions = (
+            balanceTransactionsRes.data || []
+          ).map((t: any) => ({
             id: t.id,
             date: t.date,
             fromMethod: t.from_method,
@@ -776,7 +783,7 @@ export const useAppStore = create<AppState>()(
                     .from('washer_rentals')
                     .update({ customer_id: cdata.id })
                     .eq('id', newRental.id);
-                  
+
                   if (!updateError) {
                     newRental.customerId = cdata.id;
                     // Update local state with the customer ID
@@ -797,7 +804,10 @@ export const useAppStore = create<AppState>()(
                       ],
                     }));
                   } else {
-                    console.error('Failed to update rental with customer ID:', updateError);
+                    console.error(
+                      'Failed to update rental with customer ID:',
+                      updateError
+                    );
                     // Still add customer to local state
                     set((state) => ({
                       customers: [
@@ -913,6 +923,7 @@ export const useAppStore = create<AppState>()(
                 : rental
             ),
           }));
+          throw err; // Re-throw to let UI handle the error
         }
       },
 
@@ -1323,7 +1334,10 @@ export const useAppStore = create<AppState>()(
             ],
           }));
         } catch (err) {
-          console.error('Failed to add payment balance transaction to Supabase', err);
+          console.error(
+            'Failed to add payment balance transaction to Supabase',
+            err
+          );
           throw err; // Lanzar el error para que el componente lo maneje
         }
       },
@@ -1350,18 +1364,29 @@ export const useAppStore = create<AppState>()(
             paymentBalanceTransactions: state.paymentBalanceTransactions.map(
               (transaction) =>
                 transaction.id === id
-                  ? { ...transaction, ...updates, updatedAt: new Date().toISOString() }
+                  ? {
+                      ...transaction,
+                      ...updates,
+                      updatedAt: new Date().toISOString(),
+                    }
                   : transaction
             ),
           }));
         } catch (err) {
-          console.error('Failed to update payment balance transaction in Supabase', err);
+          console.error(
+            'Failed to update payment balance transaction in Supabase',
+            err
+          );
           // Fallback local
           set((state) => ({
             paymentBalanceTransactions: state.paymentBalanceTransactions.map(
               (transaction) =>
                 transaction.id === id
-                  ? { ...transaction, ...updates, updatedAt: new Date().toISOString() }
+                  ? {
+                      ...transaction,
+                      ...updates,
+                      updatedAt: new Date().toISOString(),
+                    }
                   : transaction
             ),
           }));
@@ -1381,7 +1406,10 @@ export const useAppStore = create<AppState>()(
             ),
           }));
         } catch (err) {
-          console.error('Failed to delete payment balance transaction from Supabase', err);
+          console.error(
+            'Failed to delete payment balance transaction from Supabase',
+            err
+          );
           // Fallback local
           set((state) => ({
             paymentBalanceTransactions: state.paymentBalanceTransactions.filter(
@@ -1392,7 +1420,13 @@ export const useAppStore = create<AppState>()(
       },
 
       getPaymentBalanceSummary: (date) => {
-        const { sales, rentals, prepaidOrders, paymentBalanceTransactions, config } = get();
+        const {
+          sales,
+          rentals,
+          prepaidOrders,
+          paymentBalanceTransactions,
+          config,
+        } = get();
 
         // Calcular totales originales por método de pago
         const salesOfDay = sales.filter((s) => s.date === date);
@@ -1424,8 +1458,10 @@ export const useAppStore = create<AppState>()(
               // Sale dinero de este método
               if (method === 'divisa') {
                 // Si sale de divisa, restar el monto en USD convertido a Bs
-                const usdAmount = transaction.amountUsd || transaction.amount / config.exchangeRate;
-                return adjustment - (usdAmount * config.exchangeRate);
+                const usdAmount =
+                  transaction.amountUsd ||
+                  transaction.amount / config.exchangeRate;
+                return adjustment - usdAmount * config.exchangeRate;
               } else {
                 // Si sale de Bs, restar el monto en Bs directamente
                 return adjustment - transaction.amount;
@@ -1434,8 +1470,10 @@ export const useAppStore = create<AppState>()(
               // Entra dinero a este método
               if (method === 'divisa') {
                 // Si entra a divisa, sumar el monto en USD convertido a Bs
-                const usdAmount = transaction.amountUsd || transaction.amount / config.exchangeRate;
-                return adjustment + (usdAmount * config.exchangeRate);
+                const usdAmount =
+                  transaction.amountUsd ||
+                  transaction.amount / config.exchangeRate;
+                return adjustment + usdAmount * config.exchangeRate;
               } else {
                 // Si entra a Bs, sumar el monto en Bs directamente
                 return adjustment + transaction.amount;
@@ -1446,7 +1484,12 @@ export const useAppStore = create<AppState>()(
         };
 
         // Generar resumen para cada método de pago
-        const methods: PaymentMethod[] = ['efectivo', 'pago_movil', 'punto_venta', 'divisa'];
+        const methods: PaymentMethod[] = [
+          'efectivo',
+          'pago_movil',
+          'punto_venta',
+          'divisa',
+        ];
         return methods.map((method) => {
           const originalTotal = calculateOriginalTotal(method);
           const adjustments = calculateAdjustments(method);
@@ -1482,9 +1525,9 @@ export const useAppStore = create<AppState>()(
             .from('payment_balance_transactions')
             .select('*')
             .order('created_at', { ascending: false });
-          
+
           if (error) throw error;
-          
+
           const transactions = (data || []).map((t: any) => ({
             id: t.id,
             date: t.date,
@@ -1502,7 +1545,10 @@ export const useAppStore = create<AppState>()(
             paymentBalanceTransactions: transactions,
           }));
         } catch (err) {
-          console.error('Error loading payment balance transactions from Supabase', err);
+          console.error(
+            'Error loading payment balance transactions from Supabase',
+            err
+          );
           // Keep local state if Supabase fails
         }
       },
