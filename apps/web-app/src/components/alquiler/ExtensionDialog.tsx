@@ -54,6 +54,20 @@ export function ExtensionDialog({
   const [notes, setNotes] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Calcular la nueva hora de retiro para mostrar en el resumen
+  const newPickupInfo = useMemo(() => {
+    if (!rental) return { pickupTime: '', pickupDate: '' };
+    
+    const hours = extensionType === 'preset' ? selectedHours : (customHours ? Number(customHours) : 0);
+    if (hours <= 0) return { pickupTime: rental.pickupTime, pickupDate: rental.pickupDate };
+    
+    return calculateExtendedPickupTime(
+      rental.pickupDate,
+      rental.pickupTime,
+      hours
+    );
+  }, [rental?.pickupDate, rental?.pickupTime, selectedHours, customHours, extensionType]);
+
   if (!rental || (!canExtendRental(rental))) {
     return null;
   }
@@ -63,18 +77,6 @@ export function ExtensionDialog({
   const currentFee = calculateExtensionFee(selectedHours);
   const calculatedCustomFee = customHours ? calculateExtensionFee(Number(customHours)) : 0;
   const finalFee = pricingType === 'manual' ? Number(customFee) : (extensionType === 'preset' ? currentFee : calculatedCustomFee);
-
-  // Calcular la nueva hora de retiro para mostrar en el resumen
-  const newPickupInfo = useMemo(() => {
-    const hours = extensionType === 'preset' ? selectedHours : (customHours ? Number(customHours) : 0);
-    if (hours <= 0) return { pickupTime: rental.pickupTime, pickupDate: rental.pickupDate };
-    
-    return calculateExtendedPickupTime(
-      rental.pickupDate,
-      rental.pickupTime,
-      hours
-    );
-  }, [rental.pickupDate, rental.pickupTime, selectedHours, customHours, extensionType]);
 
   const handleDeleteExtension = (extensionId: string) => {
     if (!rental) return;
