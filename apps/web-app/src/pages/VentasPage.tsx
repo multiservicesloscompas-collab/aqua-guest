@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Header } from '@/components/layout/Header';
 import { DateSelector } from '@/components/ventas/DateSelector';
+import { PaymentFilter } from '@/components/ventas/PaymentFilter';
 import { SalesList } from '@/components/ventas/SalesList';
 import { AddProductSheet } from '@/components/ventas/AddProductSheet';
 import { CartSheet } from '@/components/ventas/CartSheet';
@@ -8,11 +9,13 @@ import { useAppStore } from '@/store/useAppStore';
 import { Button } from '@/components/ui/button';
 import { Plus, ShoppingCart } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { PaymentMethod } from '@/types';
 
 export function VentasPage() {
   const { selectedDate, setSelectedDate, getSalesByDate, cart } = useAppStore();
   const [showAddProduct, setShowAddProduct] = useState(false);
   const [showCart, setShowCart] = useState(false);
+  const [paymentFilter, setPaymentFilter] = useState<PaymentMethod | 'todos'>('todos');
 
   useEffect(() => {
     const today = new Date();
@@ -38,7 +41,12 @@ export function VentasPage() {
           onDateChange={setSelectedDate}
         />
 
-        <SalesList sales={sales} />
+        <PaymentFilter
+          selectedFilter={paymentFilter}
+          onFilterChange={setPaymentFilter}
+        />
+
+        <SalesList sales={sales} paymentFilter={paymentFilter} />
       </main>
 
       {/* FAB para agregar producto */}

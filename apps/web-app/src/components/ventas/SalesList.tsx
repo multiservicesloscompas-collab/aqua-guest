@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Sale, PaymentMethodLabels } from '@/types';
+import { Sale, PaymentMethod, PaymentMethodLabels } from '@/types';
 import { useAppStore } from '@/store/useAppStore';
 import {
   Trash2,
@@ -8,6 +8,7 @@ import {
   CreditCard,
   FileText,
   Pencil,
+  DollarSign,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -26,18 +27,25 @@ import { toast } from 'sonner';
 
 interface SalesListProps {
   sales: Sale[];
+  paymentFilter?: PaymentMethod | 'todos';
 }
 
-const paymentIcons = {
+const paymentIcons: Record<PaymentMethod, any> = {
   pago_movil: Smartphone,
   efectivo: Banknote,
   punto_venta: CreditCard,
+  divisa: DollarSign,
 };
 
-export function SalesList({ sales }: SalesListProps) {
+export function SalesList({ sales, paymentFilter = 'todos' }: SalesListProps) {
   const { deleteSale } = useAppStore();
   const [editingSale, setEditingSale] = useState<Sale | null>(null);
   const [editSheetOpen, setEditSheetOpen] = useState(false);
+
+  // Filtrar ventas por método de pago si es necesario
+  const filteredSales = paymentFilter === 'todos' 
+    ? sales 
+    : sales.filter(sale => sale.paymentMethod === paymentFilter);
 
   const handleDelete = (id: string) => {
     deleteSale(id);
@@ -49,11 +57,13 @@ export function SalesList({ sales }: SalesListProps) {
     setEditSheetOpen(true);
   };
 
-  if (sales.length === 0) {
+  if (filteredSales.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
         <FileText className="w-12 h-12 mb-3 opacity-40" />
-        <p className="text-sm font-medium">Sin ventas este día</p>
+        <p className="text-sm font-medium">
+          {paymentFilter === 'todos' ? 'Sin ventas este día' : `Sin ventas con ${PaymentMethodLabels[paymentFilter as PaymentMethod]}`}
+        </p>
         <p className="text-xs">Presiona + para agregar una venta</p>
       </div>
     );
@@ -64,11 +74,16 @@ export function SalesList({ sales }: SalesListProps) {
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-semibold text-foreground">
-            Ventas del Día ({sales.length})
+            Ventas del Día ({filteredSales.length})
+            {paymentFilter !== 'todos' && (
+              <span className="text-xs text-muted-foreground ml-2">
+                ({PaymentMethodLabels[paymentFilter as PaymentMethod]})
+              </span>
+            )}
           </h3>
           <span className="text-sm font-bold text-primary">
             Bs{' '}
-            {sales
+            {filteredSales
               .reduce((sum, s) => {
                 const num = Number(s.totalBs);
                 return sum + (isNaN(num) ? 0 : num);
@@ -78,7 +93,7 @@ export function SalesList({ sales }: SalesListProps) {
         </div>
 
         <div className="space-y-2">
-          {sales.map((sale) => {
+          {filteredSales.map((sale) => {
             const PaymentIcon = paymentIcons[sale.paymentMethod] || Banknote;
             const time = new Date(sale.createdAt).toLocaleTimeString('es-VE', {
               hour: '2-digit',

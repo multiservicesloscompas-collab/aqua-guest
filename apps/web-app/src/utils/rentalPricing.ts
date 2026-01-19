@@ -2,7 +2,7 @@ import { RentalShift, RentalShiftConfig, PaymentMethod } from '@/types';
 
 /**
  * Calcula el precio del alquiler basado en la jornada y método de pago
- * Aplica la regla de negocio especial: 24 horas + efectivo = $5
+ * Aplica la regla de negocio especial: 24 horas + divisa = $5
  */
 export function calculateRentalPrice(
   shift: RentalShift,
@@ -10,12 +10,12 @@ export function calculateRentalPrice(
   deliveryFee: number = 0
 ): number {
   const basePrice = RentalShiftConfig[shift].priceUsd;
-  
-  // Regla especial: 24 horas + efectivo = $5
-  if (shift === 'completo' && paymentMethod === 'efectivo') {
+
+  // Regla especial: 24 horas + divisa = $5
+  if (shift === 'completo' && paymentMethod === 'divisa') {
     return 5 + deliveryFee;
   }
-  
+
   return basePrice + deliveryFee;
 }
 

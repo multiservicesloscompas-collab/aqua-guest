@@ -118,7 +118,7 @@ export function RentalSheet({ open, onOpenChange }: RentalSheetProps) {
       .filter((r) => {
         // Si el alquiler está finalizado, no afecta la disponibilidad
         if (r.status === 'finalizado') return false;
-        
+
         // Cualquier alquiler activo (agendado o enviado) hace que la lavadora no esté disponible
         return true;
       })
@@ -263,10 +263,9 @@ export function RentalSheet({ open, onOpenChange }: RentalSheetProps) {
                   >
                     <span className="text-xs">{config.label}</span>
                     <span className="text-sm font-bold">
-                      {s === 'completo' && paymentMethod === 'efectivo' 
-                        ? '$5' 
-                        : `$${config.priceUsd}`
-                      }
+                      {s === 'completo' && paymentMethod === 'divisa'
+                        ? '$5'
+                        : `$${config.priceUsd}`}
                     </span>
                   </Button>
                 );
@@ -323,9 +322,7 @@ export function RentalSheet({ open, onOpenChange }: RentalSheetProps) {
                 className="h-14 flex flex-col gap-1 p-2"
               >
                 <DollarSign className="w-5 h-5" />
-                <span className="text-xs">
-                  {PaymentMethodLabels.divisa}
-                </span>
+                <span className="text-xs">{PaymentMethodLabels.divisa}</span>
               </Button>
             </div>
           </div>
