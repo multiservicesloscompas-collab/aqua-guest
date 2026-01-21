@@ -11,18 +11,18 @@ interface MenuSheetProps {
 }
 
 const menuItems: { route: AppRoute; label: string; description: string; icon: typeof Users }[] = [
-  { 
-    route: 'equilibrio-pagos', 
-    label: 'Equilibrar Pagos', 
-    description: 'Transferir entre métodos de pago',
-    icon: ArrowLeftRight 
-  },
-  { 
-    route: 'prepagados', 
-    label: 'Agua Prepagada', 
-    description: 'Pedidos pagados por adelantado',
-    icon: Droplets 
-  },
+  //{ 
+    //route: 'equilibrio-pagos', 
+    //label: 'Equilibrar Pagos', 
+    //description: 'Transferir entre métodos de pago',
+    //icon: ArrowLeftRight 
+  //},
+  //{
+    //route: 'prepagados', 
+    //label: 'Agua Prepagada', 
+    //description: 'Pedidos pagados por adelantado',
+    //icon: Droplets 
+  //},
   { 
     route: 'seguimiento', 
     label: 'Seguimiento', 
@@ -74,7 +74,7 @@ export function MenuSheet({ open, onOpenChange, currentRoute, onNavigate }: Menu
           <SheetTitle className="text-lg">Más opciones</SheetTitle>
         </SheetHeader>
         
-        <div className="space-y-2 pb-6">
+        <div className="space-y-2 pb-6 overflow-y-auto max-h-[60vh] -webkit-overflow-scrolling: touch">
           {menuItems.map(({ route, label, description, icon: Icon }) => {
             const isActive = currentRoute === route;
             return (
