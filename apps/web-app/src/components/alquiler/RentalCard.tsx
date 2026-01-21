@@ -87,8 +87,7 @@ export function RentalCard({
 
   const getNextStatus = (): RentalStatus | null => {
     if (rental.status === 'agendado') {
-      // Only show 'enviado' if there's delivery service
-      return rental.deliveryFee > 0 ? 'enviado' : 'finalizado';
+      return 'enviado';
     }
     if (rental.status === 'enviado') return 'finalizado';
     return null;
