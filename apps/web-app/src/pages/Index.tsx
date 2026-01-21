@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 import { BottomNav } from '@/components/layout/BottomNav';
 import { MenuSheet } from '@/components/layout/MenuSheet';
@@ -23,19 +23,28 @@ const Index = () => {
   const { loadFromSupabase } = useAppStore();
   const [currentRoute, setCurrentRoute] = useState<AppRoute>('dashboard');
   const [menuOpen, setMenuOpen] = useState(false);
+  const [lastLoaded, setLastLoaded] = useState<number>(Date.now());
+  const isFirstLoad = useRef(true);
 
   const handleRefresh = async () => {
     await loadFromSupabase();
+    setLastLoaded(Date.now());
   };
 
-  const { containerRef, isPulling, pullDistance, isRefreshing, progress } = usePullToRefresh({
-    onRefresh: handleRefresh,
-    threshold: 80
-  });
+  const { containerRef, isPulling, pullDistance, isRefreshing, progress } =
+    usePullToRefresh({
+      onRefresh: handleRefresh,
+      threshold: 80,
+    });
 
   useEffect(() => {
-    loadFromSupabase();
-  }, [loadFromSupabase]);
+    const minutesSinceLastLoad = (Date.now() - lastLoaded) / (1000 * 60);
+    if (isFirstLoad.current || minutesSinceLastLoad >= 5) {
+      loadFromSupabase();
+      setLastLoaded(Date.now());
+      isFirstLoad.current = false;
+    }
+  }, [loadFromSupabase, currentRoute, lastLoaded]);
 
   const renderPage = () => {
     switch (currentRoute) {
@@ -74,19 +83,19 @@ const Index = () => {
     <div className="min-h-screen bg-background" ref={containerRef}>
       {/* Pull-to-refresh indicator */}
       {(isPulling || isRefreshing) && (
-        <div 
+        <div
           className="fixed top-0 left-0 right-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm border-b border-border/50 transition-all duration-200"
-          style={{ 
+          style={{
             height: `${Math.min(pullDistance, 120)}px`,
-            opacity: progress
+            opacity: progress,
           }}
         >
           <div className="flex items-center gap-2">
-            <RefreshCw 
+            <RefreshCw
               className={`w-5 h-5 text-primary transition-transform duration-200 ${
                 isRefreshing ? 'animate-spin' : ''
               }`}
-              style={{ 
+              style={{
                 transform: `rotate(${progress * 360}deg)`,
               }}
             />
@@ -96,7 +105,7 @@ const Index = () => {
           </div>
         </div>
       )}
-      
+
       {renderPage()}
       <BottomNav
         currentRoute={currentRoute}
