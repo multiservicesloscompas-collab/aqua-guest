@@ -30,7 +30,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Plus, Droplets, User, Edit, Trash2, Check } from 'lucide-react';
+import { Plus, Droplets, User, Edit, Trash2, Check, Loader2 } from 'lucide-react';
 import {
   PaymentMethod,
   PaymentMethodLabels,
@@ -67,6 +67,9 @@ export function PrepagadosPage() {
     useState<PaymentMethod>('pago_movil');
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
+  const [isMarkingDelivered, setIsMarkingDelivered] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const resetForm = () => {
     setCustomerName('');
@@ -289,7 +292,7 @@ export function PrepagadosPage() {
                   {order.status === 'pendiente' && (
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
-                        <Button variant="default" size="sm" className="flex-1">
+                        <Button variant="default" size="sm" className="flex-1" disabled={isMarkingDelivered}>
                           <Check className="w-4 h-4 mr-1" />
                           Marcar Entregado
                         </Button>
@@ -305,11 +308,20 @@ export function PrepagadosPage() {
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
-                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                          <AlertDialogCancel disabled={isMarkingDelivered}>Cancelar</AlertDialogCancel>
                           <AlertDialogAction
-                            onClick={() => markPrepaidAsDelivered(order.id)}
+                            onClick={async () => {
+                              setIsMarkingDelivered(true);
+                              try {
+                                await markPrepaidAsDelivered(order.id);
+                              } finally {
+                                setIsMarkingDelivered(false);
+                              }
+                            }}
+                            disabled={isMarkingDelivered}
                           >
-                            Confirmar
+                            {isMarkingDelivered ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                            {isMarkingDelivered ? 'Marcando...' : 'Confirmar'}
                           </AlertDialogAction>
                         </AlertDialogFooter>
                       </AlertDialogContent>
@@ -326,7 +338,7 @@ export function PrepagadosPage() {
 
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
-                      <Button variant="outline" size="sm">
+                      <Button variant="outline" size="sm" disabled={isDeleting}>
                         <Trash2 className="w-4 h-4 text-destructive" />
                       </Button>
                     </AlertDialogTrigger>
@@ -338,12 +350,22 @@ export function PrepagadosPage() {
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
-                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
                         <AlertDialogAction
-                          onClick={() => deletePrepaidOrder(order.id)}
+                          onClick={async () => {
+                            setDeletingId(order.id);
+                            setIsDeleting(true);
+                            try {
+                              await deletePrepaidOrder(order.id);
+                            } finally {
+                              setIsDeleting(false);
+                              setDeletingId(null);
+                            }
+                          }}
+                          disabled={isDeleting}
                           className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                         >
-                          Eliminar
+                          {isDeleting && deletingId === order.id ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Eliminar'}
                         </AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>

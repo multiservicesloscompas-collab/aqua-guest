@@ -29,6 +29,7 @@ import {
   Smartphone,
   Banknote,
   CreditCard,
+  Loader2,
 } from 'lucide-react';
 import {
   RentalShift,
@@ -68,6 +69,7 @@ export function RentalSheet({ open, onOpenChange }: RentalSheetProps) {
   const [customerAddress, setCustomerAddress] = useState('');
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
   const [notes, setNotes] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
 
   const timeSlots = useMemo(() => generateTimeSlots(), []);
 
@@ -136,7 +138,7 @@ export function RentalSheet({ open, onOpenChange }: RentalSheetProps) {
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!machineId) {
       toast.error('Selecciona una lavadora');
       return;
@@ -152,28 +154,36 @@ export function RentalSheet({ open, onOpenChange }: RentalSheetProps) {
       return;
     }
 
-    addRental({
-      date: selectedDate,
-      customerId: selectedCustomerId || undefined,
-      customerName: customerName.trim(),
-      customerPhone: customerPhone.trim(),
-      customerAddress: customerAddress.trim(),
-      machineId,
-      shift,
-      deliveryTime,
-      pickupTime: pickupInfo.pickupTime,
-      pickupDate: pickupInfo.pickupDate,
-      deliveryFee,
-      totalUsd,
-      paymentMethod,
-      status: 'agendado',
-      isPaid: false,
-      notes: notes.trim() || undefined,
-    });
+    setIsSaving(true);
+    try {
+      await addRental({
+        date: selectedDate,
+        customerId: selectedCustomerId || undefined,
+        customerName: customerName.trim(),
+        customerPhone: customerPhone.trim(),
+        customerAddress: customerAddress.trim(),
+        machineId,
+        shift,
+        deliveryTime,
+        pickupTime: pickupInfo.pickupTime,
+        pickupDate: pickupInfo.pickupDate,
+        deliveryFee,
+        totalUsd,
+        paymentMethod,
+        status: 'agendado',
+        isPaid: false,
+        notes: notes.trim() || undefined,
+      });
 
-    toast.success('Alquiler registrado');
-    onOpenChange(false);
-    resetForm();
+      toast.success('Alquiler registrado');
+      onOpenChange(false);
+      resetForm();
+    } catch (err) {
+      console.error('Error registrando alquiler:', err);
+      toast.error('Error al registrar el alquiler');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const resetForm = () => {
@@ -472,13 +482,15 @@ export function RentalSheet({ open, onOpenChange }: RentalSheetProps) {
           </div>
           <Button
             onClick={handleSubmit}
+            disabled={isSaving}
             className="w-full h-12 text-base font-semibold"
             style={{
               marginBottom: '4rem',
               marginTop: '2rem',
             }}
           >
-            Confirmar Alquiler
+            {isSaving && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+            {isSaving ? 'Registrando...' : 'Confirmar Alquiler'}
           </Button>
         </div>
       </SheetContent>

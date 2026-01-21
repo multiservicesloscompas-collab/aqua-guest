@@ -13,6 +13,7 @@ import {
   UserPlus,
   Users,
   Pencil,
+  Loader2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -43,6 +44,8 @@ export default function ClientesPage() {
   const [newName, setNewName] = useState('');
   const [newPhone, setNewPhone] = useState('');
   const [newAddress, setNewAddress] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const filteredCustomers = customers.filter(
     (c) =>
@@ -69,45 +72,53 @@ export default function ClientesPage() {
     }
   };
 
-  const handleSaveCustomer = () => {
+  const handleSaveCustomer = async () => {
     if (!newName.trim()) {
       toast.error('El nombre es requerido');
       return;
     }
-    (async () => {
-      try {
-        if (editingCustomer) {
-          await updateCustomer(editingCustomer, {
-            name: newName.trim(),
-            phone: newPhone.trim(),
-            address: newAddress.trim(),
-          });
-          toast.success('Cliente actualizado');
-        } else {
-          await addCustomer({
-            name: newName.trim(),
-            phone: newPhone.trim(),
-            address: newAddress.trim(),
-          });
-          toast.success('Cliente agregado');
-        }
-        setShowAddSheet(false);
-        handleReset();
-      } catch (err) {
-        toast.error(
-          editingCustomer
-            ? 'Error actualizando cliente'
-            : 'Error agregando cliente'
-        );
+    setIsSaving(true);
+    try {
+      if (editingCustomer) {
+        await updateCustomer(editingCustomer, {
+          name: newName.trim(),
+          phone: newPhone.trim(),
+          address: newAddress.trim(),
+        });
+        toast.success('Cliente actualizado');
+      } else {
+        await addCustomer({
+          name: newName.trim(),
+          phone: newPhone.trim(),
+          address: newAddress.trim(),
+        });
+        toast.success('Cliente agregado');
       }
-    })();
+      setShowAddSheet(false);
+      handleReset();
+    } catch (err) {
+      toast.error(
+        editingCustomer
+          ? 'Error actualizando cliente'
+          : 'Error agregando cliente'
+      );
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (deleteId) {
-      deleteCustomer(deleteId);
-      toast.success('Cliente eliminado');
-      setDeleteId(null);
+      setIsDeleting(true);
+      try {
+        await deleteCustomer(deleteId);
+        toast.success('Cliente eliminado');
+      } catch (err) {
+        toast.error('Error eliminando cliente');
+      } finally {
+        setIsDeleting(false);
+        setDeleteId(null);
+      }
     }
   };
 
@@ -261,9 +272,11 @@ export default function ClientesPage() {
             </div>
             <Button
               onClick={handleSaveCustomer}
+              disabled={isSaving}
               className="w-full h-12 text-base font-semibold"
             >
-              {editingCustomer ? (
+              {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+              {isSaving ? 'Guardando...' : editingCustomer ? (
                 <>
                   <Pencil className="w-5 h-5 mr-2" />
                   Guardar Cambios
@@ -287,12 +300,13 @@ export default function ClientesPage() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              className="bg-destructive text-destructive-foreground"
-            >
-              Eliminar
-            </AlertDialogAction>
+          <AlertDialogAction
+            onClick={handleDelete}
+            disabled={isDeleting}
+            className="bg-destructive text-destructive-foreground"
+          >
+            {isDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Eliminar'}
+          </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

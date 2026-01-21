@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/select';
 import { Sale, PaymentMethod, PaymentMethodLabels, CartItem } from '@/types';
 import { useAppStore } from '@/store/useAppStore';
-import { Pencil } from 'lucide-react';
+import { Pencil, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface EditSaleSheetProps {
@@ -38,6 +38,7 @@ export function EditSaleSheet({
     useState<PaymentMethod>('pago_movil');
   const [notes, setNotes] = useState('');
   const [totalBs, setTotalBs] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
   // We need a local type that allows quantity to be empty string for the input
   interface EditableCartItem extends Omit<CartItem, 'quantity'> {
     quantity: number | '';
@@ -88,7 +89,7 @@ export function EditSaleSheet({
     setTotalBs(newTotal.toFixed(2));
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!sale) return;
 
     const newTotalBs = parseFloat(totalBs);
@@ -97,20 +98,28 @@ export function EditSaleSheet({
       return;
     }
 
-    updateSale(sale.id, {
-      paymentMethod,
-      notes: notes.trim() || undefined,
-      totalBs: newTotalBs,
-      totalUsd: newTotalBs / config.exchangeRate,
-      // Map back to strict CartItem type (ensure no empty strings)
-      items: items.map((i) => ({
-        ...i,
-        quantity: i.quantity === '' || i.quantity === 0 ? 1 : i.quantity,
-      })),
-    });
+    setIsSaving(true);
+    try {
+      await updateSale(sale.id, {
+        paymentMethod,
+        notes: notes.trim() || undefined,
+        totalBs: newTotalBs,
+        totalUsd: newTotalBs / config.exchangeRate,
+        // Map back to strict CartItem type (ensure no empty strings)
+        items: items.map((i) => ({
+          ...i,
+          quantity: i.quantity === '' || i.quantity === 0 ? 1 : i.quantity,
+        })),
+      });
 
-    toast.success('Venta actualizada');
-    onOpenChange(false);
+      toast.success('Venta actualizada');
+      onOpenChange(false);
+    } catch (err) {
+      console.error('Error actualizando venta:', err);
+      toast.error('Error al actualizar la venta');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   if (!sale) return null;
@@ -210,9 +219,11 @@ export function EditSaleSheet({
 
           <Button
             onClick={handleSubmit}
+            disabled={isSaving}
             className="w-full h-12 text-base font-bold"
           >
-            Guardar Cambios
+            {isSaving && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+            {isSaving ? 'Guardando...' : 'Guardar Cambios'}
           </Button>
         </div>
       </SheetContent>

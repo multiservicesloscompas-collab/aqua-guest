@@ -37,7 +37,7 @@ import {
   PaymentMethod,
   PaymentMethodLabels,
 } from '@/types';
-import { Plus, Trash2, Wallet, Pencil } from 'lucide-react';
+import { Plus, Trash2, Wallet, Pencil, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
@@ -58,6 +58,9 @@ export function EgresosPage() {
   const [category, setCategory] = useState<ExpenseCategory>('operativo');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('efectivo');
   const [notes, setNotes] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
     const today = new Date();
@@ -97,41 +100,51 @@ export function EgresosPage() {
     setShowSheet(true);
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!description || !amount) return;
-    (async () => {
-      try {
-        if (editingExpense) {
-          await updateExpense(editingExpense.id, {
-            description,
-            amount: Number(amount),
-            category,
-            paymentMethod,
-            notes: notes || undefined,
-          });
-          toast.success('Egreso actualizado');
-        } else {
-          await addExpense({
-            date: selectedDate,
-            description,
-            amount: Number(amount),
-            category,
-            paymentMethod,
-            notes: notes || undefined,
-          });
-          toast.success('Egreso registrado');
-        }
-        handleReset();
-        setShowSheet(false);
-      } catch (err) {
-        toast.error('Error guardando egreso');
+    setIsSaving(true);
+    try {
+      if (editingExpense) {
+        await updateExpense(editingExpense.id, {
+          description,
+          amount: Number(amount),
+          category,
+          paymentMethod,
+          notes: notes || undefined,
+        });
+        toast.success('Egreso actualizado');
+      } else {
+        await addExpense({
+          date: selectedDate,
+          description,
+          amount: Number(amount),
+          category,
+          paymentMethod,
+          notes: notes || undefined,
+        });
+        toast.success('Egreso registrado');
       }
-    })();
+      handleReset();
+      setShowSheet(false);
+    } catch (err) {
+      toast.error('Error guardando egreso');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const handleDelete = (id: string) => {
-    deleteExpense(id);
-    toast.success('Egreso eliminado');
+  const handleDelete = async (id: string) => {
+    setDeletingId(id);
+    setIsDeleting(true);
+    try {
+      await deleteExpense(id);
+      toast.success('Egreso eliminado');
+    } catch (err) {
+      toast.error('Error eliminando egreso');
+    } finally {
+      setIsDeleting(false);
+      setDeletingId(null);
+    }
   };
 
   return (
@@ -226,9 +239,10 @@ export function EgresosPage() {
                           <AlertDialogCancel>Cancelar</AlertDialogCancel>
                           <AlertDialogAction
                             onClick={() => handleDelete(expense.id)}
+                            disabled={isDeleting}
                             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                           >
-                            Eliminar
+                            {isDeleting && deletingId === expense.id ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Eliminar'}
                           </AlertDialogAction>
                         </AlertDialogFooter>
                       </AlertDialogContent>
@@ -351,10 +365,15 @@ export function EgresosPage() {
 
             <Button
               onClick={handleSubmit}
-              disabled={!description || !amount}
+              disabled={!description || !amount || isSaving}
               className="w-full h-14 text-base font-bold bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-xl"
             >
-              {editingExpense ? (
+              {isSaving ? (
+                <>
+                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                  Guardando...
+                </>
+              ) : editingExpense ? (
                 <>
                   <Pencil className="w-5 h-5 mr-2" />
                   Guardar Cambios

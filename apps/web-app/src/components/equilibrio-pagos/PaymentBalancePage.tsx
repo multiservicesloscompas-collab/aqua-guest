@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeftRight, Plus, Trash2, Edit2, Save, X } from 'lucide-react';
+import { ArrowLeftRight, Plus, Trash2, Edit2, Save, X, Loader2 } from 'lucide-react';
 import { DateSelector } from '@/components/ventas/DateSelector';
 import { toast } from 'sonner';
 
@@ -33,6 +33,11 @@ export function PaymentBalancePage() {
     amount: '',
     notes: ''
   });
+
+  const [isAdding, setIsAdding] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const balanceSummary = useMemo(() => {
     return getPaymentBalanceSummary(selectedDate);
@@ -63,17 +68,18 @@ export function PaymentBalancePage() {
 
     // Obtener tasa de cambio actual
     const exchangeRate = config.exchangeRate;
-    
+
     // Calcular montos según los métodos de pago involucrados
     let amountBs = amount;
     let amountUsd = 0;
-    
+
     if (formData.fromMethod === 'divisa' || formData.toMethod === 'divisa') {
       // Si involucra divisas, el monto ingresado se considera en USD
       amountUsd = amount;
       amountBs = amount * exchangeRate;
     }
 
+    setIsAdding(true);
     try {
       await addPaymentBalanceTransaction({
         date: selectedDate,
@@ -93,11 +99,13 @@ export function PaymentBalancePage() {
         notes: ''
       });
       setShowAddForm(false);
-      
+
       toast.success('Transferencia registrada exitosamente');
     } catch (error) {
       console.error('Error adding transaction:', error);
       toast.error('No se pudo registrar la transferencia. Intenta nuevamente.');
+    } finally {
+      setIsAdding(false);
     }
   };
 
@@ -120,17 +128,18 @@ export function PaymentBalancePage() {
 
     // Obtener tasa de cambio actual
     const exchangeRate = config.exchangeRate;
-    
+
     // Calcular montos según los métodos de pago involucrados
     let amountBs = amount;
     let amountUsd = 0;
-    
+
     if (formData.fromMethod === 'divisa' || formData.toMethod === 'divisa') {
       // Si involucra divisas, el monto ingresado se considera en USD
       amountUsd = amount;
       amountBs = amount * exchangeRate;
     }
 
+    setIsUpdating(true);
     try {
       await updatePaymentBalanceTransaction(id, {
         fromMethod: formData.fromMethod,
@@ -149,22 +158,29 @@ export function PaymentBalancePage() {
         notes: ''
       });
       setEditingTransaction(null);
-      
+
       toast.success('Transferencia actualizada exitosamente');
     } catch (error) {
       console.error('Error updating transaction:', error);
       toast.error('No se pudo actualizar la transferencia. Intenta nuevamente.');
+    } finally {
+      setIsUpdating(false);
     }
   };
 
   const handleDeleteTransaction = async (id: string) => {
     if (confirm('¿Está seguro de eliminar esta transacción de equilibrio?')) {
+      setDeletingId(id);
+      setIsDeleting(true);
       try {
         await deletePaymentBalanceTransaction(id);
         toast.success('Transferencia eliminada exitosamente');
       } catch (error) {
         console.error('Error deleting transaction:', error);
         toast.error('No se pudo eliminar la transferencia. Intenta nuevamente.');
+      } finally {
+        setIsDeleting(false);
+        setDeletingId(null);
       }
     }
   };
@@ -393,18 +409,22 @@ export function PaymentBalancePage() {
                 <div className="flex gap-2">
                   {editingTransaction ? (
                     <>
-                      <Button onClick={() => handleUpdateTransaction(editingTransaction)} className="flex-1">
-                        <Save className="w-4 h-4 mr-2" />
-                        Actualizar
+                      <Button
+                        onClick={() => handleUpdateTransaction(editingTransaction)}
+                        disabled={isUpdating}
+                        className="flex-1"
+                      >
+                        {isUpdating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
+                        {isUpdating ? 'Actualizando...' : 'Actualizar'}
                       </Button>
-                      <Button onClick={cancelEdit} variant="outline">
+                      <Button onClick={cancelEdit} variant="outline" disabled={isUpdating}>
                         <X className="w-4 h-4" />
                       </Button>
                     </>
                   ) : (
-                    <Button onClick={handleAddTransaction} className="w-full">
-                      <Plus className="w-4 h-4 mr-2" />
-                      Agregar Transferencia
+                    <Button onClick={handleAddTransaction} disabled={isAdding} className="w-full">
+                      {isAdding ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Plus className="w-4 h-4 mr-2" />}
+                      {isAdding ? 'Agregando...' : 'Agregar Transferencia'}
                     </Button>
                   )}
                 </div>
@@ -460,9 +480,9 @@ export function PaymentBalancePage() {
                         size="sm"
                         variant="ghost"
                         onClick={() => handleDeleteTransaction(transaction.id)}
-                        disabled={editingTransaction !== null}
+                        disabled={editingTransaction !== null || isDeleting}
                       >
-                        <Trash2 className="w-4 h-4" />
+                        {isDeleting && deletingId === transaction.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
                       </Button>
                     </div>
                   </div>

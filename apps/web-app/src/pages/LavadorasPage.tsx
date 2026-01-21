@@ -6,6 +6,7 @@ import {
   Trash2,
   Weight,
   Tag,
+  Loader2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -65,6 +66,8 @@ export default function LavadorasPage() {
   const [kg, setKg] = useState('');
   const [brand, setBrand] = useState('');
   const [status, setStatus] = useState<MachineStatus>('disponible');
+  const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const resetForm = () => {
     setName('');
@@ -93,16 +96,23 @@ export default function LavadorasPage() {
     setDeleteDialogOpen(true);
   };
 
-  const handleDeleteConfirm = () => {
+  const handleDeleteConfirm = async () => {
     if (machineToDelete) {
-      deleteWashingMachine(machineToDelete.id);
-      toast.success('Lavadora eliminada');
+      setIsDeleting(true);
+      try {
+        await deleteWashingMachine(machineToDelete.id);
+        toast.success('Lavadora eliminada');
+      } catch (err) {
+        toast.error('Error eliminando la lavadora');
+      } finally {
+        setIsDeleting(false);
+      }
     }
     setDeleteDialogOpen(false);
     setMachineToDelete(null);
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!name.trim() || !kg || !brand.trim()) {
       toast.error('Completa todos los campos');
       return;
@@ -114,35 +124,35 @@ export default function LavadorasPage() {
       return;
     }
 
+    setIsSaving(true);
     // persist via supabase-backed store (async)
-    (async () => {
-      try {
-        if (editingMachine) {
-          await updateWashingMachine(editingMachine.id, {
-            name: name.trim(),
-            kg: kgNum,
-            brand: brand.trim(),
-            status,
-            isAvailable: status === 'disponible',
-          });
-          toast.success('Lavadora actualizada');
-        } else {
-          await addWashingMachine({
-            name: name.trim(),
-            kg: kgNum,
-            brand: brand.trim(),
-            status,
-            isAvailable: status === 'disponible',
-          });
-          toast.success('Lavadora agregada');
-        }
-      } catch (err) {
-        toast.error('Error guardando la lavadora');
+    try {
+      if (editingMachine) {
+        await updateWashingMachine(editingMachine.id, {
+          name: name.trim(),
+          kg: kgNum,
+          brand: brand.trim(),
+          status,
+          isAvailable: status === 'disponible',
+        });
+        toast.success('Lavadora actualizada');
+      } else {
+        await addWashingMachine({
+          name: name.trim(),
+          kg: kgNum,
+          brand: brand.trim(),
+          status,
+          isAvailable: status === 'disponible',
+        });
+        toast.success('Lavadora agregada');
       }
-    })();
-
-    setSheetOpen(false);
-    resetForm();
+      setSheetOpen(false);
+      resetForm();
+    } catch (err) {
+      toast.error('Error guardando la lavadora');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -304,8 +314,9 @@ export default function LavadorasPage() {
               </Select>
             </div>
 
-            <Button onClick={handleSubmit} className="w-full h-12 mt-4">
-              {editingMachine ? 'Guardar Cambios' : 'Agregar Lavadora'}
+            <Button onClick={handleSubmit} disabled={isSaving} className="w-full h-12 mt-4">
+              {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+              {isSaving ? 'Guardando...' : editingMachine ? 'Guardar Cambios' : 'Agregar Lavadora'}
             </Button>
           </div>
         </SheetContent>
@@ -325,9 +336,10 @@ export default function LavadorasPage() {
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteConfirm}
+              disabled={isDeleting}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Eliminar
+              {isDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Eliminar'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

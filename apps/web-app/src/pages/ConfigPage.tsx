@@ -11,6 +11,7 @@ import {
   Info,
   Droplet,
   History,
+  Loader2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -27,6 +28,8 @@ export function ConfigPage({ onNavigate }: ConfigPageProps) {
   const [literPrices, setLiterPrices] = useState<LiterPricing[]>(
     config.literPricing || DEFAULT_LITER_BREAKPOINTS
   );
+  const [isSavingRate, setIsSavingRate] = useState(false);
+  const [isSavingPrices, setIsSavingPrices] = useState(false);
 
   useEffect(() => {
     setRate(config.exchangeRate.toString());
@@ -43,12 +46,15 @@ export function ConfigPage({ onNavigate }: ConfigPageProps) {
       return;
     }
 
+    setIsSavingRate(true);
     try {
       await setExchangeRate(newRate);
       toast.success('Tasa actualizada');
     } catch (err) {
       console.error('Error saving exchange rate', err);
       toast.error('Error al guardar la tasa. Se guardó localmente');
+    } finally {
+      setIsSavingRate(false);
     }
   };
 
@@ -68,12 +74,15 @@ export function ConfigPage({ onNavigate }: ConfigPageProps) {
       toast.error('Todos los precios deben ser mayores a 0');
       return;
     }
+    setIsSavingPrices(true);
     try {
       await setLiterPricing(literPrices);
       toast.success('Precios por litros actualizados');
     } catch (err) {
       console.error('Error saving liter prices', err);
       toast.error('Error al guardar los precios. Se guardaron localmente');
+    } finally {
+      setIsSavingPrices(false);
     }
   };
 
@@ -115,9 +124,10 @@ export function ConfigPage({ onNavigate }: ConfigPageProps) {
               />
               <Button
                 onClick={handleSaveRate}
+                disabled={isSavingRate}
                 className="h-14 w-14 gradient-primary rounded-xl"
               >
-                <Save className="w-5 h-5" />
+                {isSavingRate ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
               </Button>
             </div>
           </div>
@@ -188,10 +198,11 @@ export function ConfigPage({ onNavigate }: ConfigPageProps) {
 
           <Button
             onClick={handleSaveLiterPrices}
+            disabled={isSavingPrices}
             className="w-full h-12 gradient-primary rounded-xl font-semibold"
           >
-            <Save className="w-4 h-4 mr-2" />
-            Guardar Precios
+            {isSavingPrices ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+            {isSavingPrices ? 'Guardando...' : 'Guardar Precios'}
           </Button>
 
           <p className="text-xs text-muted-foreground text-center">

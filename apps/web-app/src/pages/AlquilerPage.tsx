@@ -6,6 +6,8 @@ import { RentalSheet } from '@/components/alquiler/RentalSheet';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
 import { useAppStore } from '@/store/useAppStore';
+import { cn } from '@/lib/utils';
+import { WasherRental } from '@/types';
 
 export function AlquilerPage() {
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -25,11 +27,16 @@ export function AlquilerPage() {
   const rentals = getRentalsByDate(selectedDate);
 
   // Calcular resumen del día
-  const activeRentals = rentals.filter((r) => r.status !== 'finalizado').length;
-  const totalEarnings = rentals.reduce((sum, r) => sum + r.totalUsd, 0);
+  const activeRentals = rentals.filter(
+    (r: WasherRental) => r.status !== 'finalizado'
+  ).length;
+  const totalEarnings = rentals.reduce(
+    (sum: number, r: WasherRental) => sum + r.totalUsd,
+    0
+  );
   const paidAmount = rentals
-    .filter((r) => r.isPaid)
-    .reduce((sum, r) => sum + r.totalUsd, 0);
+    .filter((r: WasherRental) => r.isPaid)
+    .reduce((sum: number, r: WasherRental) => sum + r.totalUsd, 0);
 
   return (
     <div className="min-h-screen bg-background pb-24">
@@ -66,9 +73,11 @@ export function AlquilerPage() {
 
       {/* FAB para agregar */}
       <Button
-        size="lg"
-        className="fixed bottom-20 right-4 w-14 h-14 rounded-full shadow-lg z-40"
         onClick={() => setSheetOpen(true)}
+        className={cn(
+          'fixed bottom-24 right-4 w-14 h-14 rounded-full gradient-primary shadow-fab z-40',
+          'transition-transform hover:scale-105 active:scale-95'
+        )}
       >
         <Plus className="w-6 h-6" />
       </Button>
