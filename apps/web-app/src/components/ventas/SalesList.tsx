@@ -81,7 +81,7 @@ export function SalesList({ sales, paymentFilter = 'todos' }: SalesListProps) {
               </span>
             )}
           </h3>
-          <span className="text-sm font-bold text-primary">
+          <span className="text-sm font-bold text-primary" data-testid="total-sales">
             Bs{' '}
             {filteredSales
               .reduce((sum, s) => {
@@ -115,14 +115,14 @@ export function SalesList({ sales, paymentFilter = 'todos' }: SalesListProps) {
                     <div className="p-2 bg-primary/10 rounded-full">
                       <PaymentIcon className="w-4 h-4 text-primary" />
                     </div>
-                    <div>
-                      <p className="text-sm font-bold text-foreground">
-                        Bs{' '}
-                        {(() => {
-                          const num = Number(sale.totalBs);
-                          return (isNaN(num) ? 0 : num).toFixed(2);
-                        })()}
-                      </p>
+                     <div>
+                       <p className="text-sm font-bold text-foreground" data-testid={`sale-price-${sale.id}`}>
+                         Bs{' '}
+                         {(() => {
+                           const num = Number(sale.totalBs);
+                           return (isNaN(num) ? 0 : num).toFixed(2);
+                         })()}
+                       </p>
                       <p className="text-xs text-muted-foreground">
                         {PaymentMethodLabels[sale.paymentMethod]} • $
                         {(() => {

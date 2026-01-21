@@ -4,7 +4,7 @@
 
 - Backend: NestJS
 - Frontend: React
-- Base de datos: Sqlite
+- Base de datos: Supabase
 - Nx manejador de Monorepositorios
 - Use CMD en windows en lugar de powershell
 
