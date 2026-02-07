@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { useAppStore } from '@/store/useAppStore';
 import { Product } from '@/types';
 import { Plus, Minus, Droplet } from 'lucide-react';
-import { cn } from '@/lib/utils';
+
 import { toast } from 'sonner';
 
 interface AddProductSheetProps {
@@ -19,12 +19,33 @@ interface AddProductSheetProps {
   onOpenChange: (open: boolean) => void;
 }
 
+const DEFAULT_DISPLAY_LITERS = 19;
+
+function useProductDisplayPrice(
+  products: Product[],
+  getPriceForLiters: (liters: number) => number
+): Map<string, number> {
+  const priceMap = new Map<string, number>();
+
+  products.forEach((product) => {
+    if (product.requiresLiters) {
+      priceMap.set(product.id, getPriceForLiters(DEFAULT_DISPLAY_LITERS));
+    } else {
+      priceMap.set(product.id, product.defaultPrice);
+    }
+  });
+
+  return priceMap;
+}
+
 export function AddProductSheet({ open, onOpenChange }: AddProductSheetProps) {
   const { products, addToCart, getPriceForLiters, config } = useAppStore();
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [quantity, setQuantity] = useState(1);
-  const [liters, setLiters] = useState(19);
+  const [liters, setLiters] = useState(DEFAULT_DISPLAY_LITERS);
   const [unitPrice, setUnitPrice] = useState(0);
+
+  const displayPrices = useProductDisplayPrice(products, getPriceForLiters);
 
   // Actualizar precio cuando cambian los litros para productos que lo requieren
   useEffect(() => {
@@ -88,21 +109,24 @@ export function AddProductSheet({ open, onOpenChange }: AddProductSheetProps) {
         {!selectedProduct ? (
           /* Selector de producto */
           <div className="grid grid-cols-2 gap-3">
-            {products.map((product) => (
-              <button
-                key={product.id}
-                onClick={() => setSelectedProduct(product)}
-                className="flex flex-col items-center gap-2 p-4 bg-muted/50 rounded-xl border-2 border-transparent hover:border-primary/30 transition-all active:scale-95"
-              >
-                <span className="text-3xl">{product.icon || '📦'}</span>
-                <span className="text-sm font-semibold text-foreground text-center">
-                  {product.name}
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  Bs {product.defaultPrice.toFixed(2)}
-                </span>
-              </button>
-            ))}
+            {products.map((product) => {
+              const displayPrice = displayPrices.get(product.id) ?? product.defaultPrice;
+              return (
+                <button
+                  key={product.id}
+                  onClick={() => setSelectedProduct(product)}
+                  className="flex flex-col items-center gap-2 p-4 bg-muted/50 rounded-xl border-2 border-transparent hover:border-primary/30 transition-all active:scale-95"
+                >
+                  <span className="text-3xl">{product.icon || '📦'}</span>
+                  <span className="text-sm font-semibold text-foreground text-center">
+                    {product.name}
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    Bs {displayPrice.toFixed(2)}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         ) : (
           /* Formulario de producto */

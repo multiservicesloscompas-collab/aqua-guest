@@ -126,6 +126,7 @@ interface AppState {
   loadSalesByDate: (date: string) => Promise<void>;
   loadRentalsByDate: (date: string) => Promise<void>;
   loadExpensesByDate: (date: string) => Promise<void>;
+  loadExpensesByDates: (dates: string[]) => Promise<void>;
   loadDataForDateRange: (startDate: string, endDate: string) => Promise<void>;
   loadFromSupabase: () => Promise<void>;
 }
@@ -1644,6 +1645,26 @@ export const useAppStore = create<AppState>()(
           return expenses;
         } catch (err) {
           console.error('Error loading expenses by date:', err);
+          throw err;
+        }
+      },
+
+      loadExpensesByDates: async (dates) => {
+        try {
+          const map = await expensesDataService.loadExpensesByDates(dates);
+          const incoming: Expense[] = [];
+          for (const entries of map.values()) {
+            incoming.push(...entries);
+          }
+          const loadedDatesSet = new Set(dates);
+          set((state) => {
+            const kept = state.expenses.filter((e) => !loadedDatesSet.has(e.date));
+            return {
+              expenses: [...kept, ...incoming],
+            };
+          });
+        } catch (err) {
+          console.error('Error loading expenses by dates:', err);
           throw err;
         }
       },

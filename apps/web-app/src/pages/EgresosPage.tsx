@@ -20,26 +20,19 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
-import {
   ExpenseCategory,
   ExpenseCategoryLabels,
   Expense,
   PaymentMethod,
   PaymentMethodLabels,
 } from '@/types';
-import { Plus, Trash2, Wallet, Pencil, Loader2 } from 'lucide-react';
+import { Plus, Wallet, Pencil, Loader2, CalendarDays, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { ExpenseCard } from '@/components/egresos/ExpenseCard';
+import { WeeklyExpensesView } from '@/components/egresos/WeeklyExpensesView';
+
+type EgresosViewMode = 'day' | 'week';
 
 export function EgresosPage() {
   const {
@@ -52,6 +45,7 @@ export function EgresosPage() {
     deleteExpense,
   } = useAppStore();
 
+  const [viewMode, setViewMode] = useState<EgresosViewMode>('day');
   const [showSheet, setShowSheet] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [description, setDescription] = useState('');
@@ -75,28 +69,24 @@ export function EgresosPage() {
     setSelectedDate(formattedDate);
   }, [setSelectedDate]);
 
-  // Cargar egresos cuando cambia la fecha - Optimización de rendimiento
   useEffect(() => {
-    if (!selectedDate) return;
+    if (!selectedDate || viewMode !== 'day') return;
 
-    // Verificar si ya hay egresos en caché para esta fecha
     const cachedExpenses = getExpensesByDate(selectedDate);
 
     if (cachedExpenses.length > 0) {
-      // Ya tenemos datos, no es necesario cargar
       return;
     }
 
-    // Cargar egresos de la fecha específica
     setLoadingExpenses(true);
     loadExpensesByDate(selectedDate)
-      .catch(err => {
+      .catch((err: unknown) => {
         console.error('Error loading expenses for date:', selectedDate, err);
       })
       .finally(() => {
         setLoadingExpenses(false);
       });
-  }, [selectedDate, loadExpensesByDate, getExpensesByDate]);
+  }, [selectedDate, loadExpensesByDate, getExpensesByDate, viewMode]);
 
   const expenses = getExpensesByDate(selectedDate);
   const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
@@ -151,7 +141,7 @@ export function EgresosPage() {
       }
       handleReset();
       setShowSheet(false);
-    } catch (err) {
+    } catch {
       toast.error('Error guardando egreso');
     } finally {
       setIsSaving(false);
@@ -164,7 +154,7 @@ export function EgresosPage() {
     try {
       await deleteExpense(id);
       toast.success('Egreso eliminado');
-    } catch (err) {
+    } catch {
       toast.error('Error eliminando egreso');
     } finally {
       setIsDeleting(false);
@@ -172,117 +162,95 @@ export function EgresosPage() {
     }
   };
 
+  const toggleViewMode = () => {
+    setViewMode((prev) => (prev === 'day' ? 'week' : 'day'));
+  };
+
   return (
     <div className="flex flex-col min-h-screen pb-24">
       <Header title="Egresos" subtitle="Registro de gastos" />
 
       <main className="flex-1 px-4 py-4 space-y-4 max-w-lg mx-auto w-full">
-        <DateSelector
-          selectedDate={selectedDate}
-          onDateChange={setSelectedDate}
-          loading={loadingExpenses}
-        />
-
-        {/* Total del día */}
-        <div className="bg-destructive/10 border border-destructive/20 rounded-xl p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Wallet className="w-5 h-5 text-destructive" />
-              <span className="text-sm font-medium text-foreground">
-                Total Egresos
-              </span>
-            </div>
-            <span className="text-xl font-extrabold text-destructive">
-              Bs {totalExpenses.toFixed(2)}
-            </span>
+        <div className="flex items-center gap-2">
+          <div className="flex-1">
+            <DateSelector
+              selectedDate={selectedDate}
+              onDateChange={setSelectedDate}
+              loading={loadingExpenses}
+            />
           </div>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={toggleViewMode}
+            className={cn(
+              'h-12 w-12 shrink-0 rounded-xl border transition-colors',
+              viewMode === 'week'
+                ? 'bg-primary/10 border-primary/30 text-primary'
+                : 'text-muted-foreground'
+            )}
+            title={viewMode === 'day' ? 'Vista semanal' : 'Vista diaria'}
+          >
+            {viewMode === 'day' ? (
+              <CalendarDays className="w-5 h-5" />
+            ) : (
+              <Calendar className="w-5 h-5" />
+            )}
+          </Button>
         </div>
 
-        {/* Lista de egresos */}
-        {loadingExpenses && expenses.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-            <Loader2 className="w-8 h-8 mb-3 animate-spin" />
-            <p className="text-sm font-medium">Cargando egresos...</p>
-          </div>
-        ) : expenses.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-            <Wallet className="w-12 h-12 mb-3 opacity-40" />
-            <p className="text-sm font-medium">Sin egresos este día</p>
-            <p className="text-xs">Presiona + para registrar un gasto</p>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {expenses.map((expense) => (
-              <div
-                key={expense.id}
-                className="bg-card rounded-xl p-4 border shadow-card"
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <p className="text-sm font-bold text-foreground">
-                      {expense.description}
-                    </p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <p className="text-xs text-muted-foreground">
-                        {ExpenseCategoryLabels[expense.category]}
-                      </p>
-                      <span className="text-xs text-muted-foreground">•</span>
-                      <p className="text-xs text-muted-foreground">
-                        {PaymentMethodLabels[expense.paymentMethod || 'efectivo']}
-                      </p>
-                    </div>
-                    {expense.notes && (
-                      <p className="text-xs text-muted-foreground mt-1 italic">
-                        {expense.notes}
-                      </p>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-base font-bold text-destructive">
-                      Bs {expense.amount.toFixed(2)}
-                    </span>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleEdit(expense)}
-                      className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/10"
-                    >
-                      <Pencil className="w-4 h-4" />
-                    </Button>
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent className="max-w-[90vw] rounded-xl">
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>¿Eliminar egreso?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            Esta acción no se puede deshacer.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                          <AlertDialogAction
-                            onClick={() => handleDelete(expense.id)}
-                            disabled={isDeleting}
-                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                          >
-                            {isDeleting && deletingId === expense.id ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Eliminar'}
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  </div>
+        {viewMode === 'day' ? (
+          <>
+            {/* Total del día */}
+            <div className="bg-destructive/10 border border-destructive/20 rounded-xl p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Wallet className="w-5 h-5 text-destructive" />
+                  <span className="text-sm font-medium text-foreground">
+                    Total Egresos
+                  </span>
                 </div>
+                <span className="text-xl font-extrabold text-destructive">
+                  Bs {totalExpenses.toFixed(2)}
+                </span>
               </div>
-            ))}
-          </div>
+            </div>
+
+            {/* Lista de egresos del día */}
+            {loadingExpenses && expenses.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                <Loader2 className="w-8 h-8 mb-3 animate-spin" />
+                <p className="text-sm font-medium">Cargando egresos...</p>
+              </div>
+            ) : expenses.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                <Wallet className="w-12 h-12 mb-3 opacity-40" />
+                <p className="text-sm font-medium">Sin egresos este día</p>
+                <p className="text-xs">Presiona + para registrar un gasto</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {expenses.map((expense) => (
+                  <ExpenseCard
+                    key={expense.id}
+                    expense={expense}
+                    onEdit={handleEdit}
+                    onDelete={handleDelete}
+                    isDeleting={isDeleting}
+                    deletingId={deletingId}
+                  />
+                ))}
+              </div>
+            )}
+          </>
+        ) : (
+          <WeeklyExpensesView
+            anchorDate={selectedDate}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            isDeleting={isDeleting}
+            deletingId={deletingId}
+          />
         )}
       </main>
 

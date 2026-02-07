@@ -184,6 +184,7 @@ export function DashboardPage({ onNavigate }: DashboardPageProps = {}) {
             }
             icon={<Wallet className="w-4 h-4 text-destructive" />}
             variant="danger"
+            onClick={() => onNavigate?.('egresos')}
           />
           <KpiCard
             title="Neto Hoy"
