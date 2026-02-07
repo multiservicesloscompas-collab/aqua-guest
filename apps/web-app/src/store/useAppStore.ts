@@ -126,6 +126,7 @@ interface AppState {
   loadSalesByDate: (date: string) => Promise<void>;
   loadRentalsByDate: (date: string) => Promise<void>;
   loadExpensesByDate: (date: string) => Promise<void>;
+  loadDataForDateRange: (startDate: string, endDate: string) => Promise<void>;
   loadFromSupabase: () => Promise<void>;
 }
 
@@ -1644,6 +1645,62 @@ export const useAppStore = create<AppState>()(
         } catch (err) {
           console.error('Error loading expenses by date:', err);
           throw err;
+        }
+      },
+
+      loadDataForDateRange: async (startDate, endDate) => {
+        try {
+          const dates: string[] = [];
+          const current = new Date(startDate + 'T12:00:00');
+          const end = new Date(endDate + 'T12:00:00');
+          while (current <= end) {
+            const y = current.getFullYear();
+            const m = String(current.getMonth() + 1).padStart(2, '0');
+            const d = String(current.getDate()).padStart(2, '0');
+            dates.push(`${y}-${m}-${d}`);
+            current.setDate(current.getDate() + 1);
+          }
+
+          if (dates.length === 0) return;
+
+          const [salesMap, rentalsMap, expensesMap] = await Promise.all([
+            salesDataService.loadSalesByDates(dates),
+            rentalsDataService.loadRentalsByDates(dates),
+            expensesDataService.loadExpensesByDates(dates),
+          ]);
+
+          const allSales: Sale[] = [];
+          for (const entries of salesMap.values()) {
+            allSales.push(...entries);
+          }
+
+          const allRentals: WasherRental[] = [];
+          for (const entries of rentalsMap.values()) {
+            allRentals.push(...entries);
+          }
+
+          const allExpenses: Expense[] = [];
+          for (const entries of expensesMap.values()) {
+            allExpenses.push(...entries);
+          }
+
+          const loadedDatesSet = new Set(dates);
+          set((state) => ({
+            sales: [
+              ...state.sales.filter((s) => !loadedDatesSet.has(s.date)),
+              ...allSales,
+            ],
+            rentals: [
+              ...state.rentals.filter((r) => !loadedDatesSet.has(r.date)),
+              ...allRentals,
+            ],
+            expenses: [
+              ...state.expenses.filter((e) => !loadedDatesSet.has(e.date)),
+              ...allExpenses,
+            ],
+          }));
+        } catch (err) {
+          console.error('Error loading data for date range:', err);
         }
       },
     }),

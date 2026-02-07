@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Header } from '@/components/layout/Header';
 import { KpiCard } from '@/components/ui/KpiCard';
 import { SalesChart } from '@/components/dashboard/SalesChart';
@@ -18,14 +18,11 @@ import {
   Banknote,
   BarChart3,
 } from 'lucide-react';
+import { ChartDataPoint, Sale, WasherRental, AppRoute } from '@/types';
 import {
-  ChartDataPoint,
-  Sale,
-  WasherRental,
-  PrepaidOrder,
-  AppRoute,
-  PaymentMethod,
-} from '@/types';
+  calculateDashboardMetrics,
+  getMonthToDateRange,
+} from '@/services/DashboardMetricsService';
 
 interface DashboardPageProps {
   onNavigate?: (route: AppRoute) => void;
@@ -39,229 +36,60 @@ export function DashboardPage({ onNavigate }: DashboardPageProps = {}) {
     rentals,
     prepaidOrders,
     paymentBalanceTransactions,
+    loadDataForDateRange,
   } = useAppStore();
   const [currency, setCurrency] = useState<'Bs' | 'USD'>('Bs');
   const [selectedDate, setSelectedDate] = useState<string>(
     new Date().toISOString().split('T')[0]
   );
+  const [loading, setLoading] = useState(false);
+  const lastLoadedRange = useRef<string>('');
 
-  const stats = useMemo(() => {
-    const selected = new Date(selectedDate + 'T12:00:00');
+  const loadMonthData = useCallback(
+    async (date: string) => {
+      const range = getMonthToDateRange(date);
+      const rangeKey = `${range.start}_${range.end}`;
+      if (lastLoadedRange.current === rangeKey) return;
+      lastLoadedRange.current = rangeKey;
+      setLoading(true);
+      try {
+        await loadDataForDateRange(range.start, range.end);
+      } catch (err) {
+        console.error('Error loading month data for dashboard', err);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [loadDataForDateRange]
+  );
 
-    // Calcular inicio de semana (Domingo) en local
-    const startOfWeek = new Date(selected);
-    startOfWeek.setDate(selected.getDate() - selected.getDay());
-    const startOfWeekStr =
-      startOfWeek.getFullYear() +
-      '-' +
-      String(startOfWeek.getMonth() + 1).padStart(2, '0') +
-      '-' +
-      String(startOfWeek.getDate()).padStart(2, '0');
+  useEffect(() => {
+    loadMonthData(selectedDate);
+  }, [selectedDate, loadMonthData]);
 
-    // Calcular inicio de mes en local
-    const startOfMonth = new Date(
-      selected.getFullYear(),
-      selected.getMonth(),
-      1
-    );
-    const startOfMonthStr =
-      startOfMonth.getFullYear() +
-      '-' +
-      String(startOfMonth.getMonth() + 1).padStart(2, '0') +
-      '-' +
-      String(startOfMonth.getDate()).padStart(2, '0');
+  const metrics = useMemo(
+    () =>
+      calculateDashboardMetrics({
+        selectedDate,
+        exchangeRate: config.exchangeRate,
+        sales,
+        rentals,
+        expenses,
+        prepaidOrders,
+        paymentBalanceTransactions,
+      }),
+    [
+      sales,
+      expenses,
+      rentals,
+      prepaidOrders,
+      paymentBalanceTransactions,
+      selectedDate,
+      config.exchangeRate,
+    ]
+  );
 
-    // Ventas de agua - usar comparación de strings
-    const salesToday = sales.filter((s) => s.date === selectedDate);
-    const salesWeek = sales.filter((s) => s.date >= startOfWeekStr);
-    const salesMonth = sales.filter((s) => s.date >= startOfMonthStr);
-
-    // Alquileres - usar comparación de strings
-    const rentalsToday = rentals.filter((r) => r.date === selectedDate);
-    const rentalsWeek = rentals.filter((r) => r.date >= startOfWeekStr);
-    const rentalsMonth = rentals.filter((r) => r.date >= startOfMonthStr);
-
-    // Egresos
-    const expensesToday = expenses.filter((e: any) => e.date === selectedDate);
-    const expensesWeek = expenses.filter((e: any) => e.date >= startOfWeekStr);
-    const expensesMonth = expenses.filter(
-      (e: any) => e.date >= startOfMonthStr
-    );
-
-    // Totales de agua (en Bs)
-    const waterToday = salesToday.reduce((sum, s) => sum + s.totalBs, 0);
-    const waterWeek = salesWeek.reduce((sum, s) => sum + s.totalBs, 0);
-    const waterMonth = salesMonth.reduce((sum, s) => sum + s.totalBs, 0);
-
-    // Totales de alquiler (USD -> Bs)
-    const rentalTodayBs = rentalsToday.reduce(
-      (sum, r) => sum + r.totalUsd * config.exchangeRate,
-      0
-    );
-    const rentalWeekBs = rentalsWeek.reduce(
-      (sum, r) => sum + r.totalUsd * config.exchangeRate,
-      0
-    );
-    const rentalMonthBs = rentalsMonth.reduce(
-      (sum, r) => sum + r.totalUsd * config.exchangeRate,
-      0
-    );
-
-    // Totales combinados
-    const totalToday = waterToday + rentalTodayBs;
-    const totalWeek = waterWeek + rentalWeekBs;
-    const totalMonth = waterMonth + rentalMonthBs;
-    const expenseTodayTotal = expensesToday.reduce(
-      (sum: number, e: any) => sum + e.amount,
-      0
-    );
-    const expenseWeekTotal = expensesWeek.reduce(
-      (sum: number, e: any) => sum + e.amount,
-      0
-    );
-    const expenseMonthTotal = expensesMonth.reduce(
-      (sum: number, e: any) => sum + e.amount,
-      0
-    );
-
-    // Conteo de transacciones (agua + alquileres)
-    const transactionsToday = salesToday.length + rentalsToday.length;
-
-    // Calcular totales originales por método de pago (sin ajustes)
-    const originalMethodTotals = {
-      efectivo:
-        salesToday
-          .filter((s: Sale) => s.paymentMethod === 'efectivo')
-          .reduce((sum: number, s: Sale) => sum + s.totalBs, 0) +
-        rentalsToday
-          .filter((r: WasherRental) => r.paymentMethod === 'efectivo')
-          .reduce(
-            (sum: number, r: WasherRental) =>
-              sum + r.totalUsd * config.exchangeRate,
-            0
-          ) +
-        prepaidOrders
-          .filter(
-            (p: PrepaidOrder) =>
-              p.datePaid === selectedDate && p.paymentMethod === 'efectivo'
-          )
-          .reduce((sum: number, p: PrepaidOrder) => sum + p.amountBs, 0),
-      pago_movil:
-        salesToday
-          .filter((s: Sale) => s.paymentMethod === 'pago_movil')
-          .reduce((sum: number, s: Sale) => sum + s.totalBs, 0) +
-        rentalsToday
-          .filter((r: WasherRental) => r.paymentMethod === 'pago_movil')
-          .reduce(
-            (sum: number, r: WasherRental) =>
-              sum + r.totalUsd * config.exchangeRate,
-            0
-          ) +
-        prepaidOrders
-          .filter(
-            (p: PrepaidOrder) =>
-              p.datePaid === selectedDate && p.paymentMethod === 'pago_movil'
-          )
-          .reduce((sum: number, p: PrepaidOrder) => sum + p.amountBs, 0),
-      punto_venta:
-        salesToday
-          .filter((s: Sale) => s.paymentMethod === 'punto_venta')
-          .reduce((sum: number, s: Sale) => sum + s.totalBs, 0) +
-        rentalsToday
-          .filter((r: WasherRental) => r.paymentMethod === 'punto_venta')
-          .reduce(
-            (sum: number, r: WasherRental) =>
-              sum + r.totalUsd * config.exchangeRate,
-            0
-          ) +
-        prepaidOrders
-          .filter(
-            (p: PrepaidOrder) =>
-              p.datePaid === selectedDate && p.paymentMethod === 'punto_venta'
-          )
-          .reduce((sum: number, p: PrepaidOrder) => sum + p.amountBs, 0),
-      divisa:
-        salesToday
-          .filter((s: Sale) => s.paymentMethod === 'divisa')
-          .reduce((sum: number, s: Sale) => sum + s.totalBs, 0) +
-        rentalsToday
-          .filter((r: WasherRental) => r.paymentMethod === 'divisa')
-          .reduce(
-            (sum: number, r: WasherRental) =>
-              sum + r.totalUsd * config.exchangeRate,
-            0
-          ) +
-        prepaidOrders
-          .filter(
-            (p: PrepaidOrder) =>
-              p.datePaid === selectedDate && p.paymentMethod === 'divisa'
-          )
-          .reduce((sum: number, p: PrepaidOrder) => sum + p.amountBs, 0),
-    };
-
-    // Calcular ajustes por transacciones de equilibrio del día
-    const balanceTransactionsForDay = paymentBalanceTransactions.filter(
-      (t: any) => t.date === selectedDate
-    );
-
-    const calculateAdjustments = (method: PaymentMethod) => {
-      return balanceTransactionsForDay.reduce(
-        (adjustment: number, transaction: any) => {
-          if (transaction.fromMethod === method) {
-            return adjustment - transaction.amount; // Sale dinero de este método
-          } else if (transaction.toMethod === method) {
-            return adjustment + transaction.amount; // Entra dinero a este método
-          }
-          return adjustment;
-        },
-        0
-      );
-    };
-
-    // Calcular totales finales con ajustes
-    const methodTotals = {
-      efectivo:
-        originalMethodTotals.efectivo + calculateAdjustments('efectivo') - 
-        expensesToday.filter((e: any) => e.paymentMethod === 'efectivo').reduce((sum: number, e: any) => sum + e.amount, 0),
-      pago_movil:
-        originalMethodTotals.pago_movil + calculateAdjustments('pago_movil') -
-        expensesToday.filter((e: any) => e.paymentMethod === 'pago_movil').reduce((sum: number, e: any) => sum + e.amount, 0),
-      punto_venta:
-        originalMethodTotals.punto_venta + calculateAdjustments('punto_venta') -
-        expensesToday.filter((e: any) => e.paymentMethod === 'punto_venta').reduce((sum: number, e: any) => sum + e.amount, 0),
-      divisa:
-        originalMethodTotals.divisa + calculateAdjustments('divisa') -
-        expensesToday.filter((e: any) => e.paymentMethod === 'divisa').reduce((sum: number, e: any) => sum + e.amount, 0),
-    };
-
-    return {
-      totalToday,
-      totalTodayUsd: totalToday / config.exchangeRate,
-      totalWeek,
-      totalWeekUsd: totalWeek / config.exchangeRate,
-      totalMonth,
-      totalMonthUsd: totalMonth / config.exchangeRate,
-      salesCount: transactionsToday,
-      expenseToday: expenseTodayTotal,
-      expenseTodayUsd: expenseTodayTotal / config.exchangeRate,
-      netToday: totalToday - expenseTodayTotal,
-      netTodayUsd: (totalToday - expenseTodayTotal) / config.exchangeRate,
-      netWeek: totalWeek - expenseWeekTotal,
-      netWeekUsd: (totalWeek - expenseWeekTotal) / config.exchangeRate,
-      netMonth: totalMonth - expenseMonthTotal,
-      netMonthUsd: (totalMonth - expenseMonthTotal) / config.exchangeRate,
-      methodTotals,
-      originalMethodTotals, // Para referencia en el dashboard
-    };
-  }, [
-    sales,
-    expenses,
-    rentals,
-    prepaidOrders,
-    paymentBalanceTransactions, // Agregar esta dependencia
-    selectedDate,
-    config.exchangeRate,
-  ]);
+  const toUsd = (bs: number): number => bs / config.exchangeRate;
 
   const weekData = useMemo((): ChartDataPoint[] => {
     const days = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
@@ -307,11 +135,11 @@ export function DashboardPage({ onNavigate }: DashboardPageProps = {}) {
       <Header title="AquaGest" subtitle="Panel de Control" />
 
       <main className="flex-1 px-4 py-4 space-y-4 max-w-lg mx-auto w-full">
-        {/* KPI Principal */}
+        {/* KPI Principal - Ventas del día seleccionado */}
         <KpiCard
-          title="Ventas de Hoy"
-          value={`Bs ${stats.totalToday.toFixed(2)}`}
-          subtitle={`$${stats.totalTodayUsd.toFixed(2)} USD`}
+          title="Ingresos del Día"
+          value={`Bs ${metrics.day.totalIncomeBs.toFixed(2)}`}
+          subtitle={`$${toUsd(metrics.day.totalIncomeBs).toFixed(2)} USD`}
           icon={<Droplets className="w-5 h-5 text-primary-foreground" />}
           variant="primary"
         />
@@ -320,38 +148,39 @@ export function DashboardPage({ onNavigate }: DashboardPageProps = {}) {
         <DateSelector
           selectedDate={selectedDate}
           onDateChange={setSelectedDate}
+          loading={loading}
         />
 
-        {/* Grid de KPIs secundarios */}
+        {/* Grid de KPIs - Acumulado del mes hasta la fecha seleccionada */}
         <div className="grid grid-cols-2 gap-3">
           <KpiCard
-            title="Semana"
+            title="Acumulado Mes"
             value={
               currency === 'Bs'
-                ? `Bs ${stats.netWeek.toFixed(0)}`
-                : `$ ${stats.netWeekUsd.toFixed(2)}`
+                ? `Bs ${metrics.mtd.totalIncomeBs.toFixed(0)}`
+                : `$ ${toUsd(metrics.mtd.totalIncomeBs).toFixed(2)}`
             }
-            subtitle={stats.netWeek >= 0 ? 'Neto' : 'Pérdida'}
+            subtitle="Ingresos"
             icon={<TrendingUp className="w-4 h-4 text-primary" />}
-            variant={stats.netWeek >= 0 ? 'default' : 'warning'}
+            variant="default"
           />
           <KpiCard
-            title="Mes"
+            title="Neto Mes"
             value={
               currency === 'Bs'
-                ? `Bs ${stats.netMonth.toFixed(0)}`
-                : `$ ${stats.netMonthUsd.toFixed(2)}`
+                ? `Bs ${metrics.mtd.netBs.toFixed(0)}`
+                : `$ ${toUsd(metrics.mtd.netBs).toFixed(2)}`
             }
-            subtitle={stats.netMonth >= 0 ? 'Neto' : 'Pérdida'}
+            subtitle={metrics.mtd.netBs >= 0 ? 'Ganancia' : 'Pérdida'}
             icon={<DollarSign className="w-4 h-4 text-primary" />}
-            variant={stats.netMonth >= 0 ? 'default' : 'warning'}
+            variant={metrics.mtd.netBs >= 0 ? 'default' : 'warning'}
           />
           <KpiCard
-            title="Egresos Hoy"
+            title="Egresos Mes"
             value={
               currency === 'Bs'
-                ? `Bs ${stats.expenseToday.toFixed(0)}`
-                : `$ ${stats.expenseTodayUsd.toFixed(2)}`
+                ? `Bs ${metrics.mtd.expenseBs.toFixed(0)}`
+                : `$ ${toUsd(metrics.mtd.expenseBs).toFixed(2)}`
             }
             icon={<Wallet className="w-4 h-4 text-destructive" />}
             variant="danger"
@@ -360,16 +189,16 @@ export function DashboardPage({ onNavigate }: DashboardPageProps = {}) {
             title="Neto Hoy"
             value={
               currency === 'Bs'
-                ? `Bs ${stats.netToday.toFixed(0)}`
-                : `$ ${stats.netTodayUsd.toFixed(2)}`
+                ? `Bs ${metrics.day.netBs.toFixed(0)}`
+                : `$ ${toUsd(metrics.day.netBs).toFixed(2)}`
             }
-            subtitle={stats.netToday >= 0 ? 'Ganancia' : 'Pérdida'}
-            variant={stats.netToday >= 0 ? 'success' : 'warning'}
+            subtitle={metrics.day.netBs >= 0 ? 'Ganancia' : 'Pérdida'}
+            variant={metrics.day.netBs >= 0 ? 'success' : 'warning'}
           />
           <KpiCard
             title="Transacciones"
-            value={stats.salesCount}
-            subtitle="hoy"
+            value={metrics.mtd.transactionsCount}
+            subtitle="acumulado mes"
             variant="success"
             icon={<Receipt className="w-4 h-4 text-primary" />}
           />
@@ -436,12 +265,12 @@ export function DashboardPage({ onNavigate }: DashboardPageProps = {}) {
           </CardContent>
         </Card>
 
-        {/* Resumen por método de pago */}
+        {/* Resumen por método de pago - Acumulado del mes */}
         <section className="bg-card rounded-2xl border p-5 space-y-4 shadow-sm mb-6">
           <div className="flex items-center justify-between">
             <h3 className="text-base font-semibold text-foreground flex items-center gap-2">
               <Wallet className="w-5 h-5 text-primary" />
-              Resumen por Pago (Hoy)
+              Resumen por Pago (Mes)
             </h3>
             <span className="text-xs font-medium px-2 py-1 bg-primary/10 text-primary rounded-full">
               {currency === 'Bs' ? 'Bolívares' : 'Dólares'}
@@ -461,8 +290,8 @@ export function DashboardPage({ onNavigate }: DashboardPageProps = {}) {
                   <p className="text-lg font-bold text-orange-950">
                     {currency === 'Bs' ? 'Bs ' : '$ '}
                     {(currency === 'Bs'
-                      ? stats.methodTotals.efectivo
-                      : stats.methodTotals.efectivo / config.exchangeRate
+                      ? metrics.mtd.methodTotalsBs.efectivo
+                      : toUsd(metrics.mtd.methodTotalsBs.efectivo)
                     ).toLocaleString('es-VE', {
                       minimumFractionDigits: 2,
                     })}
@@ -473,8 +302,8 @@ export function DashboardPage({ onNavigate }: DashboardPageProps = {}) {
                 <p className="text-xs font-medium text-muted-foreground">
                   {currency === 'Bs' ? '$' : 'Bs'}
                   {(currency === 'Bs'
-                    ? stats.methodTotals.efectivo / config.exchangeRate
-                    : stats.methodTotals.efectivo
+                    ? toUsd(metrics.mtd.methodTotalsBs.efectivo)
+                    : metrics.mtd.methodTotalsBs.efectivo
                   ).toFixed(2)}
                 </p>
               </div>
@@ -492,8 +321,8 @@ export function DashboardPage({ onNavigate }: DashboardPageProps = {}) {
                   <p className="text-lg font-bold text-blue-950">
                     {currency === 'Bs' ? 'Bs ' : '$ '}
                     {(currency === 'Bs'
-                      ? stats.methodTotals.pago_movil
-                      : stats.methodTotals.pago_movil / config.exchangeRate
+                      ? metrics.mtd.methodTotalsBs.pago_movil
+                      : toUsd(metrics.mtd.methodTotalsBs.pago_movil)
                     ).toLocaleString('es-VE', {
                       minimumFractionDigits: 2,
                     })}
@@ -504,8 +333,8 @@ export function DashboardPage({ onNavigate }: DashboardPageProps = {}) {
                 <p className="text-xs font-medium text-muted-foreground">
                   {currency === 'Bs' ? '$' : 'Bs'}
                   {(currency === 'Bs'
-                    ? stats.methodTotals.pago_movil / config.exchangeRate
-                    : stats.methodTotals.pago_movil
+                    ? toUsd(metrics.mtd.methodTotalsBs.pago_movil)
+                    : metrics.mtd.methodTotalsBs.pago_movil
                   ).toFixed(2)}
                 </p>
               </div>
@@ -523,8 +352,8 @@ export function DashboardPage({ onNavigate }: DashboardPageProps = {}) {
                   <p className="text-lg font-bold text-purple-950">
                     {currency === 'Bs' ? 'Bs ' : '$ '}
                     {(currency === 'Bs'
-                      ? stats.methodTotals.punto_venta
-                      : stats.methodTotals.punto_venta / config.exchangeRate
+                      ? metrics.mtd.methodTotalsBs.punto_venta
+                      : toUsd(metrics.mtd.methodTotalsBs.punto_venta)
                     ).toLocaleString('es-VE', {
                       minimumFractionDigits: 2,
                     })}
@@ -535,8 +364,8 @@ export function DashboardPage({ onNavigate }: DashboardPageProps = {}) {
                 <p className="text-xs font-medium text-muted-foreground">
                   {currency === 'Bs' ? '$' : 'Bs'}
                   {(currency === 'Bs'
-                    ? stats.methodTotals.punto_venta / config.exchangeRate
-                    : stats.methodTotals.punto_venta
+                    ? toUsd(metrics.mtd.methodTotalsBs.punto_venta)
+                    : metrics.mtd.methodTotalsBs.punto_venta
                   ).toFixed(2)}
                 </p>
               </div>
@@ -554,8 +383,8 @@ export function DashboardPage({ onNavigate }: DashboardPageProps = {}) {
                   <p className="text-lg font-bold text-green-950">
                     {currency === 'Bs' ? 'Bs ' : '$ '}
                     {(currency === 'Bs'
-                      ? stats.methodTotals.divisa
-                      : stats.methodTotals.divisa / config.exchangeRate
+                      ? metrics.mtd.methodTotalsBs.divisa
+                      : toUsd(metrics.mtd.methodTotalsBs.divisa)
                     ).toLocaleString('es-VE', {
                       minimumFractionDigits: 2,
                     })}
@@ -566,8 +395,8 @@ export function DashboardPage({ onNavigate }: DashboardPageProps = {}) {
                 <p className="text-xs font-medium text-muted-foreground">
                   {currency === 'Bs' ? '$' : 'Bs'}
                   {(currency === 'Bs'
-                    ? stats.methodTotals.divisa / config.exchangeRate
-                    : stats.methodTotals.divisa
+                    ? toUsd(metrics.mtd.methodTotalsBs.divisa)
+                    : metrics.mtd.methodTotalsBs.divisa
                   ).toFixed(2)}
                 </p>
               </div>
