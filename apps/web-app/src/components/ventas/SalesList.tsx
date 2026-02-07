@@ -24,6 +24,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { EditSaleSheet } from './EditSaleSheet';
 import { toast } from 'sonner';
+import { getSafeTimestampForSorting } from '@/lib/date-utils';
 
 interface SalesListProps {
   sales: Sale[];
@@ -95,7 +96,8 @@ export function SalesList({ sales, paymentFilter = 'todos' }: SalesListProps) {
         <div className="space-y-2">
           {filteredSales.map((sale) => {
             const PaymentIcon = paymentIcons[sale.paymentMethod] || Banknote;
-            const time = new Date(sale.createdAt).toLocaleTimeString('es-VE', {
+            const timeMs = getSafeTimestampForSorting(sale.createdAt);
+            const time = new Date(timeMs).toLocaleTimeString('es-VE', {
               hour: '2-digit',
               minute: '2-digit',
             });

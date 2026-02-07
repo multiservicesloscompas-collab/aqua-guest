@@ -7,7 +7,7 @@ import { RentalShift, RentalShiftConfig, PaymentMethod } from '@/types';
 export function calculateRentalPrice(
   shift: RentalShift,
   paymentMethod: PaymentMethod,
-  deliveryFee: number = 0
+  deliveryFee = 0
 ): number {
   const basePrice = RentalShiftConfig[shift].priceUsd;
 

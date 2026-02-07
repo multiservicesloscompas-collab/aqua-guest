@@ -46,6 +46,7 @@ export function EgresosPage() {
     selectedDate,
     setSelectedDate,
     getExpensesByDate,
+    loadExpensesByDate,
     addExpense,
     updateExpense,
     deleteExpense,
@@ -61,6 +62,7 @@ export function EgresosPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [loadingExpenses, setLoadingExpenses] = useState(false);
 
   useEffect(() => {
     const today = new Date();
@@ -72,6 +74,29 @@ export function EgresosPage() {
       String(today.getDate()).padStart(2, '0');
     setSelectedDate(formattedDate);
   }, [setSelectedDate]);
+
+  // Cargar egresos cuando cambia la fecha - Optimización de rendimiento
+  useEffect(() => {
+    if (!selectedDate) return;
+
+    // Verificar si ya hay egresos en caché para esta fecha
+    const cachedExpenses = getExpensesByDate(selectedDate);
+
+    if (cachedExpenses.length > 0) {
+      // Ya tenemos datos, no es necesario cargar
+      return;
+    }
+
+    // Cargar egresos de la fecha específica
+    setLoadingExpenses(true);
+    loadExpensesByDate(selectedDate)
+      .catch(err => {
+        console.error('Error loading expenses for date:', selectedDate, err);
+      })
+      .finally(() => {
+        setLoadingExpenses(false);
+      });
+  }, [selectedDate, loadExpensesByDate, getExpensesByDate]);
 
   const expenses = getExpensesByDate(selectedDate);
   const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
@@ -155,6 +180,7 @@ export function EgresosPage() {
         <DateSelector
           selectedDate={selectedDate}
           onDateChange={setSelectedDate}
+          loading={loadingExpenses}
         />
 
         {/* Total del día */}
@@ -173,7 +199,12 @@ export function EgresosPage() {
         </div>
 
         {/* Lista de egresos */}
-        {expenses.length === 0 ? (
+        {loadingExpenses && expenses.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+            <Loader2 className="w-8 h-8 mb-3 animate-spin" />
+            <p className="text-sm font-medium">Cargando egresos...</p>
+          </div>
+        ) : expenses.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
             <Wallet className="w-12 h-12 mb-3 opacity-40" />
             <p className="text-sm font-medium">Sin egresos este día</p>

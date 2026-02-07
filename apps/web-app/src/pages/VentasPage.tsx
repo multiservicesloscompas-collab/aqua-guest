@@ -7,15 +7,16 @@ import { AddProductSheet } from '@/components/ventas/AddProductSheet';
 import { CartSheet } from '@/components/ventas/CartSheet';
 import { useAppStore } from '@/store/useAppStore';
 import { Button } from '@/components/ui/button';
-import { Plus, ShoppingCart } from 'lucide-react';
+import { Plus, ShoppingCart, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { PaymentMethod } from '@/types';
 
 export function VentasPage() {
-  const { selectedDate, setSelectedDate, getSalesByDate, cart } = useAppStore();
+  const { selectedDate, setSelectedDate, getSalesByDate, cart, loadSalesByDate } = useAppStore();
   const [showAddProduct, setShowAddProduct] = useState(false);
   const [showCart, setShowCart] = useState(false);
   const [paymentFilter, setPaymentFilter] = useState<PaymentMethod | 'todos'>('todos');
+  const [loadingSales, setLoadingSales] = useState(false);
 
   useEffect(() => {
     const today = new Date();
@@ -28,6 +29,29 @@ export function VentasPage() {
     setSelectedDate(formattedDate);
   }, [setSelectedDate]);
 
+  // Cargar ventas cuando cambia la fecha - Optimización de rendimiento
+  useEffect(() => {
+    if (!selectedDate) return;
+
+    // Verificar si ya hay ventas en caché para esta fecha
+    const cachedSales = getSalesByDate(selectedDate);
+
+    if (cachedSales.length > 0) {
+      // Ya tenemos datos, no es necesario cargar
+      return;
+    }
+
+    // Cargar ventas de la fecha específica
+    setLoadingSales(true);
+    loadSalesByDate(selectedDate)
+      .catch(err => {
+        console.error('Error loading sales for date:', selectedDate, err);
+      })
+      .finally(() => {
+        setLoadingSales(false);
+      });
+  }, [selectedDate, loadSalesByDate, getSalesByDate]);
+
   const sales = getSalesByDate(selectedDate);
   const cartCount = cart.length;
 
@@ -39,6 +63,7 @@ export function VentasPage() {
         <DateSelector
           selectedDate={selectedDate}
           onDateChange={setSelectedDate}
+          loading={loadingSales}
         />
 
         <PaymentFilter
@@ -46,7 +71,14 @@ export function VentasPage() {
           onFilterChange={setPaymentFilter}
         />
 
-        <SalesList sales={sales} paymentFilter={paymentFilter} />
+        {loadingSales && sales.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+            <Loader2 className="w-8 h-8 mb-3 animate-spin" />
+            <p className="text-sm font-medium">Cargando ventas...</p>
+          </div>
+        ) : (
+          <SalesList sales={sales} paymentFilter={paymentFilter} />
+        )}
       </main>
 
       {/* FAB para agregar producto */}
@@ -82,3 +114,4 @@ export function VentasPage() {
     </div>
   );
 }
+

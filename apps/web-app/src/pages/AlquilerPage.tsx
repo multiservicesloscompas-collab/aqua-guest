@@ -4,14 +4,15 @@ import { DateSelector } from '@/components/ventas/DateSelector';
 import { RentalList } from '@/components/alquiler/RentalList';
 import { RentalSheet } from '@/components/alquiler/RentalSheet';
 import { Button } from '@/components/ui/button';
-import { Plus } from 'lucide-react';
+import { Plus, Loader2 } from 'lucide-react';
 import { useAppStore } from '@/store/useAppStore';
 import { cn } from '@/lib/utils';
 import { WasherRental } from '@/types';
 
 export function AlquilerPage() {
   const [sheetOpen, setSheetOpen] = useState(false);
-  const { selectedDate, setSelectedDate, getRentalsByDate } = useAppStore();
+  const { selectedDate, setSelectedDate, getRentalsByDate, loadRentalsByDate } = useAppStore();
+  const [loadingRentals, setLoadingRentals] = useState(false);
 
   useEffect(() => {
     const today = new Date();
@@ -23,6 +24,29 @@ export function AlquilerPage() {
       String(today.getDate()).padStart(2, '0');
     setSelectedDate(formattedDate);
   }, [setSelectedDate]);
+
+  // Cargar alquileres cuando cambia la fecha - Optimización de rendimiento
+  useEffect(() => {
+    if (!selectedDate) return;
+
+    // Verificar si ya hay alquileres en caché para esta fecha
+    const cachedRentals = getRentalsByDate(selectedDate);
+
+    if (cachedRentals.length > 0) {
+      // Ya tenemos datos, no es necesario cargar
+      return;
+    }
+
+    // Cargar alquileres de la fecha específica
+    setLoadingRentals(true);
+    loadRentalsByDate(selectedDate)
+      .catch(err => {
+        console.error('Error loading rentals for date:', selectedDate, err);
+      })
+      .finally(() => {
+        setLoadingRentals(false);
+      });
+  }, [selectedDate, loadRentalsByDate, getRentalsByDate]);
 
   const rentals = getRentalsByDate(selectedDate);
 
@@ -46,6 +70,7 @@ export function AlquilerPage() {
         <DateSelector
           selectedDate={selectedDate}
           onDateChange={setSelectedDate}
+          loading={loadingRentals}
         />
 
         {/* Resumen rápido */}
@@ -68,7 +93,14 @@ export function AlquilerPage() {
           </div>
         )}
 
-        <RentalList />
+        {loadingRentals && rentals.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+            <Loader2 className="w-8 h-8 mb-3 animate-spin" />
+            <p className="text-sm font-medium">Cargando alquileres...</p>
+          </div>
+        ) : (
+          <RentalList />
+        )}
       </main>
 
       {/* FAB para agregar */}
@@ -86,3 +118,4 @@ export function AlquilerPage() {
     </div>
   );
 }
+

@@ -21,6 +21,16 @@ import {
 import supabase from '@/lib/supabaseClient';
 import { defaultProducts } from '@/data/products';
 import { defaultWashingMachines } from '@/data/washingMachines';
+import {
+  getSafeTimestamp,
+  normalizeTimestamp,
+  compareTimestamps,
+} from '@/lib/date-utils';
+import { dateService } from '@/services/DateService';
+import { DateFilterStrategy, SalesFilterService } from '@/services/SalesFilterService';
+import { salesDataService } from '@/services/SalesDataService';
+import { rentalsDataService } from '@/services/RentalsDataService';
+import { expensesDataService } from '@/services/ExpensesDataService';
 
 interface AppState {
   // Configuración
@@ -113,6 +123,9 @@ interface AppState {
   setSelectedDate: (date: string) => void;
   getSalesByDate: (date: string) => Sale[];
   getExpensesByDate: (date: string) => Expense[];
+  loadSalesByDate: (date: string) => Promise<void>;
+  loadRentalsByDate: (date: string) => Promise<void>;
+  loadExpensesByDate: (date: string) => Promise<void>;
   loadFromSupabase: () => Promise<void>;
 }
 
@@ -292,10 +305,15 @@ export const useAppStore = create<AppState>()(
         return sortedPricing[sortedPricing.length - 1]?.price || 0;
       },
 
-      // Load data from Supabase
+       // Load data from Supabase - Optimizado para cargar solo datos necesarios
       loadFromSupabase: async () => {
         try {
+          // Obtener la fecha actual para cargar solo ventas y alquileres del día
+          const currentDate = dateService.getCurrentDate();
+
           // Fetch core tables in parallel
+          // NOTA: Ya NO cargamos todas las ventas, alquileres ni egresos
+          // Solo cargamos ventas, alquileres y egresos del día actual - optimización de rendimiento
           const [
             customersRes,
             machinesRes,
@@ -310,12 +328,13 @@ export const useAppStore = create<AppState>()(
           ] = await Promise.all([
             supabase.from('customers').select('*'),
             supabase.from('washing_machines').select('*'),
-            supabase
-              .from('washer_rentals')
-              .select('*, customers(name, phone, address)'),
+            // SOLO cargar alquileres del día actual - optimización de rendimiento
+            supabase.from('washer_rentals').select('*, customers(name, phone, address)').eq('date', currentDate).order('created_at', { ascending: true }),
             supabase.from('products').select('*'),
-            supabase.from('sales').select('*'),
-            supabase.from('expenses').select('*'),
+            // SOLO cargar ventas del día actual - optimización de rendimiento
+            supabase.from('sales').select('*').eq('date', currentDate).order('created_at', { ascending: true }),
+            // SOLO cargar egresos del día actual - optimización de rendimiento
+            supabase.from('expenses').select('*').eq('date', currentDate).order('created_at', { ascending: true }),
             supabase.from('prepaid_orders').select('*'),
             supabase.from('liter_pricing').select('*'),
             supabase.from('exchange_rates').select('*'),
@@ -362,15 +381,15 @@ export const useAppStore = create<AppState>()(
           const sales = (salesRes.data || []).map((s: any) => ({
             id: s.id,
             dailyNumber: s.daily_number ?? s.dailyNumber,
-            date: s.date,
+            date: dateService.normalizeSaleDate(s.date), // Normalizar fecha al cargar desde Supabase
             items: s.items || [],
             paymentMethod: s.payment_method || s.paymentMethod,
             totalBs: Number(s.total_bs ?? s.totalBs ?? 0),
             totalUsd: Number(s.total_usd ?? s.totalUsd ?? 0),
             exchangeRate: Number(s.exchange_rate ?? s.exchangeRate ?? 0),
             notes: s.notes,
-            createdAt: s.created_at ?? s.createdAt ?? new Date().toISOString(),
-            updatedAt: s.updated_at ?? s.updatedAt ?? new Date().toISOString(),
+            createdAt: normalizeTimestamp(s.created_at ?? s.createdAt ?? new Date().toISOString()),
+            updatedAt: normalizeTimestamp(s.updated_at ?? s.updatedAt ?? new Date().toISOString()),
           }));
           const expenses = (expensesRes.data || []).map((e: any) => ({
             ...e,
@@ -511,15 +530,22 @@ export const useAppStore = create<AppState>()(
           0
         );
 
-        // Calcular el número diario incremental
+        // Usar DateService para normalizar la fecha - SRP
+        const normalizedDate = dateService.normalizeSaleDate(state.selectedDate);
+
+        // Calcular el número diario incremental usando fecha normalizada
         const salesOfDay = state.sales.filter(
-          (s) => s.date === state.selectedDate
+          (s) => s.date === normalizedDate
         );
         const dailyNumber = salesOfDay.length + 1;
 
+        // Generar timestamps seguros para consistencia
+        const safeCreatedAt = getSafeTimestamp();
+        const safeUpdatedAt = getSafeTimestamp();
+
         const newSale = {
           daily_number: dailyNumber,
-          date: state.selectedDate,
+          date: normalizedDate, // Usar fecha normalizada
           items: state.cart,
           payment_method: paymentMethod,
           total_bs: totalBs,
@@ -536,24 +562,30 @@ export const useAppStore = create<AppState>()(
             .single();
           if (error) throw error;
 
+          // Normalizar la fecha recibida de Supabase para mantener consistencia
+          // Usar la fecha normalizada que se envió, no la que viene de Supabase
+          // Esto asegura que el filtrado funcione correctamente
+          const saleDate = dateService.normalizeSaleDate(data.date || normalizedDate);
+
+          // Normalizar timestamps de Supabase, usar locales seguros si vienen inválidos
           const sale: Sale = {
             id: data.id,
             dailyNumber: data.daily_number,
-            date: data.date,
+            date: saleDate, // Usar fecha normalizada para consistencia
             items: data.items,
             paymentMethod: data.payment_method,
             totalBs: Number(data.total_bs),
             totalUsd: Number(data.total_usd),
             exchangeRate: Number(data.exchange_rate),
             notes: data.notes,
-            createdAt: data.created_at || new Date().toISOString(),
-            updatedAt: data.updated_at || new Date().toISOString(),
+            createdAt: normalizeTimestamp(data.created_at, safeCreatedAt),
+            updatedAt: normalizeTimestamp(data.updated_at, safeUpdatedAt),
           };
 
           set((state) => ({ sales: [...state.sales, sale], cart: [] }));
           return sale;
         } catch (err) {
-          // fallback local
+          // fallback local - usar siempre timestamps seguros
           const sale: Sale = {
             id: generateId(),
             dailyNumber,
@@ -564,8 +596,8 @@ export const useAppStore = create<AppState>()(
             totalUsd: totalBs / state.config.exchangeRate,
             exchangeRate: state.config.exchangeRate,
             notes,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
+            createdAt: safeCreatedAt,
+            updatedAt: safeUpdatedAt,
           };
           set((state) => ({ sales: [...state.sales, sale], cart: [] }));
           return sale;
@@ -1507,13 +1539,15 @@ export const useAppStore = create<AppState>()(
       // Utilidades
       setSelectedDate: (date) => set({ selectedDate: date }),
 
-      getSalesByDate: (date) =>
-        get()
-          .sales.filter((sale) => sale.date === date)
-          .sort(
-            (a, b) =>
-              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-          ),
+      getSalesByDate: (date) => {
+        // Normalizar la fecha antes de filtrar para mantener consistencia
+        const normalizedDate = dateService.normalizeSaleDate(date);
+        // Usar SalesFilterService con estrategia de filtrado por fecha - OCP, DIP
+        const filterService = new SalesFilterService(new DateFilterStrategy(dateService));
+        return filterService
+          .filterSales(get().sales, normalizedDate)
+          .sort((a: Sale, b: Sale) => compareTimestamps(a.createdAt, b.createdAt));
+      },
 
       getExpensesByDate: (date) =>
         get().expenses.filter((exp) => exp.date === date),
@@ -1550,6 +1584,66 @@ export const useAppStore = create<AppState>()(
             err
           );
           // Keep local state if Supabase fails
+        }
+      },
+
+      // Cargar ventas de una fecha específica - optimizado con caché
+      loadSalesByDate: async (date) => {
+        try {
+          const sales = await salesDataService.loadSalesByDate(date);
+
+          // Reemplazar ventas de esa fecha específica
+          set((state) => {
+            const existingSales = state.sales.filter((s) => s.date !== date);
+            return {
+              sales: [...existingSales, ...sales],
+            };
+          });
+
+          return sales;
+        } catch (err) {
+          console.error('Error loading sales by date:', err);
+          throw err;
+        }
+      },
+
+      // Cargar alquileres de una fecha específica - optimizado con caché
+      loadRentalsByDate: async (date) => {
+        try {
+          const rentals = await rentalsDataService.loadRentalsByDate(date);
+
+          // Reemplazar alquileres de esa fecha específica
+          set((state) => {
+            const existingRentals = state.rentals.filter((r) => r.date !== date);
+            return {
+              rentals: [...existingRentals, ...rentals],
+            };
+          });
+
+          return rentals;
+        } catch (err) {
+          console.error('Error loading rentals by date:', err);
+          throw err;
+        }
+      },
+
+      // Cargar egresos de una fecha específica - optimizado con caché
+      loadExpensesByDate: async (date) => {
+        try {
+          const expenses = await expensesDataService.loadExpensesByDate(date);
+
+          // Reemplazar egresos de esa fecha específica
+          set((state) => {
+            const existingExpenses = state.expenses.filter((e) => e.date !== date);
+            return {
+              expenses: [...existingExpenses, ...expenses],
+            };
+          });
+
+          return expenses;
+        } catch (err) {
+          console.error('Error loading expenses by date:', err);
+          throw err;
         }
       },
     }),

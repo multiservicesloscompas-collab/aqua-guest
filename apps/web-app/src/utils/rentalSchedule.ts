@@ -24,7 +24,7 @@ export function calculatePickupTime(
   const [hours, minutes] = deliveryTime.split(':').map(Number);
 
   // Crear fecha/hora de entrega
-  let deliveryDateTime = setMinutes(setHours(deliveryDate, hours), minutes);
+  const deliveryDateTime = setMinutes(setHours(deliveryDate, hours), minutes);
 
   // Agregar horas del turno
   let pickupDateTime = new Date(

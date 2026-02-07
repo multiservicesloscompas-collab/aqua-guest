@@ -16,6 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { CustomerSearch } from './CustomerSearch';
 import { Badge } from '@/components/ui/badge';
 import {
   WashingMachine,
@@ -128,14 +129,30 @@ export function RentalSheet({ open, onOpenChange }: RentalSheetProps) {
   }, [rentals]);
 
   // Autocompletar cliente
-  const handleCustomerSelect = (customerId: string) => {
-    const customer = customers.find((c) => c.id === customerId);
+  const handleCustomerSelect = (customer: Customer | null) => {
     if (customer) {
-      setSelectedCustomerId(customerId);
+      setSelectedCustomerId(customer.id);
       setCustomerName(customer.name);
       setCustomerPhone(customer.phone);
       setCustomerAddress(customer.address);
+    } else {
+      setSelectedCustomerId('');
+      setCustomerName('');
+      setCustomerPhone('');
+      setCustomerAddress('');
     }
+  };
+
+  const handleCreateNewCustomer = () => {
+    setSelectedCustomerId('');
+    setCustomerName('');
+    setCustomerPhone('');
+    setCustomerAddress('');
+    // Focus en el input de nombre
+    setTimeout(() => {
+      const nameInput = document.querySelector('input[placeholder="Nombre del cliente"]') as HTMLInputElement;
+      nameInput?.focus();
+    }, 0);
   };
 
   const handleSubmit = async () => {
@@ -400,38 +417,13 @@ export function RentalSheet({ open, onOpenChange }: RentalSheetProps) {
               Cliente
             </Label>
 
-            <Select
-              value={selectedCustomerId}
-              onValueChange={(value) => {
-                if (value === 'new') {
-                  setSelectedCustomerId('');
-                  setCustomerName('');
-                  setCustomerPhone('');
-                  setCustomerAddress('');
-                } else {
-                  handleCustomerSelect(value);
-                }
-              }}
-            >
-              <SelectTrigger className="h-12">
-                <SelectValue placeholder="Seleccionar o crear cliente..." />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="new">+ Nuevo cliente</SelectItem>
-                {customers.map((customer) => (
-                  <SelectItem key={customer.id} value={customer.id}>
-                    <div className="flex flex-col">
-                      <span>{customer.name}</span>
-                      {customer.address && (
-                        <span className="text-xs text-muted-foreground">
-                          {customer.address}
-                        </span>
-                      )}
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <CustomerSearch
+              customers={customers}
+              selectedCustomerId={selectedCustomerId || null}
+              onSelectCustomer={handleCustomerSelect}
+              onCreateNew={handleCreateNewCustomer}
+              placeholder="Buscar cliente registrado..."
+            />
 
             <div className="space-y-3">
               <Input
