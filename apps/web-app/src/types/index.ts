@@ -25,7 +25,11 @@ export interface CartItem {
 }
 
 // Método de pago
-export type PaymentMethod = 'pago_movil' | 'efectivo' | 'punto_venta' | 'divisa';
+export type PaymentMethod =
+  | 'pago_movil'
+  | 'efectivo'
+  | 'punto_venta'
+  | 'divisa';
 
 export const PaymentMethodLabels: Record<PaymentMethod, string> = {
   pago_movil: 'Pago Móvil',
@@ -154,6 +158,7 @@ export interface WasherRental {
   paymentMethod: PaymentMethod; // Método de pago
   status: RentalStatus;
   isPaid: boolean;
+  datePaid?: string; // Fecha en que se realizó el pago (YYYY-MM-DD)
   notes?: string;
   // Campos para extensión de tiempo
   extensions?: RentalExtension[];

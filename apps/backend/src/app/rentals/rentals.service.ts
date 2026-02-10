@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CreateRentalDto } from './dto/create-rental.dto';
@@ -9,7 +9,7 @@ import { Rental } from './entities/rental.entity';
 export class RentalsService {
   constructor(
     @InjectRepository(Rental)
-    private rentalRepository: Repository<Rental>,
+    private rentalRepository: Repository<Rental>
   ) {}
 
   create(createRentalDto: CreateRentalDto) {
@@ -25,7 +25,31 @@ export class RentalsService {
     return this.rentalRepository.findOneBy({ id });
   }
 
-  update(id: string, updateRentalDto: UpdateRentalDto) {
+  async update(id: string, updateRentalDto: UpdateRentalDto) {
+    const rental = await this.rentalRepository.findOneBy({ id });
+
+    if (!rental) {
+      throw new Error('Rental not found');
+    }
+
+    // Check if trying to change payment status
+    const isChangingPaymentStatus =
+      updateRentalDto.paymentStatus !== undefined ||
+      updateRentalDto.isPaid !== undefined;
+
+    if (isChangingPaymentStatus && rental.datePaid) {
+      const datePaid = new Date(rental.datePaid);
+      const now = new Date();
+      const diffInHours =
+        (now.getTime() - datePaid.getTime()) / (1000 * 60 * 60);
+
+      if (diffInHours > 48) {
+        throw new ForbiddenException(
+          'No se puede modificar el estado de pago después de 48 horas de la fecha de pago'
+        );
+      }
+    }
+
     return this.rentalRepository.update(id, updateRentalDto);
   }
 

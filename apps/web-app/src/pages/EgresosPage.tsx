@@ -26,11 +26,19 @@ import {
   PaymentMethod,
   PaymentMethodLabels,
 } from '@/types';
-import { Plus, Wallet, Pencil, Loader2, CalendarDays, Calendar } from 'lucide-react';
+import {
+  Plus,
+  Wallet,
+  Pencil,
+  Loader2,
+  CalendarDays,
+  Calendar,
+} from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { ExpenseCard } from '@/components/egresos/ExpenseCard';
 import { WeeklyExpensesView } from '@/components/egresos/WeeklyExpensesView';
+import { getVenezuelaDate } from '@/services/DateService';
 
 type EgresosViewMode = 'day' | 'week';
 
@@ -59,14 +67,7 @@ export function EgresosPage() {
   const [loadingExpenses, setLoadingExpenses] = useState(false);
 
   useEffect(() => {
-    const today = new Date();
-    const formattedDate =
-      today.getFullYear() +
-      '-' +
-      String(today.getMonth() + 1).padStart(2, '0') +
-      '-' +
-      String(today.getDate()).padStart(2, '0');
-    setSelectedDate(formattedDate);
+    setSelectedDate(getVenezuelaDate());
   }, [setSelectedDate]);
 
   useEffect(() => {

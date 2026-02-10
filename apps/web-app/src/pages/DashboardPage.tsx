@@ -23,6 +23,7 @@ import {
   calculateDashboardMetrics,
   getMonthToDateRange,
 } from '@/services/DashboardMetricsService';
+import { getVenezuelaDate } from '@/services/DateService';
 
 interface DashboardPageProps {
   onNavigate?: (route: AppRoute) => void;
@@ -39,17 +40,15 @@ export function DashboardPage({ onNavigate }: DashboardPageProps = {}) {
     loadDataForDateRange,
   } = useAppStore();
   const [currency, setCurrency] = useState<'Bs' | 'USD'>('Bs');
-  const [selectedDate, setSelectedDate] = useState<string>(
-    new Date().toISOString().split('T')[0]
-  );
+  const [selectedDate, setSelectedDate] = useState<string>(getVenezuelaDate());
   const [loading, setLoading] = useState(false);
   const lastLoadedRange = useRef<string>('');
 
   const loadMonthData = useCallback(
-    async (date: string) => {
+    async (date: string, force = false) => {
       const range = getMonthToDateRange(date);
       const rangeKey = `${range.start}_${range.end}`;
-      if (lastLoadedRange.current === rangeKey) return;
+      if (!force && lastLoadedRange.current === rangeKey) return;
       lastLoadedRange.current = rangeKey;
       setLoading(true);
       try {
@@ -64,7 +63,7 @@ export function DashboardPage({ onNavigate }: DashboardPageProps = {}) {
   );
 
   useEffect(() => {
-    loadMonthData(selectedDate);
+    loadMonthData(selectedDate, true);
   }, [selectedDate, loadMonthData]);
 
   const metrics = useMemo(
@@ -114,9 +113,9 @@ export function DashboardPage({ onNavigate }: DashboardPageProps = {}) {
         0
       );
 
-      // Alquileres (USD -> Bs)
+      // Alquileres pagados (USD -> Bs), usando datePaid si existe
       const dayRentals = rentals.filter(
-        (r: WasherRental) => r.date === dateStr
+        (r: WasherRental) => r.isPaid && (r.datePaid || r.date) === dateStr
       );
       const rentalValue = dayRentals.reduce(
         (sum: number, r: WasherRental) =>
@@ -241,7 +240,7 @@ export function DashboardPage({ onNavigate }: DashboardPageProps = {}) {
           </CardContent>
         </Card>
 
-      {/* Card de equilibrio de pagos */}
+        {/* Card de equilibrio de pagos */}
         <Card
           className="cursor-pointer hover:bg-muted/50 active:scale-95 transition-all border-green-500/20 bg-gradient-to-br from-green-500/5 to-green-500/10"
           onClick={() => onNavigate?.('equilibrio-pagos')}
@@ -404,8 +403,6 @@ export function DashboardPage({ onNavigate }: DashboardPageProps = {}) {
             </div>
           </div>
         </section>
-
- 
 
         {/* Ventas recientes */}
         <RecentSales sales={selectedSales} />

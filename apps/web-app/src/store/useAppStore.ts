@@ -26,8 +26,11 @@ import {
   normalizeTimestamp,
   compareTimestamps,
 } from '@/lib/date-utils';
-import { dateService } from '@/services/DateService';
-import { DateFilterStrategy, SalesFilterService } from '@/services/SalesFilterService';
+import { dateService, getVenezuelaDate } from '@/services/DateService';
+import {
+  DateFilterStrategy,
+  SalesFilterService,
+} from '@/services/SalesFilterService';
 import { salesDataService } from '@/services/SalesDataService';
 import { rentalsDataService } from '@/services/RentalsDataService';
 import { expensesDataService } from '@/services/ExpensesDataService';
@@ -133,7 +136,8 @@ interface AppState {
 
 const generateId = () => Math.random().toString(36).substring(2, 15);
 
-const today = new Date().toISOString().split('T')[0];
+// Usar zona horaria de Venezuela (Caracas) para la fecha por defecto
+const today = getVenezuelaDate();
 
 export const useAppStore = create<AppState>()(
   persist(
@@ -158,7 +162,7 @@ export const useAppStore = create<AppState>()(
 
       // Configuración
       setExchangeRate: async (rate) => {
-        const today = new Date().toISOString().split('T')[0];
+        const today = getVenezuelaDate();
         const existingIndex = get().config.exchangeRateHistory.findIndex(
           (h: ExchangeRateHistory) => h.date === today
         );
@@ -307,11 +311,11 @@ export const useAppStore = create<AppState>()(
         return sortedPricing[sortedPricing.length - 1]?.price || 0;
       },
 
-       // Load data from Supabase - Optimizado para cargar solo datos necesarios
+      // Load data from Supabase - Optimizado para cargar solo datos necesarios
       loadFromSupabase: async () => {
         try {
-          // Obtener la fecha actual para cargar solo ventas y alquileres del día
-          const currentDate = dateService.getCurrentDate();
+          // Usar la fecha seleccionada en lugar de la fecha actual
+          const currentDate = get().selectedDate;
 
           // Fetch core tables in parallel
           // NOTA: Ya NO cargamos todas las ventas, alquileres ni egresos
@@ -331,12 +335,24 @@ export const useAppStore = create<AppState>()(
             supabase.from('customers').select('*'),
             supabase.from('washing_machines').select('*'),
             // SOLO cargar alquileres del día actual - optimización de rendimiento
-            supabase.from('washer_rentals').select('*, customers(name, phone, address)').eq('date', currentDate).order('created_at', { ascending: true }),
+            supabase
+              .from('washer_rentals')
+              .select('*, customers(name, phone, address)')
+              .eq('date', currentDate)
+              .order('created_at', { ascending: true }),
             supabase.from('products').select('*'),
             // SOLO cargar ventas del día actual - optimización de rendimiento
-            supabase.from('sales').select('*').eq('date', currentDate).order('created_at', { ascending: true }),
+            supabase
+              .from('sales')
+              .select('*')
+              .eq('date', currentDate)
+              .order('created_at', { ascending: true }),
             // SOLO cargar egresos del día actual - optimización de rendimiento
-            supabase.from('expenses').select('*').eq('date', currentDate).order('created_at', { ascending: true }),
+            supabase
+              .from('expenses')
+              .select('*')
+              .eq('date', currentDate)
+              .order('created_at', { ascending: true }),
             supabase.from('prepaid_orders').select('*'),
             supabase.from('liter_pricing').select('*'),
             supabase.from('exchange_rates').select('*'),
@@ -367,6 +383,7 @@ export const useAppStore = create<AppState>()(
             paymentMethod: r.payment_method || 'efectivo',
             status: r.status,
             isPaid: r.is_paid,
+            datePaid: r.date_paid || undefined,
             notes: r.notes,
             createdAt: r.created_at ?? r.createdAt,
             updatedAt: r.updated_at ?? r.updatedAt,
@@ -390,8 +407,12 @@ export const useAppStore = create<AppState>()(
             totalUsd: Number(s.total_usd ?? s.totalUsd ?? 0),
             exchangeRate: Number(s.exchange_rate ?? s.exchangeRate ?? 0),
             notes: s.notes,
-            createdAt: normalizeTimestamp(s.created_at ?? s.createdAt ?? new Date().toISOString()),
-            updatedAt: normalizeTimestamp(s.updated_at ?? s.updatedAt ?? new Date().toISOString()),
+            createdAt: normalizeTimestamp(
+              s.created_at ?? s.createdAt ?? new Date().toISOString()
+            ),
+            updatedAt: normalizeTimestamp(
+              s.updated_at ?? s.updatedAt ?? new Date().toISOString()
+            ),
           }));
           const expenses = (expensesRes.data || []).map((e: any) => ({
             ...e,
@@ -533,12 +554,12 @@ export const useAppStore = create<AppState>()(
         );
 
         // Usar DateService para normalizar la fecha - SRP
-        const normalizedDate = dateService.normalizeSaleDate(state.selectedDate);
+        const normalizedDate = dateService.normalizeSaleDate(
+          state.selectedDate
+        );
 
         // Calcular el número diario incremental usando fecha normalizada
-        const salesOfDay = state.sales.filter(
-          (s) => s.date === normalizedDate
-        );
+        const salesOfDay = state.sales.filter((s) => s.date === normalizedDate);
         const dailyNumber = salesOfDay.length + 1;
 
         // Generar timestamps seguros para consistencia
@@ -567,7 +588,9 @@ export const useAppStore = create<AppState>()(
           // Normalizar la fecha recibida de Supabase para mantener consistencia
           // Usar la fecha normalizada que se envió, no la que viene de Supabase
           // Esto asegura que el filtrado funcione correctamente
-          const saleDate = dateService.normalizeSaleDate(data.date || normalizedDate);
+          const saleDate = dateService.normalizeSaleDate(
+            data.date || normalizedDate
+          );
 
           // Normalizar timestamps de Supabase, usar locales seguros si vienen inválidos
           const sale: Sale = {
@@ -585,6 +608,7 @@ export const useAppStore = create<AppState>()(
           };
 
           set((state) => ({ sales: [...state.sales, sale], cart: [] }));
+          salesDataService.invalidateCache(sale.date);
           return sale;
         } catch (err) {
           // fallback local - usar siempre timestamps seguros
@@ -631,6 +655,10 @@ export const useAppStore = create<AppState>()(
                 : sale
             ),
           }));
+          const updatedSale = get().sales.find((s) => s.id === id);
+          if (updatedSale) {
+            salesDataService.invalidateCache(updatedSale.date);
+          }
         } catch (err) {
           console.error('Failed to update sale in Supabase', err);
           // Still update local state as fallback
@@ -641,22 +669,33 @@ export const useAppStore = create<AppState>()(
                 : sale
             ),
           }));
+          const updatedSale = get().sales.find((s) => s.id === id);
+          if (updatedSale) {
+            salesDataService.invalidateCache(updatedSale.date);
+          }
         }
       },
 
       deleteSale: async (id) => {
+        const saleToDelete = get().sales.find((s) => s.id === id);
         try {
           const { error } = await supabase.from('sales').delete().eq('id', id);
           if (error) throw error;
           set((state) => ({
             sales: state.sales.filter((sale) => sale.id !== id),
           }));
+          if (saleToDelete) {
+            salesDataService.invalidateCache(saleToDelete.date);
+          }
         } catch (err) {
           console.error('Failed to delete sale from Supabase', err);
           // Still remove from local state as fallback
           set((state) => ({
             sales: state.sales.filter((sale) => sale.id !== id),
           }));
+          if (saleToDelete) {
+            salesDataService.invalidateCache(saleToDelete.date);
+          }
         }
       },
 
@@ -688,6 +727,7 @@ export const useAppStore = create<AppState>()(
               },
             ],
           }));
+          expensesDataService.invalidateCache(data.date);
         } catch (err) {
           console.error('Failed to add expense to Supabase', err);
           throw err; // Re-throw error to let UI handle it
@@ -718,6 +758,14 @@ export const useAppStore = create<AppState>()(
               exp.id === id ? { ...exp, ...updates } : exp
             ),
           }));
+          const updatedExpense = get().expenses.find((e) => e.id === id);
+          if (updatedExpense) {
+            expensesDataService.invalidateCache(updatedExpense.date);
+            // Si la fecha cambió, invalidar también la fecha anterior
+            if (updates.date && updates.date !== updatedExpense.date) {
+              expensesDataService.invalidateCache(updates.date);
+            }
+          }
         } catch (err) {
           console.error('Failed to update expense in Supabase', err);
           // Still update local state as fallback
@@ -726,10 +774,18 @@ export const useAppStore = create<AppState>()(
               exp.id === id ? { ...exp, ...updates } : exp
             ),
           }));
+          const updatedExpense = get().expenses.find((e) => e.id === id);
+          if (updatedExpense) {
+            expensesDataService.invalidateCache(updatedExpense.date);
+            if (updates.date && updates.date !== updatedExpense.date) {
+              expensesDataService.invalidateCache(updates.date);
+            }
+          }
         }
       },
 
       deleteExpense: async (id) => {
+        const expenseToDelete = get().expenses.find((e) => e.id === id);
         try {
           const { error } = await supabase
             .from('expenses')
@@ -739,12 +795,18 @@ export const useAppStore = create<AppState>()(
           set((state) => ({
             expenses: state.expenses.filter((exp) => exp.id !== id),
           }));
+          if (expenseToDelete) {
+            expensesDataService.invalidateCache(expenseToDelete.date);
+          }
         } catch (err) {
           console.error('Failed to delete expense from Supabase', err);
           // Still remove from local state as fallback
           set((state) => ({
             expenses: state.expenses.filter((exp) => exp.id !== id),
           }));
+          if (expenseToDelete) {
+            expensesDataService.invalidateCache(expenseToDelete.date);
+          }
         }
       },
 
@@ -764,6 +826,7 @@ export const useAppStore = create<AppState>()(
             payment_method: rental.paymentMethod,
             status: rental.status,
             is_paid: rental.isPaid,
+            date_paid: rental.datePaid || null,
             notes: rental.notes,
           };
           const { data, error } = await supabase
@@ -789,11 +852,13 @@ export const useAppStore = create<AppState>()(
             paymentMethod: data.payment_method || rental.paymentMethod,
             status: data.status,
             isPaid: data.is_paid,
+            datePaid: data.date_paid || undefined,
             notes: data.notes,
             createdAt: data.created_at || new Date().toISOString(),
             updatedAt: data.updated_at || new Date().toISOString(),
           };
           set((state) => ({ rentals: [...state.rentals, newRental] }));
+          rentalsDataService.invalidateCache(data.date);
 
           // Save customer locally if provided and not exists, then update rental with customer ID
           if (!rental.customerId && rental.customerName) {
@@ -910,6 +975,8 @@ export const useAppStore = create<AppState>()(
             payload.payment_method = updates.paymentMethod;
           if (updates.status !== undefined) payload.status = updates.status;
           if (updates.isPaid !== undefined) payload.is_paid = updates.isPaid;
+          if (updates.datePaid !== undefined)
+            payload.date_paid = updates.datePaid;
           if (updates.notes !== undefined) payload.notes = updates.notes;
           if (updates.customerId !== undefined)
             payload.customer_id = updates.customerId;
@@ -947,6 +1014,13 @@ export const useAppStore = create<AppState>()(
                 : rental
             ),
           }));
+          const updatedRental = get().rentals.find((r) => r.id === id);
+          if (updatedRental) {
+            rentalsDataService.invalidateCache(updatedRental.date);
+            if (updates.date && updates.date !== updatedRental.date) {
+              rentalsDataService.invalidateCache(updates.date);
+            }
+          }
         } catch (err) {
           console.error('Failed to update rental in Supabase', err);
           // Still update local state as fallback
@@ -957,11 +1031,19 @@ export const useAppStore = create<AppState>()(
                 : rental
             ),
           }));
+          const updatedRental = get().rentals.find((r) => r.id === id);
+          if (updatedRental) {
+            rentalsDataService.invalidateCache(updatedRental.date);
+            if (updates.date && updates.date !== updatedRental.date) {
+              rentalsDataService.invalidateCache(updates.date);
+            }
+          }
           throw err; // Re-throw to let UI handle the error
         }
       },
 
       deleteRental: async (id) => {
+        const rentalToDelete = get().rentals.find((r) => r.id === id);
         try {
           const { error } = await supabase
             .from('washer_rentals')
@@ -971,12 +1053,18 @@ export const useAppStore = create<AppState>()(
           set((state) => ({
             rentals: state.rentals.filter((rental) => rental.id !== id),
           }));
+          if (rentalToDelete) {
+            rentalsDataService.invalidateCache(rentalToDelete.date);
+          }
         } catch (err) {
           console.error('Failed to delete rental from Supabase', err);
           // Still remove from local state as fallback
           set((state) => ({
             rentals: state.rentals.filter((rental) => rental.id !== id),
           }));
+          if (rentalToDelete) {
+            rentalsDataService.invalidateCache(rentalToDelete.date);
+          }
         }
       },
 
@@ -1122,7 +1210,7 @@ export const useAppStore = create<AppState>()(
       },
 
       markPrepaidAsDelivered: async (id) => {
-        const dateDelivered = new Date().toISOString().split('T')[0];
+        const dateDelivered = getVenezuelaDate();
         const updatedAt = new Date().toISOString();
         try {
           const { error } = await supabase
@@ -1139,11 +1227,11 @@ export const useAppStore = create<AppState>()(
             prepaidOrders: state.prepaidOrders.map((order) =>
               order.id === id
                 ? {
-                    ...order,
-                    status: 'entregado' as PrepaidStatus,
-                    dateDelivered: dateDelivered,
-                    updatedAt,
-                  }
+                  ...order,
+                  status: 'entregado' as PrepaidStatus,
+                  dateDelivered: dateDelivered,
+                  updatedAt,
+                }
                 : order
             ),
           }));
@@ -1154,11 +1242,11 @@ export const useAppStore = create<AppState>()(
             prepaidOrders: state.prepaidOrders.map((order) =>
               order.id === id
                 ? {
-                    ...order,
-                    status: 'entregado' as PrepaidStatus,
-                    dateDelivered: dateDelivered,
-                    updatedAt,
-                  }
+                  ...order,
+                  status: 'entregado' as PrepaidStatus,
+                  dateDelivered: dateDelivered,
+                  updatedAt,
+                }
                 : order
             ),
           }));
@@ -1399,10 +1487,10 @@ export const useAppStore = create<AppState>()(
               (transaction) =>
                 transaction.id === id
                   ? {
-                      ...transaction,
-                      ...updates,
-                      updatedAt: new Date().toISOString(),
-                    }
+                    ...transaction,
+                    ...updates,
+                    updatedAt: new Date().toISOString(),
+                  }
                   : transaction
             ),
           }));
@@ -1417,10 +1505,10 @@ export const useAppStore = create<AppState>()(
               (transaction) =>
                 transaction.id === id
                   ? {
-                      ...transaction,
-                      ...updates,
-                      updatedAt: new Date().toISOString(),
-                    }
+                    ...transaction,
+                    ...updates,
+                    updatedAt: new Date().toISOString(),
+                  }
                   : transaction
             ),
           }));
@@ -1545,10 +1633,14 @@ export const useAppStore = create<AppState>()(
         // Normalizar la fecha antes de filtrar para mantener consistencia
         const normalizedDate = dateService.normalizeSaleDate(date);
         // Usar SalesFilterService con estrategia de filtrado por fecha - OCP, DIP
-        const filterService = new SalesFilterService(new DateFilterStrategy(dateService));
+        const filterService = new SalesFilterService(
+          new DateFilterStrategy(dateService)
+        );
         return filterService
           .filterSales(get().sales, normalizedDate)
-          .sort((a: Sale, b: Sale) => compareTimestamps(a.createdAt, b.createdAt));
+          .sort((a: Sale, b: Sale) =>
+            compareTimestamps(a.createdAt, b.createdAt)
+          );
       },
 
       getExpensesByDate: (date) =>
@@ -1616,7 +1708,9 @@ export const useAppStore = create<AppState>()(
 
           // Reemplazar alquileres de esa fecha específica
           set((state) => {
-            const existingRentals = state.rentals.filter((r) => r.date !== date);
+            const existingRentals = state.rentals.filter(
+              (r) => r.date !== date
+            );
             return {
               rentals: [...existingRentals, ...rentals],
             };
@@ -1636,7 +1730,9 @@ export const useAppStore = create<AppState>()(
 
           // Reemplazar egresos de esa fecha específica
           set((state) => {
-            const existingExpenses = state.expenses.filter((e) => e.date !== date);
+            const existingExpenses = state.expenses.filter(
+              (e) => e.date !== date
+            );
             return {
               expenses: [...existingExpenses, ...expenses],
             };
@@ -1658,7 +1754,9 @@ export const useAppStore = create<AppState>()(
           }
           const loadedDatesSet = new Set(dates);
           set((state) => {
-            const kept = state.expenses.filter((e) => !loadedDatesSet.has(e.date));
+            const kept = state.expenses.filter(
+              (e) => !loadedDatesSet.has(e.date)
+            );
             return {
               expenses: [...kept, ...incoming],
             };
@@ -1684,10 +1782,12 @@ export const useAppStore = create<AppState>()(
 
           if (dates.length === 0) return;
 
+          // Usar los nuevos métodos optimizados que hacen 1 sola query por rango
+          // en lugar de N queries por día
           const [salesMap, rentalsMap, expensesMap] = await Promise.all([
-            salesDataService.loadSalesByDates(dates),
-            rentalsDataService.loadRentalsByDates(dates),
-            expensesDataService.loadExpensesByDates(dates),
+            salesDataService.loadSalesByDateRange(startDate, endDate),
+            rentalsDataService.loadRentalsByDateRange(startDate, endDate),
+            expensesDataService.loadExpensesByDateRange(startDate, endDate),
           ]);
 
           const allSales: Sale[] = [];
@@ -1727,6 +1827,12 @@ export const useAppStore = create<AppState>()(
     }),
     {
       name: 'agua-app-storage',
+      onRehydrateStorage: () => (state) => {
+        // Actualizar selectedDate a la fecha actual de Venezuela después de rehidratar
+        if (state) {
+          state.selectedDate = getVenezuelaDate();
+        }
+      },
     }
   )
 );

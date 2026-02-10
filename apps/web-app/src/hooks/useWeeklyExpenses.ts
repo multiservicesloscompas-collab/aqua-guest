@@ -10,6 +10,7 @@ import {
 import { es } from 'date-fns/locale';
 import { useAppStore } from '@/store/useAppStore';
 import { Expense } from '@/types';
+import { getVenezuelaDate } from '@/services/DateService';
 
 export interface DayGroup {
   date: string;
@@ -53,7 +54,7 @@ function getDatesBetween(start: Date, end: Date): string[] {
 
 function formatDayLabel(dateStr: string): string {
   const date = new Date(dateStr + 'T12:00:00');
-  const today = new Date();
+  const today = new Date(getVenezuelaDate() + 'T12:00:00');
   const todayStr = format(today, 'yyyy-MM-dd');
   if (dateStr === todayStr) return 'Hoy';
 
@@ -146,20 +147,32 @@ export function useWeeklyExpenses(anchorDate: string): UseWeeklyExpensesReturn {
             date,
             label: formatDayLabel(date),
             expenses,
-            total: expenses.reduce((sum: number, e: Expense) => sum + e.amount, 0),
+            total: expenses.reduce(
+              (sum: number, e: Expense) => sum + e.amount,
+              0
+            ),
           };
         });
 
-      const weekTotal = days.reduce((sum: number, d: DayGroup) => sum + d.total, 0);
+      const weekTotal = days.reduce(
+        (sum: number, d: DayGroup) => sum + d.total,
+        0
+      );
       const monthKey = format(weekStartDate, 'yyyy-MM');
 
-      return { weekStart: weekStartStr, weekEnd: weekEndStr, days, weekTotal, monthKey };
+      return {
+        weekStart: weekStartStr,
+        weekEnd: weekEndStr,
+        days,
+        weekTotal,
+        monthKey,
+      };
     });
   }, [loadedWeekStarts, getExpensesByDate]);
 
   const monthTotals = useMemo<MonthTotal[]>(() => {
     const monthMap = new Map<string, number>();
-    
+
     weeks.forEach((week) => {
       const current = monthMap.get(week.monthKey) || 0;
       monthMap.set(week.monthKey, current + week.weekTotal);
@@ -168,8 +181,20 @@ export function useWeeklyExpenses(anchorDate: string): UseWeeklyExpensesReturn {
     return Array.from(monthMap.entries())
       .map(([monthKey, total]) => {
         const [year, month] = monthKey.split('-');
-        const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 
-                           'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+        const monthNames = [
+          'Enero',
+          'Febrero',
+          'Marzo',
+          'Abril',
+          'Mayo',
+          'Junio',
+          'Julio',
+          'Agosto',
+          'Septiembre',
+          'Octubre',
+          'Noviembre',
+          'Diciembre',
+        ];
         const monthLabel = `${monthNames[parseInt(month) - 1]} ${year}`;
         return { monthKey, monthLabel, total };
       })

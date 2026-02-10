@@ -1,4 +1,4 @@
-import { IsString, IsNumber, IsOptional } from 'class-validator';
+import { IsString, IsNumber, IsOptional, IsBoolean } from 'class-validator';
 
 export class CreateRentalDto {
   @IsString()
@@ -34,6 +34,14 @@ export class CreateRentalDto {
 
   @IsString()
   paymentStatus: string;
+
+  @IsOptional()
+  @IsBoolean()
+  isPaid?: boolean;
+
+  @IsOptional()
+  @IsString()
+  datePaid?: string;
 
   @IsNumber()
   pricePerUnit: number;

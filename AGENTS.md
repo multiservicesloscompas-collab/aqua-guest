@@ -140,7 +140,7 @@ const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2,
 - `'divisa'` - Foreign currency (DollarSign icon)
 
 ### Testing Guidelines
-- Use Vitest for frontend, Jest for backend
+- Use Jest
 - Test library for React components
 - Mock external dependencies (Supabase, store, icons)
 - Write descriptive test names in Spanish or English

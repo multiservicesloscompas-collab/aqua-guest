@@ -45,7 +45,7 @@ export function getMonthToDateRange(selectedDate: string): DateRange {
 export function filterByDateRange<T>(
   items: readonly T[],
   range: DateRange,
-  getDate: (item: T) => string,
+  getDate: (item: T) => string
 ): T[] {
   return items.filter((item) => {
     const d = getDate(item);
@@ -76,26 +76,31 @@ function computeScope(
   rentals: readonly WasherRental[],
   expenses: readonly Expense[],
   prepaidOrders: readonly PrepaidOrder[],
-  paymentBalanceTransactions: readonly PaymentBalanceTransaction[],
+  paymentBalanceTransactions: readonly PaymentBalanceTransaction[]
 ): ScopeMetrics {
   const filteredSales = filterByDateRange(sales, range, (s) => s.date);
-  const filteredRentals = filterByDateRange(rentals, range, (r) => r.date);
+  // Solo considerar alquileres pagados, usando datePaid si existe, sino date
+  const filteredRentals = filterByDateRange(
+    rentals.filter((r) => r.isPaid),
+    range,
+    (r) => r.datePaid || r.date
+  );
   const filteredExpenses = filterByDateRange(expenses, range, (e) => e.date);
   const filteredPrepaid = filterByDateRange(
     prepaidOrders,
     range,
-    (p) => p.datePaid,
+    (p) => p.datePaid
   );
   const filteredBalanceTx = filterByDateRange(
     paymentBalanceTransactions,
     range,
-    (t) => t.date,
+    (t) => t.date
   );
 
   const waterBs = filteredSales.reduce((sum, s) => sum + s.totalBs, 0);
   const rentalBs = filteredRentals.reduce(
     (sum, r) => sum + r.totalUsd * exchangeRate,
-    0,
+    0
   );
   const prepaidBs = filteredPrepaid.reduce((sum, p) => sum + p.amountBs, 0);
   const totalIncomeBs = waterBs + rentalBs + prepaidBs;
@@ -144,7 +149,7 @@ function computeScope(
 }
 
 export function calculateDashboardMetrics(
-  input: DashboardMetricsInput,
+  input: DashboardMetricsInput
 ): DashboardMetricsResult {
   const {
     selectedDate,
@@ -166,7 +171,7 @@ export function calculateDashboardMetrics(
     rentals,
     expenses,
     prepaidOrders,
-    paymentBalanceTransactions,
+    paymentBalanceTransactions
   );
 
   const mtd = computeScope(
@@ -176,7 +181,7 @@ export function calculateDashboardMetrics(
     rentals,
     expenses,
     prepaidOrders,
-    paymentBalanceTransactions,
+    paymentBalanceTransactions
   );
 
   return { day, mtd };

@@ -6,23 +6,18 @@ import { RentalSheet } from '@/components/alquiler/RentalSheet';
 import { Button } from '@/components/ui/button';
 import { Plus, Loader2 } from 'lucide-react';
 import { useAppStore } from '@/store/useAppStore';
+import { getVenezuelaDate } from '@/services/DateService';
 import { cn } from '@/lib/utils';
 import { WasherRental } from '@/types';
 
 export function AlquilerPage() {
   const [sheetOpen, setSheetOpen] = useState(false);
-  const { selectedDate, setSelectedDate, getRentalsByDate, loadRentalsByDate } = useAppStore();
+  const { selectedDate, setSelectedDate, getRentalsByDate, loadRentalsByDate } =
+    useAppStore();
   const [loadingRentals, setLoadingRentals] = useState(false);
 
   useEffect(() => {
-    const today = new Date();
-    const formattedDate =
-      today.getFullYear() +
-      '-' +
-      String(today.getMonth() + 1).padStart(2, '0') +
-      '-' +
-      String(today.getDate()).padStart(2, '0');
-    setSelectedDate(formattedDate);
+    setSelectedDate(getVenezuelaDate());
   }, [setSelectedDate]);
 
   // Cargar alquileres cuando cambia la fecha - Optimización de rendimiento
@@ -40,7 +35,7 @@ export function AlquilerPage() {
     // Cargar alquileres de la fecha específica
     setLoadingRentals(true);
     loadRentalsByDate(selectedDate)
-      .catch(err => {
+      .catch((err) => {
         console.error('Error loading rentals for date:', selectedDate, err);
       })
       .finally(() => {
@@ -118,4 +113,3 @@ export function AlquilerPage() {
     </div>
   );
 }
-

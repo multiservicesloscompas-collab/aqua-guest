@@ -6,27 +6,29 @@ import { SalesList } from '@/components/ventas/SalesList';
 import { AddProductSheet } from '@/components/ventas/AddProductSheet';
 import { CartSheet } from '@/components/ventas/CartSheet';
 import { useAppStore } from '@/store/useAppStore';
+import { getVenezuelaDate } from '@/services/DateService';
 import { Button } from '@/components/ui/button';
 import { Plus, ShoppingCart, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { PaymentMethod } from '@/types';
 
 export function VentasPage() {
-  const { selectedDate, setSelectedDate, getSalesByDate, cart, loadSalesByDate } = useAppStore();
+  const {
+    selectedDate,
+    setSelectedDate,
+    getSalesByDate,
+    cart,
+    loadSalesByDate,
+  } = useAppStore();
   const [showAddProduct, setShowAddProduct] = useState(false);
   const [showCart, setShowCart] = useState(false);
-  const [paymentFilter, setPaymentFilter] = useState<PaymentMethod | 'todos'>('todos');
+  const [paymentFilter, setPaymentFilter] = useState<PaymentMethod | 'todos'>(
+    'todos'
+  );
   const [loadingSales, setLoadingSales] = useState(false);
 
   useEffect(() => {
-    const today = new Date();
-    const formattedDate =
-      today.getFullYear() +
-      '-' +
-      String(today.getMonth() + 1).padStart(2, '0') +
-      '-' +
-      String(today.getDate()).padStart(2, '0');
-    setSelectedDate(formattedDate);
+    setSelectedDate(getVenezuelaDate());
   }, [setSelectedDate]);
 
   // Cargar ventas cuando cambia la fecha - Optimización de rendimiento
@@ -44,7 +46,7 @@ export function VentasPage() {
     // Cargar ventas de la fecha específica
     setLoadingSales(true);
     loadSalesByDate(selectedDate)
-      .catch(err => {
+      .catch((err) => {
         console.error('Error loading sales for date:', selectedDate, err);
       })
       .finally(() => {
@@ -114,4 +116,3 @@ export function VentasPage() {
     </div>
   );
 }
-

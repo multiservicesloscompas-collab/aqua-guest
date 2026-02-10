@@ -8,21 +8,35 @@ import { RentalStatus, WasherRental } from '@/types';
 import { toast } from 'sonner';
 
 export function RentalList() {
-  const { selectedDate, getRentalsByDate, updateRental, deleteRental } = useAppStore();
+  const { selectedDate, getRentalsByDate, updateRental, deleteRental } =
+    useAppStore();
   const rentals = getRentalsByDate(selectedDate);
   const [editingRental, setEditingRental] = useState<WasherRental | null>(null);
   const [editSheetOpen, setEditSheetOpen] = useState(false);
   const [extensionDialogOpen, setExtensionDialogOpen] = useState(false);
-  const [selectedRental, setSelectedRental] = useState<WasherRental | null>(null);
-  
+  const [selectedRental, setSelectedRental] = useState<WasherRental | null>(
+    null
+  );
+
   const handleStatusChange = (id: string, status: RentalStatus) => {
     updateRental(id, { status });
   };
-  
+
   const handlePaymentToggle = (id: string) => {
-    const rental = rentals.find(r => r.id === id);
+    const rental = rentals.find((r) => r.id === id);
     if (rental) {
-      updateRental(id, { isPaid: !rental.isPaid });
+      const newIsPaid = !rental.isPaid;
+      const updates: Partial<WasherRental> = { isPaid: newIsPaid };
+
+      // Si se está marcando como pagado, registrar la fecha de pago
+      if (newIsPaid) {
+        updates.datePaid = new Date().toISOString().split('T')[0];
+      } else {
+        // Si se desmarca, limpiar la fecha de pago
+        updates.datePaid = undefined;
+      }
+
+      updateRental(id, updates);
     }
   };
 
@@ -47,7 +61,7 @@ export function RentalList() {
     // Also update the selected rental state to reflect the changes
     setSelectedRental(updatedRental);
   };
-  
+
   if (rentals.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center">
@@ -61,13 +75,13 @@ export function RentalList() {
       </div>
     );
   }
-  
+
   // Ordenar: activos primero, finalizados al final
   const sortedRentals = [...rentals].sort((a, b) => {
     const statusOrder = { agendado: 0, enviado: 1, finalizado: 2 };
     return statusOrder[a.status] - statusOrder[b.status];
   });
-  
+
   return (
     <>
       <div className="space-y-3">

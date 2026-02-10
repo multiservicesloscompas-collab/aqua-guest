@@ -5,16 +5,15 @@
 
 import { supabase } from '@/lib/supabaseClient';
 import { Sale } from '@/types';
-import {
-  getSafeTimestamp,
-  normalizeTimestamp,
-} from '@/lib/date-utils';
+import { getSafeTimestamp, normalizeTimestamp } from '@/lib/date-utils';
 
 export interface ISalesDataService {
   loadSalesByDate(date: string): Promise<Sale[]>;
   clearCache(): void;
+  invalidateCache(date: string): void;
   getCachedSales(date: string): Sale[] | null;
   hasCachedDate(date: string): boolean;
+  loadSalesByDateRange(startDate: string, endDate: string): Promise<Map<string, Sale[]>>;
 }
 
 /**
@@ -47,6 +46,10 @@ class SalesCache {
 
   clear(): void {
     this.cache.clear();
+  }
+
+  delete(date: string): boolean {
+    return this.cache.delete(date);
   }
 
   keys(): IterableIterator<string> {
@@ -97,8 +100,14 @@ export class SalesDataService implements ISalesDataService {
       totalUsd: Number(s.total_usd ?? s.totalUsd ?? 0),
       exchangeRate: Number(s.exchange_rate ?? s.exchangeRate ?? 0),
       notes: s.notes,
-      createdAt: normalizeTimestamp(s.created_at ?? s.createdAt, getSafeTimestamp()),
-      updatedAt: normalizeTimestamp(s.updated_at ?? s.updatedAt, getSafeTimestamp()),
+      createdAt: normalizeTimestamp(
+        s.created_at ?? s.createdAt,
+        getSafeTimestamp()
+      ),
+      updatedAt: normalizeTimestamp(
+        s.updated_at ?? s.updatedAt,
+        getSafeTimestamp()
+      ),
     }));
 
     // 4. Guardar en caché
@@ -109,6 +118,10 @@ export class SalesDataService implements ISalesDataService {
 
   clearCache(): void {
     this.salesCache.clear();
+  }
+
+  invalidateCache(date: string): void {
+    this.salesCache.delete(date);
   }
 
   getCachedSales(date: string): Sale[] | null {
@@ -162,8 +175,14 @@ export class SalesDataService implements ISalesDataService {
         totalUsd: Number(s.total_usd ?? s.totalUsd ?? 0),
         exchangeRate: Number(s.exchange_rate ?? s.exchangeRate ?? 0),
         notes: s.notes,
-        createdAt: normalizeTimestamp(s.created_at ?? s.createdAt, getSafeTimestamp()),
-        updatedAt: normalizeTimestamp(s.updated_at ?? s.updatedAt, getSafeTimestamp()),
+        createdAt: normalizeTimestamp(
+          s.created_at ?? s.createdAt,
+          getSafeTimestamp()
+        ),
+        updatedAt: normalizeTimestamp(
+          s.updated_at ?? s.updatedAt,
+          getSafeTimestamp()
+        ),
       }));
 
       this.salesCache.set(date, sales);
@@ -171,7 +190,7 @@ export class SalesDataService implements ISalesDataService {
       return { date, sales };
     });
 
-    const loadedResults = await Promise.all(promises);
+    await Promise.all(promises);
 
     // Combinar resultados cargados con los que ya estaban en caché
     for (const date of dates) {
@@ -179,6 +198,97 @@ export class SalesDataService implements ISalesDataService {
       if (cached) {
         results.set(date, cached);
       }
+    }
+
+    return results;
+  }
+
+  /**
+   * Carga ventas en un rango de fechas de forma eficiente (1 query)
+   */
+  async loadSalesByDateRange(
+    startDate: string,
+    endDate: string
+  ): Promise<Map<string, Sale[]>> {
+    const results = new Map<string, Sale[]>();
+    const datesInRange: string[] = [];
+
+    // Generar todas las fechas en el rango
+    const current = new Date(startDate + 'T12:00:00');
+    const end = new Date(endDate + 'T12:00:00');
+
+    while (current <= end) {
+      const y = current.getFullYear();
+      const m = String(current.getMonth() + 1).padStart(2, '0');
+      const d = String(current.getDate()).padStart(2, '0');
+      datesInRange.push(`${y}-${m}-${d}`);
+      current.setDate(current.getDate() + 1);
+    }
+
+    // Verificar cuáles fechas ya están en caché para no recargarlas innecesariamente
+    const allCached = datesInRange.every((d) => this.salesCache.has(d));
+
+    if (allCached) {
+      for (const date of datesInRange) {
+        results.set(date, this.salesCache.get(date) || []);
+      }
+      return results;
+    }
+
+    // Fetch range query
+    const { data, error } = await supabase
+      .from('sales')
+      .select('*')
+      .gte('date', startDate)
+      .lte('date', endDate)
+      .order('created_at', { ascending: true });
+
+    if (error) {
+      console.error(
+        `Error loading sales for range ${startDate} to ${endDate}:`,
+        error
+      );
+      throw error;
+    }
+
+    // Agrupar resultados por fecha
+    const grouped: Record<string, Sale[]> = {};
+    for (const date of datesInRange) {
+      grouped[date] = [];
+    }
+
+    (data || []).forEach((s: any) => {
+      // Normalizar fecha del registro para asegurar coincidencia
+      const dateKey = s.date.substring(0, 10);
+
+      if (grouped[dateKey]) {
+        grouped[dateKey].push({
+          id: s.id,
+          dailyNumber: s.daily_number ?? s.dailyNumber,
+          date: dateKey,
+          items: s.items || [],
+          paymentMethod: s.payment_method || s.paymentMethod,
+          totalBs: Number(s.total_bs ?? s.totalBs ?? 0),
+          totalUsd: Number(s.total_usd ?? s.totalUsd ?? 0),
+          exchangeRate: Number(s.exchange_rate ?? s.exchangeRate ?? 0),
+          notes: s.notes,
+          createdAt: normalizeTimestamp(
+            s.created_at ?? s.createdAt,
+            getSafeTimestamp()
+          ),
+          updatedAt: normalizeTimestamp(
+            s.updated_at ?? s.updatedAt,
+            getSafeTimestamp()
+          ),
+        });
+      }
+    });
+
+    // Actualizar caché y resultados
+    for (const date of datesInRange) {
+      const sales = grouped[date] || [];
+      this.salesCache.set(date, sales);
+      results.set(date, sales);
     }
 
     return results;

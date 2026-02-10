@@ -1,7 +1,7 @@
 import { Entity, Column } from 'typeorm';
 import { BaseEntity } from '../../../libs/typeorm/base-entity';
 
-@Entity('rentals')
+@Entity('washer_rentals')
 export class Rental extends BaseEntity {
   @Column({ nullable: true })
   date: string;
@@ -35,6 +35,12 @@ export class Rental extends BaseEntity {
 
   @Column({ name: 'payment_status' })
   paymentStatus: string;
+
+  @Column({ name: 'is_paid', default: false })
+  isPaid: boolean;
+
+  @Column({ name: 'date_paid', nullable: true })
+  datePaid: string;
 
   @Column({ name: 'price_per_unit', type: 'decimal' })
   pricePerUnit: number;
