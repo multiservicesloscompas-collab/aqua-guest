@@ -48,9 +48,16 @@ const TimeFilterLabels: Record<TimeFilter, string> = {
 };
 
 export function DeliverysPage() {
-  const { rentals, washingMachines } = useAppStore();
+  const { rentals, washingMachines, selectedDate: selectedDateStr, setSelectedDate: setSelectedDateStr } = useAppStore();
   const [timeFilter, setTimeFilter] = useState<TimeFilter>('dia');
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+
+  const selectedDate = useMemo(() => {
+    return parseISO(selectedDateStr);
+  }, [selectedDateStr]);
+
+  const setSelectedDate = (date: Date) => {
+    setSelectedDateStr(format(date, 'yyyy-MM-dd'));
+  };
 
   useEffect(() => {
     const load = async () => {

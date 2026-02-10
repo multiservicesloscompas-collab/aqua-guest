@@ -23,9 +23,13 @@ import {
   Banknote,
   CreditCard,
   Plus,
+  CalendarDays,
+  Copy,
 } from 'lucide-react';
+import { toast } from '@/components/ui/sonner';
+import { format, parse } from 'date-fns';
+import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
-import { formatPickupInfo } from '@/utils/rentalSchedule';
 import { useAppStore } from '@/store/useAppStore';
 import { canExtendRental } from '@/utils/rentalExtensions';
 import {
@@ -156,7 +160,7 @@ export function RentalCard({
     <>
       <Card
         className={cn(
-          'p-4 space-y-3 transition-all active:scale-[0.98]',
+          'p-4 space-y-3 transition-all active:scale-[0.98] group relative',
           rental.status === 'finalizado' && 'opacity-60'
         )}
         onClick={onClick}
@@ -168,9 +172,25 @@ export function RentalCard({
               <WashingMachine className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <p className="font-semibold">
-                {machine?.name || `Lavadora #${rental.machineId}`}
-              </p>
+              <div className="flex items-center gap-1.5">
+                <p className="font-semibold">
+                  {machine?.name || `Lavadora #${rental.machineId}`}
+                </p>
+                <button
+                  onClick={(e: React.MouseEvent) => {
+                    e.stopPropagation();
+                    navigator.clipboard.writeText(rental.id);
+                    toast.success('ID copiado', {
+                      description: rental.id,
+                      duration: 2000,
+                    });
+                  }}
+                  className="p-1 rounded-md text-muted-foreground/30 hover:text-primary hover:bg-primary/10 transition-all opacity-0 group-hover:opacity-100"
+                  title="Copiar ID de registro"
+                >
+                  <Copy className="w-3 h-3" />
+                </button>
+              </div>
               <p className="text-sm text-muted-foreground">
                 {machine ? `${machine.kg}kg ${machine.brand}` : ''} ·{' '}
                 {shiftConfig.label}
@@ -205,6 +225,14 @@ export function RentalCard({
                 return <PaymentIcon className="w-4 h-4" />;
               })()}
               <span>{PaymentMethodLabels[rental.paymentMethod]}</span>
+            </div>
+          )}
+          {rental.isPaid && rental.datePaid && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <CalendarDays className="w-4 h-4" />
+              <span>
+                Pagado el: {format(parse(rental.datePaid, 'yyyy-MM-dd', new Date()), "EEE d 'de' MMM", { locale: es })}
+              </span>
             </div>
           )}
         </div>
@@ -273,8 +301,8 @@ export function RentalCard({
                 {nextStatus === 'enviado'
                   ? 'Enviado'
                   : nextStatus === 'finalizado' && rental.status === 'agendado'
-                  ? 'Recogida'
-                  : 'Finalizar'}
+                    ? 'Recogida'
+                    : 'Finalizar'}
                 <ChevronRight className="w-3 h-3 ml-1" />
               </Button>
             )}

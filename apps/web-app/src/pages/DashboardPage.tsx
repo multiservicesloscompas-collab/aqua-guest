@@ -21,9 +21,7 @@ import {
 import { ChartDataPoint, Sale, WasherRental, AppRoute } from '@/types';
 import {
   calculateDashboardMetrics,
-  getMonthToDateRange,
 } from '@/services/DashboardMetricsService';
-import { getVenezuelaDate } from '@/services/DateService';
 
 interface DashboardPageProps {
   onNavigate?: (route: AppRoute) => void;
@@ -38,21 +36,33 @@ export function DashboardPage({ onNavigate }: DashboardPageProps = {}) {
     prepaidOrders,
     paymentBalanceTransactions,
     loadDataForDateRange,
+    selectedDate,
+    setSelectedDate,
   } = useAppStore();
   const [currency, setCurrency] = useState<'Bs' | 'USD'>('Bs');
-  const [selectedDate, setSelectedDate] = useState<string>(getVenezuelaDate());
   const [loading, setLoading] = useState(false);
   const lastLoadedRange = useRef<string>('');
 
   const loadMonthData = useCallback(
     async (date: string, force = false) => {
-      const range = getMonthToDateRange(date);
-      const rangeKey = `${range.start}_${range.end}`;
+      // Definir rango del mes completo para una carga estable
+      const start = date.slice(0, 7) + '-01';
+      // Obtener el último día del mes
+      const dateObj = new Date(date + 'T12:00:00');
+      const lastDay = new Date(
+        dateObj.getFullYear(),
+        dateObj.getMonth() + 1,
+        0
+      ).getDate();
+      const end = date.slice(0, 7) + '-' + String(lastDay).padStart(2, '0');
+
+      const rangeKey = `${start}_${end}`;
       if (!force && lastLoadedRange.current === rangeKey) return;
       lastLoadedRange.current = rangeKey;
+
       setLoading(true);
       try {
-        await loadDataForDateRange(range.start, range.end);
+        await loadDataForDateRange(start, end);
       } catch (err) {
         console.error('Error loading month data for dashboard', err);
       } finally {
@@ -63,7 +73,7 @@ export function DashboardPage({ onNavigate }: DashboardPageProps = {}) {
   );
 
   useEffect(() => {
-    loadMonthData(selectedDate, true);
+    loadMonthData(selectedDate, false);
   }, [selectedDate, loadMonthData]);
 
   const metrics = useMemo(
@@ -175,12 +185,13 @@ export function DashboardPage({ onNavigate }: DashboardPageProps = {}) {
             variant={metrics.mtd.netBs >= 0 ? 'default' : 'warning'}
           />
           <KpiCard
-            title="Egresos Mes"
+            title="Egresos Hoy"
             value={
               currency === 'Bs'
-                ? `Bs ${metrics.mtd.expenseBs.toFixed(0)}`
-                : `$ ${toUsd(metrics.mtd.expenseBs).toFixed(2)}`
+                ? `Bs ${metrics.day.expenseBs.toFixed(0)}`
+                : `$ ${toUsd(metrics.day.expenseBs).toFixed(2)}`
             }
+            subtitle="Hoy"
             icon={<Wallet className="w-4 h-4 text-destructive" />}
             variant="danger"
             onClick={() => onNavigate?.('egresos')}
@@ -197,10 +208,12 @@ export function DashboardPage({ onNavigate }: DashboardPageProps = {}) {
           />
           <KpiCard
             title="Transacciones"
-            value={metrics.mtd.transactionsCount}
-            subtitle="acumulado mes"
+            value={metrics.day.transactionsCount}
+            subtitle="hoy"
             variant="success"
             icon={<Receipt className="w-4 h-4 text-primary" />}
+            onClick={() => onNavigate?.('transacciones-hoy')}
+            className="cursor-pointer hover:bg-muted/50 active:scale-95 transition-all"
           />
           <KpiCard
             title="Moneda"
@@ -270,7 +283,7 @@ export function DashboardPage({ onNavigate }: DashboardPageProps = {}) {
           <div className="flex items-center justify-between">
             <h3 className="text-base font-semibold text-foreground flex items-center gap-2">
               <Wallet className="w-5 h-5 text-primary" />
-              Resumen por Pago (Mes)
+              Resumen por Pago (Hoy)
             </h3>
             <span className="text-xs font-medium px-2 py-1 bg-primary/10 text-primary rounded-full">
               {currency === 'Bs' ? 'Bolívares' : 'Dólares'}
@@ -290,8 +303,8 @@ export function DashboardPage({ onNavigate }: DashboardPageProps = {}) {
                   <p className="text-lg font-bold text-orange-950">
                     {currency === 'Bs' ? 'Bs ' : '$ '}
                     {(currency === 'Bs'
-                      ? metrics.mtd.methodTotalsBs.efectivo
-                      : toUsd(metrics.mtd.methodTotalsBs.efectivo)
+                      ? metrics.day.methodTotalsBs.efectivo
+                      : toUsd(metrics.day.methodTotalsBs.efectivo)
                     ).toLocaleString('es-VE', {
                       minimumFractionDigits: 2,
                     })}
@@ -302,8 +315,8 @@ export function DashboardPage({ onNavigate }: DashboardPageProps = {}) {
                 <p className="text-xs font-medium text-muted-foreground">
                   {currency === 'Bs' ? '$' : 'Bs'}
                   {(currency === 'Bs'
-                    ? toUsd(metrics.mtd.methodTotalsBs.efectivo)
-                    : metrics.mtd.methodTotalsBs.efectivo
+                    ? toUsd(metrics.day.methodTotalsBs.efectivo)
+                    : metrics.day.methodTotalsBs.efectivo
                   ).toFixed(2)}
                 </p>
               </div>
@@ -321,8 +334,8 @@ export function DashboardPage({ onNavigate }: DashboardPageProps = {}) {
                   <p className="text-lg font-bold text-blue-950">
                     {currency === 'Bs' ? 'Bs ' : '$ '}
                     {(currency === 'Bs'
-                      ? metrics.mtd.methodTotalsBs.pago_movil
-                      : toUsd(metrics.mtd.methodTotalsBs.pago_movil)
+                      ? metrics.day.methodTotalsBs.pago_movil
+                      : toUsd(metrics.day.methodTotalsBs.pago_movil)
                     ).toLocaleString('es-VE', {
                       minimumFractionDigits: 2,
                     })}
@@ -333,8 +346,8 @@ export function DashboardPage({ onNavigate }: DashboardPageProps = {}) {
                 <p className="text-xs font-medium text-muted-foreground">
                   {currency === 'Bs' ? '$' : 'Bs'}
                   {(currency === 'Bs'
-                    ? toUsd(metrics.mtd.methodTotalsBs.pago_movil)
-                    : metrics.mtd.methodTotalsBs.pago_movil
+                    ? toUsd(metrics.day.methodTotalsBs.pago_movil)
+                    : metrics.day.methodTotalsBs.pago_movil
                   ).toFixed(2)}
                 </p>
               </div>
@@ -352,8 +365,8 @@ export function DashboardPage({ onNavigate }: DashboardPageProps = {}) {
                   <p className="text-lg font-bold text-purple-950">
                     {currency === 'Bs' ? 'Bs ' : '$ '}
                     {(currency === 'Bs'
-                      ? metrics.mtd.methodTotalsBs.punto_venta
-                      : toUsd(metrics.mtd.methodTotalsBs.punto_venta)
+                      ? metrics.day.methodTotalsBs.punto_venta
+                      : toUsd(metrics.day.methodTotalsBs.punto_venta)
                     ).toLocaleString('es-VE', {
                       minimumFractionDigits: 2,
                     })}
@@ -364,8 +377,8 @@ export function DashboardPage({ onNavigate }: DashboardPageProps = {}) {
                 <p className="text-xs font-medium text-muted-foreground">
                   {currency === 'Bs' ? '$' : 'Bs'}
                   {(currency === 'Bs'
-                    ? toUsd(metrics.mtd.methodTotalsBs.punto_venta)
-                    : metrics.mtd.methodTotalsBs.punto_venta
+                    ? toUsd(metrics.day.methodTotalsBs.punto_venta)
+                    : metrics.day.methodTotalsBs.punto_venta
                   ).toFixed(2)}
                 </p>
               </div>
@@ -383,8 +396,8 @@ export function DashboardPage({ onNavigate }: DashboardPageProps = {}) {
                   <p className="text-lg font-bold text-green-950">
                     {currency === 'Bs' ? 'Bs ' : '$ '}
                     {(currency === 'Bs'
-                      ? metrics.mtd.methodTotalsBs.divisa
-                      : toUsd(metrics.mtd.methodTotalsBs.divisa)
+                      ? metrics.day.methodTotalsBs.divisa
+                      : toUsd(metrics.day.methodTotalsBs.divisa)
                     ).toLocaleString('es-VE', {
                       minimumFractionDigits: 2,
                     })}
@@ -395,8 +408,8 @@ export function DashboardPage({ onNavigate }: DashboardPageProps = {}) {
                 <p className="text-xs font-medium text-muted-foreground">
                   {currency === 'Bs' ? '$' : 'Bs'}
                   {(currency === 'Bs'
-                    ? toUsd(metrics.mtd.methodTotalsBs.divisa)
-                    : metrics.mtd.methodTotalsBs.divisa
+                    ? toUsd(metrics.day.methodTotalsBs.divisa)
+                    : metrics.day.methodTotalsBs.divisa
                   ).toFixed(2)}
                 </p>
               </div>

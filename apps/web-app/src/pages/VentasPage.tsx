@@ -6,7 +6,6 @@ import { SalesList } from '@/components/ventas/SalesList';
 import { AddProductSheet } from '@/components/ventas/AddProductSheet';
 import { CartSheet } from '@/components/ventas/CartSheet';
 import { useAppStore } from '@/store/useAppStore';
-import { getVenezuelaDate } from '@/services/DateService';
 import { Button } from '@/components/ui/button';
 import { Plus, ShoppingCart, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -26,10 +25,6 @@ export function VentasPage() {
     'todos'
   );
   const [loadingSales, setLoadingSales] = useState(false);
-
-  useEffect(() => {
-    setSelectedDate(getVenezuelaDate());
-  }, [setSelectedDate]);
 
   // Cargar ventas cuando cambia la fecha - Optimización de rendimiento
   useEffect(() => {

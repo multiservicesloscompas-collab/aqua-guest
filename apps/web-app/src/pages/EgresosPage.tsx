@@ -38,7 +38,6 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { ExpenseCard } from '@/components/egresos/ExpenseCard';
 import { WeeklyExpensesView } from '@/components/egresos/WeeklyExpensesView';
-import { getVenezuelaDate } from '@/services/DateService';
 
 type EgresosViewMode = 'day' | 'week';
 
@@ -65,10 +64,6 @@ export function EgresosPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [loadingExpenses, setLoadingExpenses] = useState(false);
-
-  useEffect(() => {
-    setSelectedDate(getVenezuelaDate());
-  }, [setSelectedDate]);
 
   useEffect(() => {
     if (!selectedDate || viewMode !== 'day') return;

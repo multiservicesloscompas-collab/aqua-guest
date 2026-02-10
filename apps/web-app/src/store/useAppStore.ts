@@ -318,15 +318,12 @@ export const useAppStore = create<AppState>()(
           const currentDate = get().selectedDate;
 
           // Fetch core tables in parallel
-          // NOTA: Ya NO cargamos todas las ventas, alquileres ni egresos
-          // Solo cargamos ventas, alquileres y egresos del día actual - optimización de rendimiento
+          // NOTA: Ya NO cargamos todas las ventas, alquileres ni egresos aquí
+          // Porque el DashboardPage lo hace por rango de manera más eficiente
           const [
             customersRes,
             machinesRes,
-            rentalsRes,
             productsRes,
-            salesRes,
-            expensesRes,
             prepaidRes,
             literPricingRes,
             exchangeRatesRes,
@@ -334,25 +331,7 @@ export const useAppStore = create<AppState>()(
           ] = await Promise.all([
             supabase.from('customers').select('*'),
             supabase.from('washing_machines').select('*'),
-            // SOLO cargar alquileres del día actual - optimización de rendimiento
-            supabase
-              .from('washer_rentals')
-              .select('*, customers(name, phone, address)')
-              .eq('date', currentDate)
-              .order('created_at', { ascending: true }),
             supabase.from('products').select('*'),
-            // SOLO cargar ventas del día actual - optimización de rendimiento
-            supabase
-              .from('sales')
-              .select('*')
-              .eq('date', currentDate)
-              .order('created_at', { ascending: true }),
-            // SOLO cargar egresos del día actual - optimización de rendimiento
-            supabase
-              .from('expenses')
-              .select('*')
-              .eq('date', currentDate)
-              .order('created_at', { ascending: true }),
             supabase.from('prepaid_orders').select('*'),
             supabase.from('liter_pricing').select('*'),
             supabase.from('exchange_rates').select('*'),
@@ -364,30 +343,6 @@ export const useAppStore = create<AppState>()(
 
           const customers = customersRes.data || [];
           const machines = machinesRes.data || [];
-          const rentals = (rentalsRes.data || []).map((r: any) => ({
-            id: r.id,
-            date: r.date,
-            customerId: r.customer_id,
-            customerName: r.customers?.name || r.customer_name,
-            customerPhone: r.customers?.phone || r.customer_phone,
-            customerAddress: r.customers?.address || r.customer_address,
-            machineId: r.machine_id,
-            shift: r.shift,
-            deliveryTime: r.delivery_time
-              ? r.delivery_time.substring(0, 5)
-              : '',
-            pickupTime: r.pickup_time ? r.pickup_time.substring(0, 5) : '',
-            pickupDate: r.pickup_date,
-            deliveryFee: Number(r.delivery_fee),
-            totalUsd: Number(r.total_usd),
-            paymentMethod: r.payment_method || 'efectivo',
-            status: r.status,
-            isPaid: r.is_paid,
-            datePaid: r.date_paid || undefined,
-            notes: r.notes,
-            createdAt: r.created_at ?? r.createdAt,
-            updatedAt: r.updated_at ?? r.updatedAt,
-          }));
           const products = (productsRes.data || []).map((p: any) => ({
             id: p.id,
             name: p.name,
@@ -396,28 +351,6 @@ export const useAppStore = create<AppState>()(
             minLiters: p.min_liters,
             maxLiters: p.max_liters,
             icon: p.icon,
-          }));
-          const sales = (salesRes.data || []).map((s: any) => ({
-            id: s.id,
-            dailyNumber: s.daily_number ?? s.dailyNumber,
-            date: dateService.normalizeSaleDate(s.date), // Normalizar fecha al cargar desde Supabase
-            items: s.items || [],
-            paymentMethod: s.payment_method || s.paymentMethod,
-            totalBs: Number(s.total_bs ?? s.totalBs ?? 0),
-            totalUsd: Number(s.total_usd ?? s.totalUsd ?? 0),
-            exchangeRate: Number(s.exchange_rate ?? s.exchangeRate ?? 0),
-            notes: s.notes,
-            createdAt: normalizeTimestamp(
-              s.created_at ?? s.createdAt ?? new Date().toISOString()
-            ),
-            updatedAt: normalizeTimestamp(
-              s.updated_at ?? s.updatedAt ?? new Date().toISOString()
-            ),
-          }));
-          const expenses = (expensesRes.data || []).map((e: any) => ({
-            ...e,
-            paymentMethod: e.payment_method || 'efectivo',
-            createdAt: e.created_at ?? e.createdAt,
           }));
           const prepaid = (prepaidRes.data || []).map((p: any) => ({
             id: p.id,
@@ -455,6 +388,7 @@ export const useAppStore = create<AppState>()(
             createdAt: t.created_at || new Date().toISOString(),
             updatedAt: t.updated_at || new Date().toISOString(),
           }));
+
           // Process Exchange Rates with explicit logging
           let latestExchangeRate = get().config.exchangeRate;
           let exchangeHistory: ExchangeRateHistory[] =
@@ -466,10 +400,6 @@ export const useAppStore = create<AppState>()(
               exchangeRatesRes.error
             );
           } else if (exchangeRatesRes.data) {
-            console.log(
-              'Supabase Response - Exchange Rates:',
-              exchangeRatesRes.data
-            );
             const mappedHistory = exchangeRatesRes.data.map((x: any) => ({
               date: x.date,
               rate: Number(x.rate),
@@ -485,17 +415,13 @@ export const useAppStore = create<AppState>()(
             exchangeHistory = mappedHistory;
             if (exchangeHistory.length > 0) {
               latestExchangeRate = exchangeHistory[0].rate;
-              console.log('New Latest Exchange Rate:', latestExchangeRate);
             }
           }
 
           set((state) => ({
             customers,
             washingMachines: machines,
-            rentals,
             products: products.length ? products : defaultProducts,
-            sales,
-            expenses,
             prepaidOrders: prepaid,
             paymentBalanceTransactions,
             config: {
@@ -1768,6 +1694,11 @@ export const useAppStore = create<AppState>()(
       },
 
       loadDataForDateRange: async (startDate, endDate) => {
+        // Evitar múltiples cargas simultáneas para el mismo rango
+        const rangeKey = `loading_${startDate}_${endDate}`;
+        if ((get() as any)[rangeKey]) return;
+        (set as any)({ [rangeKey]: true });
+
         try {
           const dates: string[] = [];
           const current = new Date(startDate + 'T12:00:00');
@@ -1805,23 +1736,44 @@ export const useAppStore = create<AppState>()(
             allExpenses.push(...entries);
           }
 
+          // Helper to dedup items by ID
+          const dedupItems = <T extends { id: string; date: string }>(
+            currentItems: T[],
+            newItems: T[],
+            datesToExclude: Set<string>
+          ): T[] => {
+            const map = new Map<string, T>();
+
+            // Keep existing items NOT in the requested range
+            // OR keep them and overwrite? 
+            // The Logic: "filter out items in currentItems that have date in loadedDatesSet".
+            // Then add all newItems.
+            // If newItems contains items OUTSIDE loadedDatesSet (e.g. paid different day), 
+            // we want them to overwrite any existing entry.
+            // So: 
+            // 1. Add kept items to map.
+            // 2. Add new items to map (overwriting).
+
+            currentItems
+              .filter((item) => !datesToExclude.has(item.date))
+              .forEach((item) => map.set(item.id, item));
+
+            newItems.forEach((item) => map.set(item.id, item));
+
+            return Array.from(map.values());
+          };
+
           const loadedDatesSet = new Set(dates);
+
           set((state) => ({
-            sales: [
-              ...state.sales.filter((s) => !loadedDatesSet.has(s.date)),
-              ...allSales,
-            ],
-            rentals: [
-              ...state.rentals.filter((r) => !loadedDatesSet.has(r.date)),
-              ...allRentals,
-            ],
-            expenses: [
-              ...state.expenses.filter((e) => !loadedDatesSet.has(e.date)),
-              ...allExpenses,
-            ],
+            sales: dedupItems(state.sales, allSales, loadedDatesSet),
+            rentals: dedupItems(state.rentals, allRentals, loadedDatesSet),
+            expenses: dedupItems(state.expenses, allExpenses, loadedDatesSet),
           }));
         } catch (err) {
           console.error('Error loading data for date range:', err);
+        } finally {
+          (set as any)({ [rangeKey]: false });
         }
       },
     }),

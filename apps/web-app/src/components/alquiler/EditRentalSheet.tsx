@@ -41,6 +41,7 @@ import {
   PaymentMethodLabels,
 } from '@/types';
 import { useAppStore } from '@/store/useAppStore';
+import { getVenezuelaDate } from '@/services/DateService';
 import {
   calculatePickupTime,
   generateTimeSlots,
@@ -157,7 +158,7 @@ export function EditRentalSheet({
 
     setIsLoading(true);
     try {
-      await updateRental(rental.id, {
+      const updates: Partial<WasherRental> = {
         machineId,
         shift,
         deliveryTime,
@@ -173,7 +174,14 @@ export function EditRentalSheet({
         notes: notes?.trim() || undefined,
         status,
         isPaid,
-      });
+      };
+
+      // Si se marca como pagado y no estaba pagado antes, agregar fecha de pago actual
+      if (isPaid && !rental.isPaid) {
+        updates.datePaid = getVenezuelaDate();
+      }
+
+      await updateRental(rental.id, updates);
 
       toast.success('Alquiler actualizado');
       onOpenChange(false);

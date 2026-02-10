@@ -313,4 +313,5 @@ export type AppRoute =
   | 'prepagados'
   | 'deliverys'
   | 'metricas-agua'
-  | 'equilibrio-pagos';
+  | 'equilibrio-pagos'
+  | 'transacciones-hoy';

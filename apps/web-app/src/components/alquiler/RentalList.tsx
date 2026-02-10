@@ -6,6 +6,7 @@ import { ExtensionDialog } from './ExtensionDialog';
 import { WashingMachine } from 'lucide-react';
 import { RentalStatus, WasherRental } from '@/types';
 import { toast } from 'sonner';
+import { getVenezuelaDate } from '@/services/DateService';
 
 export function RentalList() {
   const { selectedDate, getRentalsByDate, updateRental, deleteRental } =
@@ -30,7 +31,7 @@ export function RentalList() {
 
       // Si se está marcando como pagado, registrar la fecha de pago
       if (newIsPaid) {
-        updates.datePaid = new Date().toISOString().split('T')[0];
+        updates.datePaid = getVenezuelaDate();
       } else {
         // Si se desmarca, limpiar la fecha de pago
         updates.datePaid = undefined;

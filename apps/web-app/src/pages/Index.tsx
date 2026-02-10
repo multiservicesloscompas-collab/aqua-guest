@@ -15,6 +15,7 @@ import { PrepagadosPage } from '@/pages/PrepagadosPage';
 import { DeliverysPage } from '@/pages/DeliverysPage';
 import { WaterMetricsPage } from '@/pages/WaterMetricsPage';
 import { PaymentBalancePage } from '@/components/equilibrio-pagos/PaymentBalancePage';
+import { TransactionsSummaryPage } from '@/pages/TransactionsSummaryPage';
 import { AppRoute } from '@/types';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { RefreshCw } from 'lucide-react';
@@ -74,6 +75,8 @@ const Index = () => {
         return <WaterMetricsPage onNavigate={setCurrentRoute} />;
       case 'equilibrio-pagos':
         return <PaymentBalancePage />;
+      case 'transacciones-hoy':
+        return <TransactionsSummaryPage onNavigate={setCurrentRoute} />;
       default:
         return <DashboardPage />;
     }
@@ -92,9 +95,8 @@ const Index = () => {
         >
           <div className="flex items-center gap-2">
             <RefreshCw
-              className={`w-5 h-5 text-primary transition-transform duration-200 ${
-                isRefreshing ? 'animate-spin' : ''
-              }`}
+              className={`w-5 h-5 text-primary transition-transform duration-200 ${isRefreshing ? 'animate-spin' : ''
+                }`}
               style={{
                 transform: `rotate(${progress * 360}deg)`,
               }}

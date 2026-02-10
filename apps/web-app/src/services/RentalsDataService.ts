@@ -240,8 +240,9 @@ export class RentalsDataService implements IRentalsDataService {
     const { data, error } = await supabase
       .from('washer_rentals')
       .select('*, customers(name, phone, address)')
-      .gte('date', startDate)
-      .lte('date', endDate)
+      .or(
+        `and(date.gte.${startDate},date.lte.${endDate}),and(date_paid.gte.${startDate},date_paid.lte.${endDate})`
+      )
       .order('created_at', { ascending: true });
 
     if (error) {
@@ -260,42 +261,42 @@ export class RentalsDataService implements IRentalsDataService {
     (data || []).forEach((r: any) => {
       const dateKey = r.date.substring(0, 10);
 
-      if (grouped[dateKey]) {
-        grouped[dateKey].push({
-          id: r.id,
-          date: dateKey,
-          customerId: r.customer_id,
-          customerName: r.customers?.name || r.customer_name,
-          customerPhone: r.customers?.phone || r.customer_phone,
-          customerAddress: r.customers?.address || r.customer_address,
-          machineId: r.machine_id,
-          shift: r.shift,
-          deliveryTime: r.delivery_time
-            ? r.delivery_time.substring(0, 5)
-            : '',
-          pickupTime: r.pickup_time ? r.pickup_time.substring(0, 5) : '',
-          pickupDate: r.pickup_date,
-          deliveryFee: Number(r.delivery_fee),
-          totalUsd: Number(r.total_usd),
-          paymentMethod: r.payment_method || 'efectivo',
-          status: r.status,
-          isPaid: r.is_paid,
-          datePaid: r.date_paid || undefined,
-          notes: r.notes,
-          createdAt: normalizeTimestamp(
-            r.created_at ?? r.createdAt,
-            getSafeTimestamp()
-          ),
-          updatedAt: normalizeTimestamp(
-            r.updated_at ?? r.updatedAt,
-            getSafeTimestamp()
-          ),
-        });
-      }
+      if (!grouped[dateKey]) grouped[dateKey] = [];
+
+      grouped[dateKey].push({
+        id: r.id,
+        date: dateKey,
+        customerId: r.customer_id,
+        customerName: r.customers?.name || r.customer_name,
+        customerPhone: r.customers?.phone || r.customer_phone,
+        customerAddress: r.customers?.address || r.customer_address,
+        machineId: r.machine_id,
+        shift: r.shift,
+        deliveryTime: r.delivery_time ? r.delivery_time.substring(0, 5) : '',
+        pickupTime: r.pickup_time ? r.pickup_time.substring(0, 5) : '',
+        pickupDate: r.pickup_date,
+        deliveryFee: Number(r.delivery_fee),
+        totalUsd: Number(r.total_usd),
+        paymentMethod: r.payment_method || 'efectivo',
+        status: r.status,
+        isPaid: r.is_paid,
+        datePaid: r.date_paid || undefined,
+        notes: r.notes,
+        createdAt: normalizeTimestamp(
+          r.created_at ?? r.createdAt,
+          getSafeTimestamp()
+        ),
+        updatedAt: normalizeTimestamp(
+          r.updated_at ?? r.updatedAt,
+          getSafeTimestamp()
+        ),
+      });
     });
 
-    for (const date of datesInRange) {
-      const rentals = grouped[date] || [];
+    // Populate results and cache
+    // We iterate over Object.keys(grouped) to include dates outside the range that were fetched
+    for (const date of Object.keys(grouped)) {
+      const rentals = grouped[date];
       this.rentalsCache.set(date, rentals);
       results.set(date, rentals);
     }
