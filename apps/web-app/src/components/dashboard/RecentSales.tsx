@@ -1,14 +1,16 @@
-import { Sale, PaymentMethodLabels } from '@/types';
-import { Clock, CreditCard, Banknote, Smartphone } from 'lucide-react';
+import { Sale, PaymentMethodLabels, PaymentMethod } from '@/types';
+import { Clock, CreditCard, Banknote, Smartphone, DollarSign } from 'lucide-react';
+import { LucideIcon } from 'lucide-react';
 
 interface RecentSalesProps {
   sales: Sale[];
 }
 
-const paymentIcons = {
+const paymentIcons: Record<PaymentMethod, LucideIcon> = {
   pago_movil: Smartphone,
   efectivo: Banknote,
   punto_venta: CreditCard,
+  divisa: DollarSign,
 };
 
 export function RecentSales({ sales }: RecentSalesProps) {

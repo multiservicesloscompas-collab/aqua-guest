@@ -16,16 +16,23 @@ import { DeliverysPage } from '@/pages/DeliverysPage';
 import { WaterMetricsPage } from '@/pages/WaterMetricsPage';
 import { PaymentBalancePage } from '@/components/equilibrio-pagos/PaymentBalancePage';
 import { TransactionsSummaryPage } from '@/pages/TransactionsSummaryPage';
-import { AppRoute } from '@/types';
+import { PaymentMethodDetailPage } from '@/pages/PaymentMethodDetailPage';
+import { AppRoute, PaymentMethod } from '@/types';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { RefreshCw } from 'lucide-react';
 
 const Index = () => {
   const { loadFromSupabase } = useAppStore();
   const [currentRoute, setCurrentRoute] = useState<AppRoute>('dashboard');
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod>('efectivo');
   const [menuOpen, setMenuOpen] = useState(false);
   const [lastLoaded, setLastLoaded] = useState<number>(Date.now());
   const isFirstLoad = useRef(true);
+
+  const handlePaymentMethodClick = (method: PaymentMethod) => {
+    setSelectedPaymentMethod(method);
+    setCurrentRoute('detalle-pago');
+  };
 
   const handleRefresh = async () => {
     await loadFromSupabase();
@@ -50,7 +57,12 @@ const Index = () => {
   const renderPage = () => {
     switch (currentRoute) {
       case 'dashboard':
-        return <DashboardPage onNavigate={setCurrentRoute} />;
+        return (
+          <DashboardPage
+            onNavigate={setCurrentRoute}
+            onPaymentMethodClick={handlePaymentMethodClick}
+          />
+        );
       case 'ventas':
         return <VentasPage />;
       case 'alquiler':
@@ -77,6 +89,14 @@ const Index = () => {
         return <PaymentBalancePage />;
       case 'transacciones-hoy':
         return <TransactionsSummaryPage onNavigate={setCurrentRoute} />;
+      case 'detalle-pago':
+        return (
+          <PaymentMethodDetailPage
+            paymentMethod={selectedPaymentMethod}
+            onNavigate={setCurrentRoute}
+            onPaymentMethodChange={setSelectedPaymentMethod}
+          />
+        );
       default:
         return <DashboardPage />;
     }

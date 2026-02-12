@@ -314,9 +314,6 @@ export const useAppStore = create<AppState>()(
       // Load data from Supabase - Optimizado para cargar solo datos necesarios
       loadFromSupabase: async () => {
         try {
-          // Usar la fecha seleccionada en lugar de la fecha actual
-          const currentDate = get().selectedDate;
-
           // Fetch core tables in parallel
           // NOTA: Ya NO cargamos todas las ventas, alquileres ni egresos aquí
           // Porque el DashboardPage lo hace por rango de manera más eficiente
@@ -784,7 +781,11 @@ export const useAppStore = create<AppState>()(
             updatedAt: data.updated_at || new Date().toISOString(),
           };
           set((state) => ({ rentals: [...state.rentals, newRental] }));
+          // Invalidar cache tanto para fecha de servicio como fecha de pago
           rentalsDataService.invalidateCache(data.date);
+          if (data.date_paid) {
+            rentalsDataService.invalidateCache(data.date_paid);
+          }
 
           // Save customer locally if provided and not exists, then update rental with customer ID
           if (!rental.customerId && rental.customerName) {
@@ -942,9 +943,16 @@ export const useAppStore = create<AppState>()(
           }));
           const updatedRental = get().rentals.find((r) => r.id === id);
           if (updatedRental) {
+            // Invalidar cache tanto para fecha de servicio como fecha de pago
             rentalsDataService.invalidateCache(updatedRental.date);
+            if (updatedRental.datePaid) {
+              rentalsDataService.invalidateCache(updatedRental.datePaid);
+            }
             if (updates.date && updates.date !== updatedRental.date) {
               rentalsDataService.invalidateCache(updates.date);
+            }
+            if (updates.datePaid && updates.datePaid !== updatedRental.datePaid) {
+              rentalsDataService.invalidateCache(updates.datePaid);
             }
           }
         } catch (err) {
@@ -960,8 +968,14 @@ export const useAppStore = create<AppState>()(
           const updatedRental = get().rentals.find((r) => r.id === id);
           if (updatedRental) {
             rentalsDataService.invalidateCache(updatedRental.date);
+            if (updatedRental.datePaid) {
+              rentalsDataService.invalidateCache(updatedRental.datePaid);
+            }
             if (updates.date && updates.date !== updatedRental.date) {
               rentalsDataService.invalidateCache(updates.date);
+            }
+            if (updates.datePaid && updates.datePaid !== updatedRental.datePaid) {
+              rentalsDataService.invalidateCache(updates.datePaid);
             }
           }
           throw err; // Re-throw to let UI handle the error
@@ -980,7 +994,11 @@ export const useAppStore = create<AppState>()(
             rentals: state.rentals.filter((rental) => rental.id !== id),
           }));
           if (rentalToDelete) {
+            // Invalidar cache tanto para fecha de servicio como fecha de pago
             rentalsDataService.invalidateCache(rentalToDelete.date);
+            if (rentalToDelete.datePaid) {
+              rentalsDataService.invalidateCache(rentalToDelete.datePaid);
+            }
           }
         } catch (err) {
           console.error('Failed to delete rental from Supabase', err);
@@ -990,6 +1008,9 @@ export const useAppStore = create<AppState>()(
           }));
           if (rentalToDelete) {
             rentalsDataService.invalidateCache(rentalToDelete.date);
+            if (rentalToDelete.datePaid) {
+              rentalsDataService.invalidateCache(rentalToDelete.datePaid);
+            }
           }
         }
       },
@@ -1736,23 +1757,13 @@ export const useAppStore = create<AppState>()(
             allExpenses.push(...entries);
           }
 
-          // Helper to dedup items by ID
+          // Helper to dedup items by ID for sales and expenses (use item.date)
           const dedupItems = <T extends { id: string; date: string }>(
             currentItems: T[],
             newItems: T[],
             datesToExclude: Set<string>
           ): T[] => {
             const map = new Map<string, T>();
-
-            // Keep existing items NOT in the requested range
-            // OR keep them and overwrite? 
-            // The Logic: "filter out items in currentItems that have date in loadedDatesSet".
-            // Then add all newItems.
-            // If newItems contains items OUTSIDE loadedDatesSet (e.g. paid different day), 
-            // we want them to overwrite any existing entry.
-            // So: 
-            // 1. Add kept items to map.
-            // 2. Add new items to map (overwriting).
 
             currentItems
               .filter((item) => !datesToExclude.has(item.date))
@@ -1763,11 +1774,32 @@ export const useAppStore = create<AppState>()(
             return Array.from(map.values());
           };
 
+          // Helper to dedup rentals by ID (use datePaid for filtering, not date)
+          const dedupRentals = (
+            currentRentals: WasherRental[],
+            newRentals: WasherRental[],
+            datesToExclude: Set<string>
+          ): WasherRental[] => {
+            const map = new Map<string, WasherRental>();
+
+            // For rentals, filter by datePaid (not date) since we load by payment date
+            currentRentals
+              .filter((rental) => {
+                const effectiveDate = rental.datePaid || rental.date;
+                return !datesToExclude.has(effectiveDate);
+              })
+              .forEach((rental) => map.set(rental.id, rental));
+
+            newRentals.forEach((rental) => map.set(rental.id, rental));
+
+            return Array.from(map.values());
+          };
+
           const loadedDatesSet = new Set(dates);
 
           set((state) => ({
             sales: dedupItems(state.sales, allSales, loadedDatesSet),
-            rentals: dedupItems(state.rentals, allRentals, loadedDatesSet),
+            rentals: dedupRentals(state.rentals, allRentals, loadedDatesSet),
             expenses: dedupItems(state.expenses, allExpenses, loadedDatesSet),
           }));
         } catch (err) {

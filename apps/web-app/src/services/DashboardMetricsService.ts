@@ -79,11 +79,11 @@ function computeScope(
   paymentBalanceTransactions: readonly PaymentBalanceTransaction[]
 ): ScopeMetrics {
   const filteredSales = filterByDateRange(sales, range, (s) => s.date);
-  // Solo considerar alquileres pagados, usando datePaid si existe, sino date
+  // Alquileres: solo considerar pagados y usar SIEMPRE datePaid (no date)
   const filteredRentals = filterByDateRange(
-    rentals.filter((r) => r.isPaid),
+    rentals.filter((r) => r.isPaid && r.datePaid),
     range,
-    (r) => r.datePaid || r.date
+    (r) => r.datePaid!
   );
   const filteredExpenses = filterByDateRange(expenses, range, (e) => e.date);
   const filteredPrepaid = filterByDateRange(
@@ -103,10 +103,18 @@ function computeScope(
     0
   );
   const prepaidBs = filteredPrepaid.reduce((sum, p) => sum + p.amountBs, 0);
+  
+  // Total income incluye ventas, alquileres y prepagados
+  // NOTA: Los equilibrios de pago NO se incluyen en el total porque son transferencias
+  // entre métodos, no ingresos/gastos nuevos. Solo afectan los totales por método.
   const totalIncomeBs = waterBs + rentalBs + prepaidBs;
   const expenseBs = filteredExpenses.reduce((sum, e) => sum + e.amount, 0);
+  
+  // Neto: ingresos - egresos
   const netBs = totalIncomeBs - expenseBs;
-  const transactionsCount = filteredSales.length + filteredRentals.length;
+  
+  // Contar todas las transacciones incluyendo equilibrios
+  const transactionsCount = filteredSales.length + filteredRentals.length + filteredBalanceTx.length;
 
   const methodTotalsBs = emptyMethodTotals();
 

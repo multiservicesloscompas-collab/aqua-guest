@@ -314,4 +314,5 @@ export type AppRoute =
   | 'deliverys'
   | 'metricas-agua'
   | 'equilibrio-pagos'
-  | 'transacciones-hoy';
+  | 'transacciones-hoy'
+  | 'detalle-pago';

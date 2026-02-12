@@ -97,11 +97,10 @@ export class RentalsDataService implements IRentalsDataService {
       pickupDate: r.pickup_date,
       deliveryFee: Number(r.delivery_fee),
       totalUsd: Number(r.total_usd),
-      paymentMethod: r.payment_method || 'efectivo',
-      status: r.status,
-      isPaid: r.is_paid,
-      datePaid: r.date_paid || undefined,
-      notes: r.notes,
+        paymentMethod: r.payment_method || 'efectivo',
+        status: r.status,
+        isPaid: r.is_paid,
+        notes: r.notes,
       createdAt: normalizeTimestamp(
         r.created_at ?? r.createdAt,
         getSafeTimestamp()
@@ -195,7 +194,7 @@ export class RentalsDataService implements IRentalsDataService {
       return { date, rentals };
     });
 
-    const loadedResults = await Promise.all(promises);
+    await Promise.all(promises);
 
     for (const date of dates) {
       const cached = this.rentalsCache.get(date);
@@ -237,12 +236,13 @@ export class RentalsDataService implements IRentalsDataService {
       return results;
     }
 
+    // Cargar solo alquileres pagados (is_paid=true) por fecha de pago (date_paid)
     const { data, error } = await supabase
       .from('washer_rentals')
       .select('*, customers(name, phone, address)')
-      .or(
-        `and(date.gte.${startDate},date.lte.${endDate}),and(date_paid.gte.${startDate},date_paid.lte.${endDate})`
-      )
+      .eq('is_paid', true)
+      .gte('date_paid', startDate)
+      .lte('date_paid', endDate)
       .order('created_at', { ascending: true });
 
     if (error) {
@@ -259,13 +259,15 @@ export class RentalsDataService implements IRentalsDataService {
     }
 
     (data || []).forEach((r: any) => {
-      const dateKey = r.date.substring(0, 10);
+      // Agrupar por fecha de pago (date_paid), no por fecha de servicio (date)
+      const dateKey = r.date_paid ? r.date_paid.substring(0, 10) : r.date.substring(0, 10);
 
       if (!grouped[dateKey]) grouped[dateKey] = [];
 
       grouped[dateKey].push({
         id: r.id,
-        date: dateKey,
+        date: r.date.substring(0, 10), // Fecha de servicio original
+        datePaid: dateKey, // Fecha de pago usada para agrupar
         customerId: r.customer_id,
         customerName: r.customers?.name || r.customer_name,
         customerPhone: r.customers?.phone || r.customer_phone,
@@ -280,7 +282,6 @@ export class RentalsDataService implements IRentalsDataService {
         paymentMethod: r.payment_method || 'efectivo',
         status: r.status,
         isPaid: r.is_paid,
-        datePaid: r.date_paid || undefined,
         notes: r.notes,
         createdAt: normalizeTimestamp(
           r.created_at ?? r.createdAt,

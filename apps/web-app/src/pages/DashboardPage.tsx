@@ -18,16 +18,17 @@ import {
   Banknote,
   BarChart3,
 } from 'lucide-react';
-import { ChartDataPoint, Sale, WasherRental, AppRoute } from '@/types';
-import {
-  calculateDashboardMetrics,
-} from '@/services/DashboardMetricsService';
+import { AppRoute, Sale, PaymentMethod } from '@/types';
+import { calculateDashboardMetrics } from '@/services/DashboardMetricsService';
+import { useWeekData } from '@/hooks/useWeekData';
+import { createCurrencyConverter } from '@/services/CurrencyService';
 
 interface DashboardPageProps {
   onNavigate?: (route: AppRoute) => void;
+  onPaymentMethodClick?: (method: PaymentMethod) => void;
 }
 
-export function DashboardPage({ onNavigate }: DashboardPageProps = {}) {
+export function DashboardPage({ onNavigate, onPaymentMethodClick }: DashboardPageProps = {}) {
   const {
     sales,
     expenses,
@@ -98,46 +99,21 @@ export function DashboardPage({ onNavigate }: DashboardPageProps = {}) {
     ]
   );
 
-  const toUsd = (bs: number): number => bs / config.exchangeRate;
+  // Usar el hook useWeekData para calcular datos de la semana
+  const weekData = useWeekData({
+    selectedDate,
+    exchangeRate: config.exchangeRate,
+    sales,
+    rentals,
+  });
 
-  const weekData = useMemo((): ChartDataPoint[] => {
-    const days = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
-    const selected = new Date(selectedDate + 'T12:00:00');
-    const currentDay = selected.getDay();
+  // Crear convertidor de moneda
+  const currencyConverter = useMemo(
+    () => createCurrencyConverter(config.exchangeRate),
+    [config.exchangeRate]
+  );
 
-    return days.map((label, index) => {
-      const date = new Date(selected);
-      date.setDate(selected.getDate() - (currentDay - index));
-      // Construct local date string manually
-      const dateStr =
-        date.getFullYear() +
-        '-' +
-        String(date.getMonth() + 1).padStart(2, '0') +
-        '-' +
-        String(date.getDate()).padStart(2, '0');
-
-      // Ventas de agua
-      const daySales = sales.filter((s: Sale) => s.date === dateStr);
-      const waterValue = daySales.reduce(
-        (sum: number, s: Sale) => sum + s.totalBs,
-        0
-      );
-
-      // Alquileres pagados (USD -> Bs), usando datePaid si existe
-      const dayRentals = rentals.filter(
-        (r: WasherRental) => r.isPaid && (r.datePaid || r.date) === dateStr
-      );
-      const rentalValue = dayRentals.reduce(
-        (sum: number, r: WasherRental) =>
-          sum + r.totalUsd * config.exchangeRate,
-        0
-      );
-
-      return { label, value: waterValue + rentalValue, date: dateStr };
-    });
-  }, [sales, rentals, config.exchangeRate, selectedDate]);
-
-  const selectedSales = sales.filter((s: Sale) => s.date === selectedDate);
+  const selectedSales = sales.filter((s) => s.date === selectedDate);
 
   return (
     <div className="flex flex-col min-h-screen pb-20">
@@ -148,7 +124,7 @@ export function DashboardPage({ onNavigate }: DashboardPageProps = {}) {
         <KpiCard
           title="Ingresos del Día"
           value={`Bs ${metrics.day.totalIncomeBs.toFixed(2)}`}
-          subtitle={`$${toUsd(metrics.day.totalIncomeBs).toFixed(2)} USD`}
+          subtitle={`$${currencyConverter.toUsd(metrics.day.totalIncomeBs).toFixed(2)} USD`}
           icon={<Droplets className="w-5 h-5 text-primary-foreground" />}
           variant="primary"
         />
@@ -167,7 +143,7 @@ export function DashboardPage({ onNavigate }: DashboardPageProps = {}) {
             value={
               currency === 'Bs'
                 ? `Bs ${metrics.mtd.totalIncomeBs.toFixed(0)}`
-                : `$ ${toUsd(metrics.mtd.totalIncomeBs).toFixed(2)}`
+                : `$ ${currencyConverter.toUsd(metrics.mtd.totalIncomeBs).toFixed(2)}`
             }
             subtitle="Ingresos"
             icon={<TrendingUp className="w-4 h-4 text-primary" />}
@@ -178,7 +154,7 @@ export function DashboardPage({ onNavigate }: DashboardPageProps = {}) {
             value={
               currency === 'Bs'
                 ? `Bs ${metrics.mtd.netBs.toFixed(0)}`
-                : `$ ${toUsd(metrics.mtd.netBs).toFixed(2)}`
+                : `$ ${currencyConverter.toUsd(metrics.mtd.netBs).toFixed(2)}`
             }
             subtitle={metrics.mtd.netBs >= 0 ? 'Ganancia' : 'Pérdida'}
             icon={<DollarSign className="w-4 h-4 text-primary" />}
@@ -189,7 +165,7 @@ export function DashboardPage({ onNavigate }: DashboardPageProps = {}) {
             value={
               currency === 'Bs'
                 ? `Bs ${metrics.day.expenseBs.toFixed(0)}`
-                : `$ ${toUsd(metrics.day.expenseBs).toFixed(2)}`
+                : `$ ${currencyConverter.toUsd(metrics.day.expenseBs).toFixed(2)}`
             }
             subtitle="Hoy"
             icon={<Wallet className="w-4 h-4 text-destructive" />}
@@ -201,7 +177,7 @@ export function DashboardPage({ onNavigate }: DashboardPageProps = {}) {
             value={
               currency === 'Bs'
                 ? `Bs ${metrics.day.netBs.toFixed(0)}`
-                : `$ ${toUsd(metrics.day.netBs).toFixed(2)}`
+                : `$ ${currencyConverter.toUsd(metrics.day.netBs).toFixed(2)}`
             }
             subtitle={metrics.day.netBs >= 0 ? 'Ganancia' : 'Pérdida'}
             variant={metrics.day.netBs >= 0 ? 'success' : 'warning'}
@@ -291,7 +267,10 @@ export function DashboardPage({ onNavigate }: DashboardPageProps = {}) {
           </div>
 
           <div className="grid grid-cols-1 gap-4">
-            <div className="flex items-center justify-between p-3 rounded-xl bg-orange-500/5 border border-orange-500/10">
+            <div
+              onClick={() => onPaymentMethodClick?.('efectivo')}
+              className="flex items-center justify-between p-3 rounded-xl bg-orange-500/5 border border-orange-500/10 cursor-pointer hover:bg-orange-500/10 transition-colors active:scale-[0.98]"
+            >
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-orange-500/10 rounded-lg">
                   <Banknote className="w-5 h-5 text-orange-600" />
@@ -304,7 +283,7 @@ export function DashboardPage({ onNavigate }: DashboardPageProps = {}) {
                     {currency === 'Bs' ? 'Bs ' : '$ '}
                     {(currency === 'Bs'
                       ? metrics.day.methodTotalsBs.efectivo
-                      : toUsd(metrics.day.methodTotalsBs.efectivo)
+                      : currencyConverter.toUsd(metrics.day.methodTotalsBs.efectivo)
                     ).toLocaleString('es-VE', {
                       minimumFractionDigits: 2,
                     })}
@@ -315,14 +294,17 @@ export function DashboardPage({ onNavigate }: DashboardPageProps = {}) {
                 <p className="text-xs font-medium text-muted-foreground">
                   {currency === 'Bs' ? '$' : 'Bs'}
                   {(currency === 'Bs'
-                    ? toUsd(metrics.day.methodTotalsBs.efectivo)
+                    ? currencyConverter.toUsd(metrics.day.methodTotalsBs.efectivo)
                     : metrics.day.methodTotalsBs.efectivo
                   ).toFixed(2)}
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center justify-between p-3 rounded-xl bg-blue-500/5 border border-blue-500/10">
+            <div
+              onClick={() => onPaymentMethodClick?.('pago_movil')}
+              className="flex items-center justify-between p-3 rounded-xl bg-blue-500/5 border border-blue-500/10 cursor-pointer hover:bg-blue-500/10 transition-colors active:scale-[0.98]"
+            >
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-blue-500/10 rounded-lg">
                   <Smartphone className="w-5 h-5 text-blue-600" />
@@ -335,7 +317,7 @@ export function DashboardPage({ onNavigate }: DashboardPageProps = {}) {
                     {currency === 'Bs' ? 'Bs ' : '$ '}
                     {(currency === 'Bs'
                       ? metrics.day.methodTotalsBs.pago_movil
-                      : toUsd(metrics.day.methodTotalsBs.pago_movil)
+                      : currencyConverter.toUsd(metrics.day.methodTotalsBs.pago_movil)
                     ).toLocaleString('es-VE', {
                       minimumFractionDigits: 2,
                     })}
@@ -346,14 +328,17 @@ export function DashboardPage({ onNavigate }: DashboardPageProps = {}) {
                 <p className="text-xs font-medium text-muted-foreground">
                   {currency === 'Bs' ? '$' : 'Bs'}
                   {(currency === 'Bs'
-                    ? toUsd(metrics.day.methodTotalsBs.pago_movil)
+                    ? currencyConverter.toUsd(metrics.day.methodTotalsBs.pago_movil)
                     : metrics.day.methodTotalsBs.pago_movil
                   ).toFixed(2)}
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center justify-between p-3 rounded-xl bg-purple-500/5 border border-purple-500/10">
+            <div
+              onClick={() => onPaymentMethodClick?.('punto_venta')}
+              className="flex items-center justify-between p-3 rounded-xl bg-purple-500/5 border border-purple-500/10 cursor-pointer hover:bg-purple-500/10 transition-colors active:scale-[0.98]"
+            >
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-purple-500/10 rounded-lg">
                   <CreditCard className="w-5 h-5 text-purple-600" />
@@ -366,7 +351,7 @@ export function DashboardPage({ onNavigate }: DashboardPageProps = {}) {
                     {currency === 'Bs' ? 'Bs ' : '$ '}
                     {(currency === 'Bs'
                       ? metrics.day.methodTotalsBs.punto_venta
-                      : toUsd(metrics.day.methodTotalsBs.punto_venta)
+                      : currencyConverter.toUsd(metrics.day.methodTotalsBs.punto_venta)
                     ).toLocaleString('es-VE', {
                       minimumFractionDigits: 2,
                     })}
@@ -377,14 +362,17 @@ export function DashboardPage({ onNavigate }: DashboardPageProps = {}) {
                 <p className="text-xs font-medium text-muted-foreground">
                   {currency === 'Bs' ? '$' : 'Bs'}
                   {(currency === 'Bs'
-                    ? toUsd(metrics.day.methodTotalsBs.punto_venta)
+                    ? currencyConverter.toUsd(metrics.day.methodTotalsBs.punto_venta)
                     : metrics.day.methodTotalsBs.punto_venta
                   ).toFixed(2)}
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center justify-between p-3 rounded-xl bg-green-500/5 border border-green-500/10">
+            <div
+              onClick={() => onPaymentMethodClick?.('divisa')}
+              className="flex items-center justify-between p-3 rounded-xl bg-green-500/5 border border-green-500/10 cursor-pointer hover:bg-green-500/10 transition-colors active:scale-[0.98]"
+            >
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-green-500/10 rounded-lg">
                   <DollarSign className="w-5 h-5 text-green-600" />
@@ -397,7 +385,7 @@ export function DashboardPage({ onNavigate }: DashboardPageProps = {}) {
                     {currency === 'Bs' ? 'Bs ' : '$ '}
                     {(currency === 'Bs'
                       ? metrics.day.methodTotalsBs.divisa
-                      : toUsd(metrics.day.methodTotalsBs.divisa)
+                      : currencyConverter.toUsd(metrics.day.methodTotalsBs.divisa)
                     ).toLocaleString('es-VE', {
                       minimumFractionDigits: 2,
                     })}
@@ -408,7 +396,7 @@ export function DashboardPage({ onNavigate }: DashboardPageProps = {}) {
                 <p className="text-xs font-medium text-muted-foreground">
                   {currency === 'Bs' ? '$' : 'Bs'}
                   {(currency === 'Bs'
-                    ? toUsd(metrics.day.methodTotalsBs.divisa)
+                    ? currencyConverter.toUsd(metrics.day.methodTotalsBs.divisa)
                     : metrics.day.methodTotalsBs.divisa
                   ).toFixed(2)}
                 </p>
