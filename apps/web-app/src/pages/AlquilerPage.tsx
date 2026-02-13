@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Header } from '@/components/layout/Header';
 import { DateSelector } from '@/components/ventas/DateSelector';
 import { RentalList } from '@/components/alquiler/RentalList';
@@ -8,26 +8,34 @@ import { Plus, Loader2 } from 'lucide-react';
 import { useAppStore } from '@/store/useAppStore';
 import { cn } from '@/lib/utils';
 import { WasherRental } from '@/types';
+import { rentalsDataService } from '@/services/RentalsDataService';
 
 export function AlquilerPage() {
   const [sheetOpen, setSheetOpen] = useState(false);
   const { selectedDate, setSelectedDate, getRentalsByDate, loadRentalsByDate } =
     useAppStore();
   const [loadingRentals, setLoadingRentals] = useState(false);
+  const isFirstLoad = useRef(true);
 
-  // Cargar alquileres cuando cambia la fecha - Optimización de rendimiento
+  // Cargar alquileres cuando cambia la fecha
   useEffect(() => {
     if (!selectedDate) return;
+
+    // En la primera carga, invalidar caché para obtener datos frescos de la BD
+    if (isFirstLoad.current) {
+      rentalsDataService.invalidateCache(selectedDate);
+      isFirstLoad.current = false;
+    }
 
     // Verificar si ya hay alquileres en caché para esta fecha
     const cachedRentals = getRentalsByDate(selectedDate);
 
     if (cachedRentals.length > 0) {
-      // Ya tenemos datos, no es necesario cargar
+      // Ya tenemos datos en el store, no es necesario cargar
       return;
     }
 
-    // Cargar alquileres de la fecha específica
+    // Cargar alquileres de la fecha específica desde Supabase
     setLoadingRentals(true);
     loadRentalsByDate(selectedDate)
       .catch((err) => {
