@@ -93,6 +93,7 @@ interface AppState {
   deletePrepaidOrder: (id: string) => Promise<void>;
   markPrepaidAsDelivered: (id: string) => Promise<void>;
   getRentalsByDate: (date: string) => WasherRental[];
+  getActiveRentalsForDate: (date: string) => WasherRental[];
 
   // Acciones de clientes
   addCustomer: (customer: Omit<Customer, 'id'>) => Promise<void>;
@@ -736,9 +737,60 @@ export const useAppStore = create<AppState>()(
       // Alquileres
       addRental: async (rental) => {
         try {
+          let customerId = rental.customerId;
+
+          // Si no hay ID de cliente, intentar crearlo o buscarlo primero para cumplir con la restricción NOT NULL
+          if (!customerId) {
+            if (!rental.customerName) {
+              throw new Error('Nombre de cliente requerido para crear el alquiler');
+            }
+
+            // Buscar si ya existe un cliente con el mismo nombre para evitar duplicados
+            const existingCustomer = get().customers.find(
+              (c) => c.name.toLowerCase() === rental.customerName.toLowerCase()
+            );
+
+            if (existingCustomer) {
+              customerId = existingCustomer.id;
+            } else {
+              // Crear nuevo cliente en Supabase antes de insertar el alquiler
+              const { data: cdata, error: cerr } = await supabase
+                .from('customers')
+                .insert({
+                  name: rental.customerName,
+                  phone: rental.customerPhone,
+                  address: rental.customerAddress,
+                })
+                .select('*')
+                .single();
+
+              if (cerr) throw cerr;
+              if (!cdata) throw new Error('Error al crear el cliente');
+
+              customerId = cdata.id;
+
+              // Actualizar estado local de clientes para que esté disponible inmediatamente
+              set((state) => ({
+                customers: [
+                  ...state.customers,
+                  {
+                    id: cdata.id,
+                    name: cdata.name,
+                    phone: cdata.phone,
+                    address: cdata.address,
+                  },
+                ],
+              }));
+            }
+          }
+
+          if (!customerId) {
+            throw new Error('Customer ID is required for rental');
+          }
+
           const payload: any = {
             date: rental.date,
-            customer_id: rental.customerId || null,
+            customer_id: customerId,
             machine_id: rental.machineId,
             shift: rental.shift,
             delivery_time: rental.deliveryTime,
@@ -752,19 +804,22 @@ export const useAppStore = create<AppState>()(
             date_paid: rental.datePaid || null,
             notes: rental.notes,
           };
+
           const { data, error } = await supabase
             .from('washer_rentals')
             .insert(payload)
             .select('*')
             .single();
+
           if (error) throw error;
+
           const newRental: WasherRental = {
             id: data.id,
             date: data.date,
             customerId: data.customer_id,
-            customerName: data.customers?.name || rental.customerName,
-            customerPhone: data.customers?.phone || rental.customerPhone,
-            customerAddress: data.customers?.address || rental.customerAddress,
+            customerName: rental.customerName || '',
+            customerPhone: rental.customerPhone || '',
+            customerAddress: rental.customerAddress || '',
             machineId: data.machine_id,
             shift: data.shift,
             deliveryTime: data.delivery_time,
@@ -780,104 +835,17 @@ export const useAppStore = create<AppState>()(
             createdAt: data.created_at || new Date().toISOString(),
             updatedAt: data.updated_at || new Date().toISOString(),
           };
+
           set((state) => ({ rentals: [...state.rentals, newRental] }));
-          // Invalidar cache tanto para fecha de servicio como fecha de pago
+
+          // Invalidar cache de alquileres
           rentalsDataService.invalidateCache(data.date);
           if (data.date_paid) {
             rentalsDataService.invalidateCache(data.date_paid);
           }
-
-          // Save customer locally if provided and not exists, then update rental with customer ID
-          if (!rental.customerId && rental.customerName) {
-            const exists = get().customers.find(
-              (c) => c.name.toLowerCase() === rental.customerName.toLowerCase()
-            );
-            if (!exists) {
-              try {
-                const { data: cdata, error: cerr } = await supabase
-                  .from('customers')
-                  .insert({
-                    name: rental.customerName,
-                    phone: rental.customerPhone,
-                    address: rental.customerAddress,
-                  })
-                  .select('*')
-                  .single();
-                if (!cerr && cdata) {
-                  // Update the rental with the new customer ID
-                  const { error: updateError } = await supabase
-                    .from('washer_rentals')
-                    .update({ customer_id: cdata.id })
-                    .eq('id', newRental.id);
-
-                  if (!updateError) {
-                    newRental.customerId = cdata.id;
-                    // Update local state with the customer ID
-                    set((state) => ({
-                      rentals: state.rentals.map((r) =>
-                        r.id === newRental.id
-                          ? { ...r, customerId: cdata.id }
-                          : r
-                      ),
-                      customers: [
-                        ...state.customers,
-                        {
-                          id: cdata.id,
-                          name: cdata.name,
-                          phone: cdata.phone,
-                          address: cdata.address,
-                        },
-                      ],
-                    }));
-                  } else {
-                    console.error(
-                      'Failed to update rental with customer ID:',
-                      updateError
-                    );
-                    // Still add customer to local state
-                    set((state) => ({
-                      customers: [
-                        ...state.customers,
-                        {
-                          id: cdata.id,
-                          name: cdata.name,
-                          phone: cdata.phone,
-                          address: cdata.address,
-                        },
-                      ],
-                    }));
-                  }
-                } else {
-                  set((state) => ({
-                    customers: [
-                      ...state.customers,
-                      {
-                        id: generateId(),
-                        name: rental.customerName,
-                        phone: rental.customerPhone,
-                        address: rental.customerAddress,
-                      },
-                    ],
-                  }));
-                }
-              } catch (err) {
-                set((state) => ({
-                  customers: [
-                    ...state.customers,
-                    {
-                      id: generateId(),
-                      name: rental.customerName,
-                      phone: rental.customerPhone,
-                      address: rental.customerAddress,
-                    },
-                  ],
-                }));
-              }
-            }
-          }
         } catch (err) {
           console.error('Failed to add rental to Supabase', err);
-          throw err; // Don't add locally if Supabase fails
+          throw err;
         }
       },
 
@@ -1017,6 +985,12 @@ export const useAppStore = create<AppState>()(
 
       getRentalsByDate: (date) =>
         get().rentals.filter((rental) => rental.date === date),
+
+      getActiveRentalsForDate: (date) =>
+        get().rentals.filter(
+          (rental) =>
+            rental.date <= date && (rental.pickupDate || rental.date) >= date
+        ),
 
       // Prepagados
       addPrepaidOrder: async (order) => {

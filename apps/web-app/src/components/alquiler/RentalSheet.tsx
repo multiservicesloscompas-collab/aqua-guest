@@ -39,6 +39,7 @@ import {
   BUSINESS_HOURS,
   PaymentMethod,
   PaymentMethodLabels,
+  WasherRental,
 } from '@/types';
 import { useAppStore } from '@/store/useAppStore';
 import {
@@ -117,16 +118,25 @@ export function RentalSheet({ open, onOpenChange }: RentalSheetProps) {
 
   // Verificar disponibilidad de lavadora
   const unavailableMachines = useMemo(() => {
+    // Definimos el intervalo solicitado
+    const requestedStart = new Date(`${selectedDate}T${deliveryTime}`);
+    const requestedEnd = new Date(`${pickupInfo.pickupDate}T${pickupInfo.pickupTime}`);
+
     return rentals
-      .filter((r) => {
+      .filter((r: WasherRental) => {
         // Si el alquiler está finalizado, no afecta la disponibilidad
         if (r.status === 'finalizado') return false;
 
-        // Cualquier alquiler activo (agendado o enviado) hace que la lavadora no esté disponible
-        return true;
+        // Convertir tiempos del alquiler existente a objetos Date para comparar
+        // Nota: asumiendo formato HH:mm para deliveryTime y pickupTime
+        const rentalStart = new Date(`${r.date}T${r.deliveryTime.substring(0, 5)}`);
+        const rentalEnd = new Date(`${r.pickupDate}T${r.pickupTime.substring(0, 5)}`);
+
+        // Hay solapamiento si (start1 < end2) Y (end1 > start2)
+        return rentalStart < requestedEnd && rentalEnd > requestedStart;
       })
-      .map((r) => r.machineId);
-  }, [rentals]);
+      .map((r: WasherRental) => r.machineId);
+  }, [rentals, selectedDate, deliveryTime, pickupInfo.pickupDate, pickupInfo.pickupTime]);
 
   // Autocompletar cliente
   const handleCustomerSelect = (customer: Customer | null) => {
@@ -195,9 +205,9 @@ export function RentalSheet({ open, onOpenChange }: RentalSheetProps) {
       toast.success('Alquiler registrado');
       onOpenChange(false);
       resetForm();
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error registrando alquiler:', err);
-      toast.error('Error al registrar el alquiler');
+      toast.error(err.message || 'Error al registrar el alquiler');
     } finally {
       setIsSaving(false);
     }

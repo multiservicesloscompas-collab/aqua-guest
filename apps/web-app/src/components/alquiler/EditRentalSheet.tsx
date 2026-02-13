@@ -113,19 +113,27 @@ export function EditRentalSheet({
   const unavailableMachines = useMemo(() => {
     if (!rental) return [];
 
+    // Definimos el intervalo solicitado (actual de este formulario)
+    const requestedStart = new Date(`${rental.date}T${deliveryTime}`);
+    const requestedEnd = new Date(`${pickupInfo.pickupDate}T${pickupInfo.pickupTime}`);
+
     return rentals
-      .filter((r) => {
+      .filter((r: WasherRental) => {
         // Excluir el alquiler actual que se está editando
         if (r.id === rental.id) return false;
 
         // Si el alquiler está finalizado, no afecta la disponibilidad
         if (r.status === 'finalizado') return false;
 
-        // Cualquier alquiler activo (agendado o enviado) hace que la lavadora no esté disponible
-        return true;
+        // Convertir tiempos del alquiler existente a objetos Date
+        const rentalStart = new Date(`${r.date}T${r.deliveryTime.substring(0, 5)}`);
+        const rentalEnd = new Date(`${r.pickupDate}T${r.pickupTime.substring(0, 5)}`);
+
+        // Hay solapamiento si (start1 < end2) Y (end1 > start2)
+        return rentalStart < requestedEnd && rentalEnd > requestedStart;
       })
-      .map((r) => r.machineId);
-  }, [rentals, rental]);
+      .map((r: WasherRental) => r.machineId);
+  }, [rentals, rental, deliveryTime, pickupInfo.pickupDate, pickupInfo.pickupTime]);
 
   // Autocompletar cliente
   const handleCustomerSelect = (customerId: string) => {
@@ -185,9 +193,9 @@ export function EditRentalSheet({
 
       toast.success('Alquiler actualizado');
       onOpenChange(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error al actualizar el alquiler:', error);
-      toast.error('Error al actualizar el alquiler');
+      toast.error(error.message || 'Error al actualizar el alquiler');
     } finally {
       setIsLoading(false);
     }

@@ -80,9 +80,9 @@ export function CustomerSearch({
 
     const term = searchTerm.toLowerCase().trim();
     return customers.filter((customer) => {
-      const nameMatch = customer.name.toLowerCase().includes(term);
-      const phoneMatch = customer.phone.toLowerCase().includes(term);
-      const addressMatch = customer.address.toLowerCase().includes(term);
+      const nameMatch = (customer.name || '').toLowerCase().includes(term);
+      const phoneMatch = (customer.phone || '').toLowerCase().includes(term);
+      const addressMatch = (customer.address || '').toLowerCase().includes(term);
       return nameMatch || phoneMatch || addressMatch;
     });
   }, [customers, searchTerm]);
@@ -209,7 +209,7 @@ export function CustomerSearch({
                 {filteredCustomers.map((customer) => (
                   <CommandItem
                     key={customer.id}
-                    value={customer.id}
+                    value={`${customer.name} ${customer.phone || ''} ${customer.address || ''} ${customer.id}`}
                     onSelect={() => handleSelect(customer.id)}
                     className="cursor-pointer py-3"
                   >
