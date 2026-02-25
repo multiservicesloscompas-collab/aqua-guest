@@ -161,6 +161,8 @@ export function DeliverysPage() {
     }
   };
 
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+
   return (
     <div className="pb-24">
       <Header
@@ -195,7 +197,7 @@ export function DeliverysPage() {
               </Select>
 
               {timeFilter === 'dia' && (
-                <Popover>
+                <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
                   <PopoverTrigger asChild>
                     <Button variant="outline" className="gap-2">
                       <CalendarIcon className="w-4 h-4" />
@@ -206,7 +208,12 @@ export function DeliverysPage() {
                     <Calendar
                       mode="single"
                       selected={selectedDate}
-                      onSelect={(date) => date && setSelectedDate(date)}
+                      onSelect={(date) => {
+                        if (date) {
+                          setSelectedDate(date);
+                          setIsCalendarOpen(false);
+                        }
+                      }}
                       locale={es}
                       className="pointer-events-auto"
                     />

@@ -7,13 +7,11 @@ import {
   PaymentMethodLabels,
 } from '@/types';
 import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   WashingMachine,
   MapPin,
   Clock,
-  ChevronRight,
   DollarSign,
   CheckCircle2,
   Circle,
@@ -25,6 +23,7 @@ import {
   Plus,
   CalendarDays,
   Copy,
+  ChevronDown,
 } from 'lucide-react';
 import { toast } from '@/components/ui/sonner';
 import { format, parse } from 'date-fns';
@@ -42,6 +41,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 interface RentalCardProps {
   rental: WasherRental;
@@ -88,16 +93,6 @@ export function RentalCard({
   const { washingMachines } = useAppStore();
   const machine = washingMachines.find((m) => m.id === rental.machineId);
   const shiftConfig = RentalShiftConfig[rental.shift];
-
-  const getNextStatus = (): RentalStatus | null => {
-    if (rental.status === 'agendado') {
-      return 'enviado';
-    }
-    if (rental.status === 'enviado') return 'finalizado';
-    return null;
-  };
-
-  const nextStatus = getNextStatus();
 
   const handleStatusClick = (e: React.MouseEvent, status: RentalStatus) => {
     e.stopPropagation();
@@ -179,11 +174,37 @@ export function RentalCard({
                 <button
                   onClick={(e: React.MouseEvent) => {
                     e.stopPropagation();
-                    navigator.clipboard.writeText(rental.id);
-                    toast.success('ID copiado', {
-                      description: rental.id,
-                      duration: 2000,
-                    });
+                    const textToCopy = rental.id;
+
+                    const handleCopy = async () => {
+                      try {
+                        if (navigator.clipboard && window.isSecureContext) {
+                          await navigator.clipboard.writeText(textToCopy);
+                        } else {
+                          // Fallback para contextos no seguros (HTTP)
+                          const textArea = document.createElement("textarea");
+                          textArea.value = textToCopy;
+                          textArea.style.position = "fixed";
+                          textArea.style.left = "-9999px";
+                          textArea.style.top = "0";
+                          document.body.appendChild(textArea);
+                          textArea.focus();
+                          textArea.select();
+                          document.execCommand('copy');
+                          document.body.removeChild(textArea);
+                        }
+
+                        toast.success('ID copiado', {
+                          description: textToCopy,
+                          duration: 2000,
+                        });
+                      } catch (err) {
+                        console.error('Error al copiar:', err);
+                        toast.error('No se pudo copiar el ID');
+                      }
+                    };
+
+                    handleCopy();
                   }}
                   className="p-1 rounded-md text-muted-foreground/30 hover:text-primary hover:bg-primary/10 transition-all opacity-0 group-hover:opacity-100"
                   title="Copiar ID de registro"
@@ -198,9 +219,36 @@ export function RentalCard({
             </div>
           </div>
           <div className="flex items-center gap-1">
-            <Badge className={cn('border', statusColors[rental.status])}>
-              {statusIcons[rental.status]} {RentalStatusLabels[rental.status]}
-            </Badge>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  onClick={(e) => e.stopPropagation()}
+                  className={cn(
+                    'flex items-center gap-1 px-3 py-1 rounded-full border text-xs font-medium transition-all hover:opacity-80',
+                    statusColors[rental.status]
+                  )}
+                >
+                  <span>{statusIcons[rental.status]} {RentalStatusLabels[rental.status]}</span>
+                  <ChevronDown className="w-3 h-3 opacity-50" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {(Object.keys(RentalStatusLabels) as RentalStatus[]).map((status) => (
+                  <DropdownMenuItem
+                    key={status}
+                    onClick={(e) => handleStatusClick(e as unknown as React.MouseEvent, status)}
+                    className={cn(
+                      'text-xs flex items-center gap-2',
+                      rental.status === status && 'bg-accent font-medium'
+                    )}
+                    disabled={rental.status === status}
+                  >
+                    <span>{statusIcons[status]}</span>
+                    {RentalStatusLabels[status]}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
 
@@ -291,21 +339,6 @@ export function RentalCard({
             >
               <Trash2 className="w-4 h-4" />
             </Button>
-            {nextStatus && (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={(e) => handleStatusClick(e, nextStatus)}
-                className="h-8 text-xs ml-1"
-              >
-                {nextStatus === 'enviado'
-                  ? 'Enviado'
-                  : nextStatus === 'finalizado' && rental.status === 'agendado'
-                    ? 'Recogida'
-                    : 'Finalizar'}
-                <ChevronRight className="w-3 h-3 ml-1" />
-              </Button>
-            )}
           </div>
         </div>
       </Card>

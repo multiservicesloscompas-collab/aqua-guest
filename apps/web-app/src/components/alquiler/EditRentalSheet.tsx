@@ -16,6 +16,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { Calendar as CalendarPicker } from '@/components/ui/calendar';
 import { Badge } from '@/components/ui/badge';
 import {
   WashingMachine,
@@ -48,7 +54,9 @@ import {
   formatPickupInfo,
 } from '@/utils/rentalSchedule';
 import { calculateRentalPrice } from '@/utils/rentalPricing';
-import { parse } from 'date-fns';
+import { parse, format } from 'date-fns';
+import { es } from 'date-fns/locale';
+import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
 interface EditRentalSheetProps {
@@ -76,6 +84,7 @@ export function EditRentalSheet({
   const [notes, setNotes] = useState('');
   const [status, setStatus] = useState<RentalStatus>('agendado');
   const [isPaid, setIsPaid] = useState(false);
+  const [datePaid, setDatePaid] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
 
   const timeSlots = useMemo(() => generateTimeSlots(), []);
@@ -94,6 +103,7 @@ export function EditRentalSheet({
       setNotes(rental.notes || '');
       setStatus(rental.status);
       setIsPaid(rental.isPaid);
+      setDatePaid(rental.datePaid || '');
     }
   }, [rental]);
 
@@ -134,6 +144,8 @@ export function EditRentalSheet({
       })
       .map((r: WasherRental) => r.machineId);
   }, [rentals, rental, deliveryTime, pickupInfo.pickupDate, pickupInfo.pickupTime]);
+
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
 
   // Autocompletar cliente
   const handleCustomerSelect = (customerId: string) => {
@@ -182,12 +194,8 @@ export function EditRentalSheet({
         notes: notes?.trim() || undefined,
         status,
         isPaid,
+        datePaid: isPaid ? (datePaid || getVenezuelaDate()) : null as any,
       };
-
-      // Si se marca como pagado y no estaba pagado antes, agregar fecha de pago actual
-      if (isPaid && !rental.isPaid) {
-        updates.datePaid = getVenezuelaDate();
-      }
 
       await updateRental(rental.id, updates);
 
@@ -214,41 +222,97 @@ export function EditRentalSheet({
         </SheetHeader>
 
         <div className="overflow-y-auto h-[calc(100%-8rem)] space-y-6 pb-40">
-          {/* Estado y Pago */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">Estado</Label>
-              <Select
-                value={status}
-                onValueChange={(v) => setStatus(v as RentalStatus)}
-              >
-                <SelectTrigger className="h-12">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(RentalStatusLabels).map(([key, label]) => (
-                    <SelectItem key={key} value={key}>
-                      {label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          {/* Control de Estado y Pago */}
+          <div className="bg-card rounded-2xl border border-border/50 p-4 shadow-sm space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest ml-1">
+                  Estado de Entrega
+                </Label>
+                <Select
+                  value={status}
+                  onValueChange={(v) => setStatus(v as RentalStatus)}
+                >
+                  <SelectTrigger className="h-12 bg-background border-border/50 rounded-xl focus:ring-primary/20 transition-all">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(RentalStatusLabels).map(([key, label]) => (
+                      <SelectItem key={key} value={key}>
+                        {label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest ml-1">
+                  Estatus de Pago
+                </Label>
+                <Select
+                  value={isPaid ? 'paid' : 'pending'}
+                  onValueChange={(v) => {
+                    const paid = v === 'paid';
+                    setIsPaid(paid);
+                    if (paid && !datePaid) {
+                      setDatePaid(getVenezuelaDate());
+                    }
+                  }}
+                >
+                  <SelectTrigger className="h-12 bg-background border-border/50 rounded-xl focus:ring-primary/20 transition-all">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="paid">Pagado</SelectItem>
+                    <SelectItem value="pending">Pendiente</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">Pago</Label>
-              <Select
-                value={isPaid ? 'paid' : 'pending'}
-                onValueChange={(v) => setIsPaid(v === 'paid')}
-              >
-                <SelectTrigger className="h-12">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="paid">Pagado</SelectItem>
-                  <SelectItem value="pending">Pendiente</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+
+            {isPaid && (
+              <div className="space-y-2 pt-3 border-t border-border/50 animate-in fade-in slide-in-from-top-2 duration-300">
+                <Label className="text-[10px] font-bold text-muted-foreground px-1 uppercase tracking-widest">
+                  Fecha de Pago Registrada
+                </Label>
+
+                <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full h-12 justify-between text-left font-medium bg-background border-border/50 rounded-xl px-4 hover:bg-background active:scale-[0.98] transition-all",
+                        !datePaid && "text-muted-foreground"
+                      )}
+                    >
+                      <span className="flex items-center gap-3">
+                        <Calendar className="h-4 w-4 text-primary" />
+                        {datePaid ? (
+                          format(parse(datePaid, 'yyyy-MM-dd', new Date()), "d 'de' MMMM, yyyy", { locale: es })
+                        ) : (
+                          "Seleccionar fecha"
+                        )}
+                      </span>
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0 rounded-2xl shadow-2xl border-border/50" align="center" sideOffset={8}>
+                    <CalendarPicker
+                      mode="single"
+                      selected={datePaid ? parse(datePaid, 'yyyy-MM-dd', new Date()) : undefined}
+                      onSelect={(date) => {
+                        if (date) {
+                          setDatePaid(format(date, 'yyyy-MM-dd'));
+                          setIsCalendarOpen(false);
+                        }
+                      }}
+                      locale={es}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            )}
           </div>
 
           {/* Selección de Lavadora */}
