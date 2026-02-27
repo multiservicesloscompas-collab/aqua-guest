@@ -1,167 +1,64 @@
-# AquaGest - Agent Coding Guidelines
+# AquaGest - Master Agent Routing & Guidelines
 
-## Build, Lint, and Test Commands
+**CONTEXT:** AquaGest is a comprehensive management system for water sales, washing machine rentals, and related administrative tasks.
 
-### Development
-- `npx nx serve web-app` - Start frontend dev server (http://localhost:5173)
-- `npx nx serve backend` - Start backend dev server (http://localhost:3100)
+**CRITICAL CONSTRAINT:** This is the root routing file. AquaGest is a monorepo. Depending on your task, you MUST route to the specific application's `AGENTS.md` file for detailed domain context, rules, and workflows.
 
-### Build
-- `npx nx build web-app` - Build frontend (output: dist/apps/web-app)
-- `npx nx build backend` - Build backend (output: apps/backend/dist)
-- `npx nx run-many --target=build --all` - Build all projects
+## 🚦 Project Routing (START HERE)
 
-### Testing
-- `npx nx test web-app` - Run all frontend tests (Vitest)
-- `npx nx test backend` - Run all backend tests (Jest)
-- `npx nx run-many --target=test --all` - Run all tests
+If you are assigned a task, **IMMEDIATELY** read the corresponding `AGENTS.md` file for that workspace before writing any code:
 
-### Running a Single Test
-- Frontend (Vitest): `npx vitest run path/to/test.test.tsx` or `npx vitest path/to/test.test.tsx`
-- Backend (Jest): `npx jest path/to/test.spec.ts`
-- With filter: `npx vitest --run -t "test name"`
+- **▶️ Frontend Application (React/Vite/Zustand):** Go to [`apps/web-app/AGENTS.md`](apps/web-app/AGENTS.md). This is where all the business logic, UI components, and Supabase integrations live. It contains the **Domain Context Map** to route you to the specific feature (Sales, Rentals, Prepaid, etc.).
 
-### Linting
-- `npx nx lint web-app` - Lint frontend
-- `npx nx lint backend` - Lint backend
-- `npx nx run-many --target=lint --all` - Lint all projects
+---
 
-### Type Checking
-- `npx nx typecheck web-app` - Typecheck frontend
-- `npx nx typecheck backend` - Typecheck backend
+## Global Build, Lint, and Test Commands
 
-## Code Style Guidelines
-
-### Import Organization
-- Third-party imports first (React, libraries)
-- Internal imports second (with `@/` alias for absolute paths)
-- Named imports preferred over default where possible
-- Group related imports together
-
-```typescript
-import { useState, useEffect } from 'react';
-import { useAppStore } from '@/store/useAppStore';
-import { Button } from '@/components/ui/button';
-import { Sale, PaymentMethod } from '@/types';
-```
-
-### Formatting
-- Prettier configured with single quotes
-- Use `prettier --write .` to format all files
-- ES2022 target, strict TypeScript enabled
-
-### Naming Conventions
-
-#### Backend (NestJS/TypeORM)
-- **Tables**: English and plural (`sales`, `clients`, `washer_rentals`)
-- **Entities**: PascalCase (`Sale`, `Client`, `WasherRental`)
-- **Columns in code**: camelCase (`customerId`, `totalUsd`)
-- **Columns in database**: snake_case (use `@Column({ name: 'column_name' })`)
-- **Services**: PascalCase + "Service" suffix (`SalesService`)
-- **DTOs**: PascalCase + "Dto" suffix (`CreateSaleDto`)
-- **Methods**: camelCase (`findAll`, `create`, `update`)
-
-#### Frontend (React)
-- **Components**: PascalCase (`SalesList`, `DashboardPage`)
-- **Hooks**: camelCase starting with "use" (`useMobile`, `useAppStore`)
-- **Types/Interfaces**: PascalCase (`Sale`, `PaymentMethod`, `CartItem`)
-- **Constants**: UPPER_SNAKE_CASE for export constants (`DEFAULT_LITER_BREAKPOINTS`)
-- **Functions**: camelCase (`addToCart`, `deleteSale`)
-
-### Type Definitions
-- Use strict TypeScript with no implicit any
-- Define shared types in `apps/web-app/src/types` or `libs/models`
-- Payment methods: `'efectivo' | 'pago_movil' | 'punto_venta' | 'divisa'`
-- Dates stored as strings in `'YYYY-MM-DD'` format
-- Timestamps in ISO 8601 format
-
-### Error Handling
-
-#### Backend
-- Use NestJS built-in exceptions (`NotFoundException`, `BadRequestException`)
-- Try-catch in service methods with appropriate error logging
-- Return meaningful error messages to clients
-
-#### Frontend
-- Use try-catch in async functions
-- Display errors using toast notifications (Sonner)
-- Fallback to local state if Supabase fails
-- Log errors with `console.error` for debugging
-
-```typescript
-try {
-  await supabase.from('sales').insert(payload);
-} catch (err) {
-  console.error('Failed to add sale', err);
-  toast.error('Error al agregar venta');
-  // Fallback to local state
-}
-```
-
-### State Management
-- Zustand for global state with persistence
-- TanStack Query for server state (if needed)
-- Keep local state in components where possible
-- Use Immer or spread operators for immutable updates
-
-### Database (TypeORM)
-- Entities extend `BaseEntity` when available
-- Use relations (`@OneToMany`, `@ManyToOne`) appropriately
-- Use cascade options for related entity management
-- Decimal columns for monetary values
-
-### React Component Patterns
-- Functional components with hooks
-- Props interfaces defined above component
-- Extract reusable logic into custom hooks
-- Use `useMemo` for expensive computations
-- Use `useCallback` for event handlers passed to children
-
-### Styling (TailwindCSS)
-- Use utility-first approach
-- Group related classes: `flex items-center justify-between`
-- Use Tailwind's arbitrary values sparingly
-- Responsive design with mobile-first approach
-- Use Radix UI primitives for accessible components
-
-### Date Handling
-- Store dates as `YYYY-MM-DD` strings
-- Use `date-fns` for date manipulations
-- Handle timezones carefully - use local time strings
-- Construct date strings manually to avoid timezone issues:
-```typescript
-const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-```
-
-### Payment Methods
-- `'efectivo'` - Cash (Banknote icon)
-- `'pago_movil'` - Mobile Payment (Smartphone icon)
-- `'punto_venta'` - POS Terminal (CreditCard icon)
-- `'divisa'` - Foreign currency (DollarSign icon)
-
-### Testing Guidelines
-- Use Jest
-- Test library for React components
-- Mock external dependencies (Supabase, store, icons)
-- Write descriptive test names in Spanish or English
-- Test happy path and edge cases
-- Use `data-testid` attributes for selecting elements
-
-```typescript
-describe('SalesList Component', () => {
-  it('debería renderizar correctamente con ventas', () => {
-    render(<SalesList sales={sales} />);
-    expect(screen.getByText('Ventas del Día (1)')).toBeInTheDocument();
-  });
-});
-```
+- `npx nx serve web-app` - Starts the frontend development server (http://localhost:4200)
+- `npx nx build web-app` - Builds the frontend (output: dist/apps/web-app)
+- `npx nx test web-app` - Runs all frontend tests (Vitest)
+- `npx nx lint web-app` - Runs the linter on the frontend
+- `npx nx typecheck web-app` - Runs typechecking on the frontend
 
 ## Architecture Principles
-- Follow hexagonal/DDD/SOLID principles
-- Separate concerns: domain, application, infrastructure
-- Keep business logic in services/domain layer
+
+- Follow Single Responsibility Principles (SRP)
+- Separation of concerns: UI, Services, State
+- Keep business logic outside of components when possible (use services or hooks)
+
+## 📏 File Size & Refactoring Mandate
+
+**CRITICAL RULE:** No file should exceed 300 lines of code.
+
+- If you analyze an existing file and it exceeds 300 lines, you MUST proactively suggest a refactoring plan to split it into smaller, single-responsibility modules.
+- If you are writing or modifying a file and your changes will cause it to exceed 300 lines, STOP. You MUST activate the refactoring guidelines and split the file immediately before continuing. Do not ignore this rule under any circumstances.
+
+## 🧠 Knowledge Base & Local Skills
+
+This project contains a local Knowledge Base of best practices downloaded into the `.agents/skills/` directory.
+
+**CRITICAL:** Do NOT attempt to use the `activate_skill` tool. Instead, you MUST use your file reading tools (`read_file`, `grep_search`) to read the `SKILL.md` or relevant `.md` files inside the following directories based on your task:
+
+- **For Database, Supabase or SQL tasks:** Read files inside `.agents/skills/supabase-postgres-best-practices/`.
+- **For React, Frontend Performance, and UI/UX:** Read files inside `.agents/skills/vercel-react-best-practices/` and `.agents/skills/web-design-guidelines/`.
+
+---
 
 ## Environment
-- Use CMD instead of PowerShell (Windows)
-- Supabase (production), SQLite (local backend)
-- Environment variables in root `.env` file
+
+- Supabase as Backend as a Service
+- Environment variables in the `.env` file at the root
+- Use `npx nx` to run monorepo commands
+- **CRITICAL SECURITY RULE:** Never print, log, or expose the contents of the `.env` file or credentials in your responses.
+
+## 📋 Technical Guidelines (Task-Specific)
+
+**CRITICAL:** You MUST read the corresponding guideline file before starting any of the following tasks:
+
+| 🛠️ Task / Area     | 📄 Guideline File                                                                  | 🎯 Activation Condition                       |
+| :----------------- | :--------------------------------------------------------------------------------- | :-------------------------------------------- |
+| **🧪 Testing**     | [`docs/agents/testing-guidelines.md`](docs/agents/testing-guidelines.md)           | When asked to create, update, or run tests.   |
+| **🛠️ Refactoring** | [`docs/agents/refactoring-guidelines.md`](docs/agents/refactoring-guidelines.md)   | When refactoring existing code or logic.      |
+| **🐛 Debugging**   | [`docs/agents/debugging-guidelines.md`](docs/agents/debugging-guidelines.md)       | When investigating or fixing reported bugs.   |
+| **🔒 Security**    | [`docs/agents/security-guidelines.md`](docs/agents/security-guidelines.md)         | When auditing code for vulnerabilities.       |
+| **⚡ Performance** | [`docs/agents/optimization-guidelines.md`](docs/agents/optimization-guidelines.md) | When optimizing algorithms or execution time. |

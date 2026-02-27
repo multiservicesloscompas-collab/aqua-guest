@@ -1,6 +1,8 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Header } from '@/components/layout/Header';
 import { useAppStore } from '@/store/useAppStore';
+import { useRentalStore } from '@/store/useRentalStore';
+import { useMachineStore } from '@/store/useMachineStore';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -48,7 +50,9 @@ const TimeFilterLabels: Record<TimeFilter, string> = {
 };
 
 export function DeliverysPage() {
-  const { rentals, washingMachines, selectedDate: selectedDateStr, setSelectedDate: setSelectedDateStr } = useAppStore();
+  const { selectedDate: selectedDateStr, setSelectedDate: setSelectedDateStr } = useAppStore();
+  const { rentals } = useRentalStore();
+  const { washingMachines } = useMachineStore();
   const [timeFilter, setTimeFilter] = useState<TimeFilter>('dia');
 
   const selectedDate = useMemo(() => {

@@ -1,11 +1,47 @@
-/**
- * Servicio de carga de ventas - SRP: Single Responsibility Principle
- * Responsabilidad única: cargar ventas de forma optimizada con caching
- */
-
 import { supabase } from '@/lib/supabaseClient';
-import { Sale } from '@/types';
+import { CartItem, PaymentMethod, Sale } from '@/types';
 import { getSafeTimestamp, normalizeTimestamp } from '@/lib/date-utils';
+
+interface SalesRow {
+  id: string;
+  daily_number?: number | null;
+  dailyNumber?: number | null;
+  date: string;
+  items?: CartItem[] | null;
+  payment_method?: PaymentMethod | null;
+  paymentMethod?: PaymentMethod | null;
+  total_bs?: number | null;
+  totalBs?: number | null;
+  total_usd?: number | null;
+  totalUsd?: number | null;
+  exchange_rate?: number | null;
+  exchangeRate?: number | null;
+  notes?: string | null;
+  created_at?: string | null;
+  createdAt?: string | null;
+  updated_at?: string | null;
+  updatedAt?: string | null;
+}
+
+const toSale = (row: SalesRow, dateOverride?: string): Sale => ({
+  id: row.id,
+  dailyNumber: row.daily_number ?? row.dailyNumber ?? 0,
+  date: dateOverride ?? row.date,
+  items: row.items ?? [],
+  paymentMethod: row.payment_method ?? row.paymentMethod ?? 'efectivo',
+  totalBs: Number(row.total_bs ?? row.totalBs ?? 0),
+  totalUsd: Number(row.total_usd ?? row.totalUsd ?? 0),
+  exchangeRate: Number(row.exchange_rate ?? row.exchangeRate ?? 0),
+  notes: row.notes ?? undefined,
+  createdAt: normalizeTimestamp(
+    row.created_at ?? row.createdAt ?? undefined,
+    getSafeTimestamp()
+  ),
+  updatedAt: normalizeTimestamp(
+    row.updated_at ?? row.updatedAt ?? undefined,
+    getSafeTimestamp()
+  ),
+});
 
 export interface ISalesDataService {
   loadSalesByDate(date: string): Promise<Sale[]>;
@@ -13,14 +49,12 @@ export interface ISalesDataService {
   invalidateCache(date: string): void;
   getCachedSales(date: string): Sale[] | null;
   hasCachedDate(date: string): boolean;
-  loadSalesByDateRange(startDate: string, endDate: string): Promise<Map<string, Sale[]>>;
+  loadSalesByDateRange(
+    startDate: string,
+    endDate: string
+  ): Promise<Map<string, Sale[]>>;
 }
 
-/**
- * Servicio de caché de ventas por fecha
- * Implementa LSP: Liskov Substitution Principle
- * Se puede substituir con otra implementación de caché
- */
 class SalesCache {
   private cache: Map<string, Sale[]> = new Map();
   private maxSize = 30; // Caché hasta 30 días
@@ -57,12 +91,6 @@ class SalesCache {
   }
 }
 
-/**
- * Servicio de datos de ventas
- * Implementa OCP: Open/Closed Principle
- * Abierto para extensión (nuevas estrategias de carga)
- * Cerrado para modificación
- */
 export class SalesDataService implements ISalesDataService {
   private salesCache: SalesCache;
 
@@ -71,13 +99,11 @@ export class SalesDataService implements ISalesDataService {
   }
 
   async loadSalesByDate(date: string): Promise<Sale[]> {
-    // 1. Verificar si ya está en caché
     const cached = this.salesCache.get(date);
     if (cached) {
       return cached;
     }
 
-    // 2. Fetch desde Supabase solo de la fecha específica
     const { data, error } = await supabase
       .from('sales')
       .select('*')
@@ -89,26 +115,7 @@ export class SalesDataService implements ISalesDataService {
       throw error;
     }
 
-    // 3. Transformar datos
-    const sales: Sale[] = (data || []).map((s: any) => ({
-      id: s.id,
-      dailyNumber: s.daily_number ?? s.dailyNumber,
-      date: s.date,
-      items: s.items || [],
-      paymentMethod: s.payment_method || s.paymentMethod,
-      totalBs: Number(s.total_bs ?? s.totalBs ?? 0),
-      totalUsd: Number(s.total_usd ?? s.totalUsd ?? 0),
-      exchangeRate: Number(s.exchange_rate ?? s.exchangeRate ?? 0),
-      notes: s.notes,
-      createdAt: normalizeTimestamp(
-        s.created_at ?? s.createdAt,
-        getSafeTimestamp()
-      ),
-      updatedAt: normalizeTimestamp(
-        s.updated_at ?? s.updatedAt,
-        getSafeTimestamp()
-      ),
-    }));
+    const sales: Sale[] = (data ?? []).map((row) => toSale(row as SalesRow));
 
     // 4. Guardar en caché
     this.salesCache.set(date, sales);
@@ -132,17 +139,12 @@ export class SalesDataService implements ISalesDataService {
     return this.salesCache.has(date);
   }
 
-  /**
-   * Carga ventas de múltiples fechas en paralelo (para Dashboard)
-   */
   async loadSalesByDates(dates: string[]): Promise<Map<string, Sale[]>> {
     const results = new Map<string, Sale[]>();
 
-    // Cargar fechas que no están en caché
     const datesToLoad = dates.filter((date) => !this.salesCache.has(date));
 
     if (datesToLoad.length === 0) {
-      // Todas las fechas están en caché
       for (const date of dates) {
         const cached = this.salesCache.get(date);
         if (cached) {
@@ -152,7 +154,6 @@ export class SalesDataService implements ISalesDataService {
       return results;
     }
 
-    // Cargar fechas faltantes en paralelo
     const promises = datesToLoad.map(async (date) => {
       const { data, error } = await supabase
         .from('sales')
@@ -165,25 +166,7 @@ export class SalesDataService implements ISalesDataService {
         return { date, sales: [] };
       }
 
-      const sales: Sale[] = (data || []).map((s: any) => ({
-        id: s.id,
-        dailyNumber: s.daily_number ?? s.dailyNumber,
-        date: s.date,
-        items: s.items || [],
-        paymentMethod: s.payment_method || s.paymentMethod,
-        totalBs: Number(s.total_bs ?? s.totalBs ?? 0),
-        totalUsd: Number(s.total_usd ?? s.totalUsd ?? 0),
-        exchangeRate: Number(s.exchange_rate ?? s.exchangeRate ?? 0),
-        notes: s.notes,
-        createdAt: normalizeTimestamp(
-          s.created_at ?? s.createdAt,
-          getSafeTimestamp()
-        ),
-        updatedAt: normalizeTimestamp(
-          s.updated_at ?? s.updatedAt,
-          getSafeTimestamp()
-        ),
-      }));
+      const sales: Sale[] = (data ?? []).map((row) => toSale(row as SalesRow));
 
       this.salesCache.set(date, sales);
 
@@ -192,7 +175,6 @@ export class SalesDataService implements ISalesDataService {
 
     await Promise.all(promises);
 
-    // Combinar resultados cargados con los que ya estaban en caché
     for (const date of dates) {
       const cached = this.salesCache.get(date);
       if (cached) {
@@ -203,9 +185,6 @@ export class SalesDataService implements ISalesDataService {
     return results;
   }
 
-  /**
-   * Carga ventas en un rango de fechas de forma eficiente (1 query)
-   */
   async loadSalesByDateRange(
     startDate: string,
     endDate: string
@@ -213,7 +192,6 @@ export class SalesDataService implements ISalesDataService {
     const results = new Map<string, Sale[]>();
     const datesInRange: string[] = [];
 
-    // Generar todas las fechas en el rango
     const current = new Date(startDate + 'T12:00:00');
     const end = new Date(endDate + 'T12:00:00');
 
@@ -225,7 +203,6 @@ export class SalesDataService implements ISalesDataService {
       current.setDate(current.getDate() + 1);
     }
 
-    // Verificar cuáles fechas ya están en caché para no recargarlas innecesariamente
     const allCached = datesInRange.every((d) => this.salesCache.has(d));
 
     if (allCached) {
@@ -235,7 +212,6 @@ export class SalesDataService implements ISalesDataService {
       return results;
     }
 
-    // Fetch range query
     const { data, error } = await supabase
       .from('sales')
       .select('*')
@@ -251,40 +227,20 @@ export class SalesDataService implements ISalesDataService {
       throw error;
     }
 
-    // Agrupar resultados por fecha
     const grouped: Record<string, Sale[]> = {};
     for (const date of datesInRange) {
       grouped[date] = [];
     }
 
-    (data || []).forEach((s: any) => {
-      // Normalizar fecha del registro para asegurar coincidencia
-      const dateKey = s.date.substring(0, 10);
+    (data ?? []).forEach((row) => {
+      const saleRow = row as SalesRow;
+      const dateKey = saleRow.date.substring(0, 10);
 
       if (grouped[dateKey]) {
-        grouped[dateKey].push({
-          id: s.id,
-          dailyNumber: s.daily_number ?? s.dailyNumber,
-          date: dateKey,
-          items: s.items || [],
-          paymentMethod: s.payment_method || s.paymentMethod,
-          totalBs: Number(s.total_bs ?? s.totalBs ?? 0),
-          totalUsd: Number(s.total_usd ?? s.totalUsd ?? 0),
-          exchangeRate: Number(s.exchange_rate ?? s.exchangeRate ?? 0),
-          notes: s.notes,
-          createdAt: normalizeTimestamp(
-            s.created_at ?? s.createdAt,
-            getSafeTimestamp()
-          ),
-          updatedAt: normalizeTimestamp(
-            s.updated_at ?? s.updatedAt,
-            getSafeTimestamp()
-          ),
-        });
+        grouped[dateKey].push(toSale(saleRow, dateKey));
       }
     });
 
-    // Actualizar caché y resultados
     for (const date of datesInRange) {
       const sales = grouped[date] || [];
       this.salesCache.set(date, sales);
@@ -294,6 +250,4 @@ export class SalesDataService implements ISalesDataService {
     return results;
   }
 }
-
-// Singleton para inyección de dependencias - DIP: Dependency Inversion Principle
 export const salesDataService = new SalesDataService();

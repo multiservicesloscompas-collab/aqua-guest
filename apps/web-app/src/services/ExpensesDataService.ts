@@ -1,8 +1,3 @@
-/**
- * Servicio de carga de egresos - SRP: Single Responsibility Principle
- * Responsabilidad única: cargar egresos de forma optimizada con caching
- */
-
 import { supabase } from '@/lib/supabaseClient';
 import { Expense } from '@/types';
 import { getSafeTimestamp, normalizeTimestamp } from '@/lib/date-utils';
@@ -13,13 +8,11 @@ export interface IExpensesDataService {
   invalidateCache(date: string): void;
   getCachedExpenses(date: string): Expense[] | null;
   hasCachedDate(date: string): boolean;
-  loadExpensesByDateRange(startDate: string, endDate: string): Promise<Map<string, Expense[]>>;
+  loadExpensesByDateRange(
+    startDate: string,
+    endDate: string
+  ): Promise<Map<string, Expense[]>>;
 }
-
-/**
- * Servicio de caché de egresos por fecha
- * Implementa LSP: Liskov Substitution Principle
- */
 class ExpensesCache {
   private cache: Map<string, Expense[]> = new Map();
   private maxSize = 30;
@@ -55,10 +48,6 @@ class ExpensesCache {
   }
 }
 
-/**
- * Servicio de datos de egresos
- * Implementa OCP: Open/Closed Principle
- */
 export class ExpensesDataService implements IExpensesDataService {
   private expensesCache: ExpensesCache;
 
@@ -175,9 +164,6 @@ export class ExpensesDataService implements IExpensesDataService {
     return results;
   }
 
-  /**
-   * Carga egresos en un rango de fechas de forma eficiente (1 query)
-   */
   async loadExpensesByDateRange(
     startDate: string,
     endDate: string

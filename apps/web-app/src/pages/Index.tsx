@@ -1,20 +1,21 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAppStore } from '@/store/useAppStore';
+import { useMachineStore } from '@/store/useMachineStore';
 import { BottomNav } from '@/components/layout/BottomNav';
 import { MenuSheet } from '@/components/layout/MenuSheet';
 import { DashboardPage } from '@/pages/DashboardPage';
-import { VentasPage } from '@/pages/VentasPage';
-import { AlquilerPage } from '@/pages/AlquilerPage';
-import { EgresosPage } from '@/pages/EgresosPage';
+import { WaterSalesPage } from '@/pages/WaterSalesPage';
+import { RentalsPage } from '@/pages/RentalsPage';
+import { ExpensesPage } from '@/pages/ExpensesPage';
 import { ConfigPage } from '@/pages/ConfigPage';
-import ClientesPage from '@/pages/ClientesPage';
-import LavadorasPage from '@/pages/LavadorasPage';
-import { SeguimientoPage } from '@/pages/SeguimientoPage';
+import CustomersPage from '@/pages/CustomersPage';
+import WashingMachinesPage from '@/pages/WashingMachinesPage';
+import { FollowUpPage } from '@/pages/FollowUpPage';
 import { ExchangeHistoryPage } from '@/pages/ExchangeHistoryPage';
-import { PrepagadosPage } from '@/pages/PrepagadosPage';
+import { PrePaysPage } from '@/pages/PrePaysPage';
 import { DeliverysPage } from '@/pages/DeliverysPage';
 import { WaterMetricsPage } from '@/pages/WaterMetricsPage';
-import { PaymentBalancePage } from '@/components/equilibrio-pagos/PaymentBalancePage';
+import { PaymentBalancePage } from '@/pages/PaymentBalancePage/index';
 import { TransactionsSummaryPage } from '@/pages/TransactionsSummaryPage';
 import { PaymentMethodDetailPage } from '@/pages/PaymentMethodDetailPage';
 import { AppRoute, PaymentMethod } from '@/types';
@@ -24,7 +25,8 @@ import { RefreshCw } from 'lucide-react';
 const Index = () => {
   const { loadFromSupabase } = useAppStore();
   const [currentRoute, setCurrentRoute] = useState<AppRoute>('dashboard');
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod>('efectivo');
+  const [selectedPaymentMethod, setSelectedPaymentMethod] =
+    useState<PaymentMethod>('efectivo');
   const [menuOpen, setMenuOpen] = useState(false);
   const [lastLoaded, setLastLoaded] = useState<number>(Date.now());
   const isFirstLoad = useRef(true);
@@ -36,6 +38,8 @@ const Index = () => {
 
   const handleRefresh = async () => {
     await loadFromSupabase();
+    useMachineStore.getState().loadWashingMachines();
+    await useMachineStore.getState().loadWashingMachines();
     setLastLoaded(Date.now());
   };
 
@@ -64,23 +68,23 @@ const Index = () => {
           />
         );
       case 'ventas':
-        return <VentasPage />;
+        return <WaterSalesPage />;
       case 'alquiler':
-        return <AlquilerPage />;
+        return <RentalsPage />;
       case 'clientes':
-        return <ClientesPage />;
+        return <CustomersPage />;
       case 'lavadoras':
-        return <LavadorasPage />;
+        return <WashingMachinesPage />;
       case 'egresos':
-        return <EgresosPage />;
+        return <ExpensesPage />;
       case 'config':
         return <ConfigPage onNavigate={setCurrentRoute} />;
       case 'seguimiento':
-        return <SeguimientoPage />;
+        return <FollowUpPage />;
       case 'historial-tasas':
         return <ExchangeHistoryPage onNavigate={setCurrentRoute} />;
       case 'prepagados':
-        return <PrepagadosPage />;
+        return <PrePaysPage />;
       case 'deliverys':
         return <DeliverysPage />;
       case 'metricas-agua':
@@ -115,8 +119,9 @@ const Index = () => {
         >
           <div className="flex items-center gap-2">
             <RefreshCw
-              className={`w-5 h-5 text-primary transition-transform duration-200 ${isRefreshing ? 'animate-spin' : ''
-                }`}
+              className={`w-5 h-5 text-primary transition-transform duration-200 ${
+                isRefreshing ? 'animate-spin' : ''
+              }`}
               style={{
                 transform: `rotate(${progress * 360}deg)`,
               }}

@@ -6,24 +6,29 @@ interface UsePullToRefreshProps {
   disabled?: boolean;
 }
 
-export function usePullToRefresh({ 
-  onRefresh, 
-  threshold = 80, 
-  disabled = false 
+export function usePullToRefresh({
+  onRefresh,
+  threshold = 80,
+  disabled = false,
 }: UsePullToRefreshProps) {
   const [isPulling, setIsPulling] = useState(false);
   const [pullDistance, setPullDistance] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const startY = useRef<number>(0);
   const currentY = useRef<number>(0);
-  const containerRef = useRef<HTMLElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const isPullingState = useRef(false);
 
   useEffect(() => {
     if (disabled) return;
 
     const getScrollTop = () => {
-      return window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
+      return (
+        window.pageYOffset ||
+        document.documentElement.scrollTop ||
+        document.body.scrollTop ||
+        0
+      );
     };
 
     const handleTouchStart = (e: TouchEvent) => {
@@ -44,11 +49,11 @@ export function usePullToRefresh({
       // Only allow pulling down (positive distance) and only if we're still at the top
       if (distance > 0 && getScrollTop() === 0) {
         e.preventDefault();
-        
+
         // Calculate pull distance with resistance
         const resistance = 0.5;
         const adjustedDistance = distance * resistance;
-        
+
         setPullDistance(Math.min(adjustedDistance, threshold * 2));
         setIsPulling(true);
         isPullingState.current = true;
@@ -91,10 +96,10 @@ export function usePullToRefresh({
 
       if (distance > 0 && getScrollTop() === 0) {
         e.preventDefault();
-        
+
         const resistance = 0.5;
         const adjustedDistance = distance * resistance;
-        
+
         setPullDistance(Math.min(adjustedDistance, threshold * 2));
         setIsPulling(true);
         isPullingState.current = true;
@@ -129,7 +134,9 @@ export function usePullToRefresh({
     };
 
     // Touch events on document
-    document.addEventListener('touchstart', handleTouchStart, { passive: false });
+    document.addEventListener('touchstart', handleTouchStart, {
+      passive: false,
+    });
     document.addEventListener('touchmove', handleTouchMove, { passive: false });
     document.addEventListener('touchend', handleTouchEnd);
 
@@ -155,6 +162,6 @@ export function usePullToRefresh({
     isPulling,
     pullDistance,
     isRefreshing,
-    progress: Math.min(pullDistance / threshold, 1)
+    progress: Math.min(pullDistance / threshold, 1),
   };
 }

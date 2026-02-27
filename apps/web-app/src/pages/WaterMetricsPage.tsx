@@ -1,6 +1,8 @@
 import { useState, useMemo } from 'react';
 import { Header } from '@/components/layout/Header';
 import { useAppStore } from '@/store/useAppStore';
+import { useWaterSalesStore } from '@/store/useWaterSalesStore';
+import { useConfigStore } from '@/store/useConfigStore';
 import { Sale, CartItem, AppRoute } from '@/types';
 import {
   Droplets,
@@ -10,7 +12,6 @@ import {
   Package,
   BarChart3,
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Select,
@@ -20,7 +21,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { DateSelector } from '@/components/ventas/DateSelector';
-import { cn } from '@/lib/utils';
 
 type DateRange = 'day' | 'week' | 'month';
 
@@ -36,10 +36,11 @@ interface LiterBreakdown {
 }
 
 export function WaterMetricsPage({ onNavigate }: WaterMetricsPageProps = {}) {
-  const { sales, config, selectedDate, setSelectedDate } = useAppStore();
+  const { selectedDate, setSelectedDate } = useAppStore();
+  const { sales } = useWaterSalesStore();
+  const { config } = useConfigStore();
   const [range, setRange] = useState<DateRange>('day');
 
-  // Calcular rango de fechas según el filtro seleccionado
   const dateRange = useMemo(() => {
     const selected = new Date(selectedDate + 'T12:00:00');
     let startDate: Date;
@@ -58,11 +59,7 @@ export function WaterMetricsPage({ onNavigate }: WaterMetricsPageProps = {}) {
         break;
       case 'month':
         startDate = new Date(selected.getFullYear(), selected.getMonth(), 1);
-        endDate = new Date(
-          selected.getFullYear(),
-          selected.getMonth() + 1,
-          0
-        );
+        endDate = new Date(selected.getFullYear(), selected.getMonth() + 1, 0);
         break;
     }
 
@@ -84,14 +81,12 @@ export function WaterMetricsPage({ onNavigate }: WaterMetricsPageProps = {}) {
     };
   }, [selectedDate, range]);
 
-  // Filtrar ventas en el rango
   const filteredSales = useMemo(() => {
     return sales.filter((sale: Sale) => {
       return sale.date >= dateRange.start && sale.date <= dateRange.end;
     });
   }, [sales, dateRange]);
 
-  // Calcular métricas
   const metrics = useMemo(() => {
     let totalLiters = 0;
     let totalBs = 0;
@@ -123,12 +118,10 @@ export function WaterMetricsPage({ onNavigate }: WaterMetricsPageProps = {}) {
       });
     });
 
-    // Convertir a array y ordenar por litros
     const breakdownArray = Object.values(literBreakdown).sort(
       (a, b) => a.liters - b.liters
     );
 
-    // Calcular botellones equivalentes (litros / 19)
     const equivalentBottles = totalLiters / 19;
 
     return {
@@ -286,7 +279,9 @@ export function WaterMetricsPage({ onNavigate }: WaterMetricsPageProps = {}) {
             {metrics.breakdown.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 <Droplets className="w-12 h-12 mx-auto mb-2 opacity-40" />
-                <p className="text-sm">No hay ventas con litros en este período</p>
+                <p className="text-sm">
+                  No hay ventas con litros en este período
+                </p>
               </div>
             ) : (
               metrics.breakdown.map((item) => (
@@ -370,4 +365,3 @@ export function WaterMetricsPage({ onNavigate }: WaterMetricsPageProps = {}) {
     </div>
   );
 }
-

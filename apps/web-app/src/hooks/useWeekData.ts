@@ -8,11 +8,6 @@ interface UseWeekDataParams {
   rentals: WasherRental[];
 }
 
-/**
- * Hook para calcular los datos de la gráfica semanal
- * Muestra ingresos por día (ventas de agua + alquileres pagados)
- * Los alquileres se filtran por fecha de pago (datePaid), no por fecha de servicio
- */
 export function useWeekData({
   selectedDate,
   exchangeRate,
@@ -47,8 +42,7 @@ export function useWeekData({
         (r: WasherRental) => r.isPaid && r.datePaid === dateStr
       );
       const rentalValue = dayRentals.reduce(
-        (sum: number, r: WasherRental) =>
-          sum + r.totalUsd * exchangeRate,
+        (sum: number, r: WasherRental) => sum + r.totalUsd * exchangeRate,
         0
       );
 

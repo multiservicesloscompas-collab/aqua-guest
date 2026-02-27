@@ -57,7 +57,7 @@ export function KpiCard({
           </p>
           <p
             className={cn(
-              'text-2xl font-extrabold tracking-tight',
+              'text-xl font-bold tracking-tight',
               isPrimary ? 'text-primary-foreground' : 'text-foreground'
             )}
           >

@@ -1,8 +1,3 @@
-// ============================================
-// TIPOS DE DATOS - PWA Gestión Comercial Agua
-// ============================================
-
-// Producto disponible para venta
 export interface Product {
   id: string;
   name: string;
@@ -13,7 +8,6 @@ export interface Product {
   icon?: string;
 }
 
-// Item dentro de un carrito/venta
 export interface CartItem {
   id: string;
   productId: string;
@@ -24,7 +18,6 @@ export interface CartItem {
   subtotal: number; // quantity * unitPrice
 }
 
-// Método de pago
 export type PaymentMethod =
   | 'pago_movil'
   | 'efectivo'
