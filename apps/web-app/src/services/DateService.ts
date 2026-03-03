@@ -1,16 +1,5 @@
-/**
- * Servicio de gestión de fechas - SRP: Single Responsibility Principle
- * Responsabilidad única: manejar operaciones de fechas y validaciones
- * Zona horaria: America/Caracas (Venezuela)
- */
-
-// Zona horaria de Venezuela
 const VENEZUELA_TIMEZONE = 'America/Caracas';
 
-/**
- * Obtiene la fecha actual en la zona horaria de Venezuela
- * Usa Intl.DateTimeFormat para asegurar la zona horaria correcta
- */
 export function getVenezuelaDate(): string {
   const now = new Date();
   const formatter = new Intl.DateTimeFormat('en-US', {
@@ -40,8 +29,6 @@ export class DateService implements IDateService {
   }
 
   normalizeSaleDate(selectedDate: string): string {
-    // Siempre usa la fecha seleccionada para mantener consistencia
-    // Asegurar formato YYYY-MM-DD eliminando componente de tiempo si existe
     if (!selectedDate) return this.getCurrentDate();
     return selectedDate.substring(0, 10);
   }
@@ -51,5 +38,4 @@ export class DateService implements IDateService {
   }
 }
 
-// Singleton para inyección de dependencias - DIP: Dependency Inversion Principle
 export const dateService = new DateService();

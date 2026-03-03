@@ -17,7 +17,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Sale, PaymentMethod, PaymentMethodLabels, CartItem } from '@/types';
-import { useAppStore } from '@/store/useAppStore';
+import { useWaterSalesStore } from '@/store/useWaterSalesStore';
+import { useConfigStore } from '@/store/useConfigStore';
 import { Pencil, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -32,7 +33,8 @@ export function EditSaleSheet({
   open,
   onOpenChange,
 }: EditSaleSheetProps) {
-  const { updateSale, config } = useAppStore();
+  const { updateSale } = useWaterSalesStore();
+  const { config } = useConfigStore();
 
   const [paymentMethod, setPaymentMethod] =
     useState<PaymentMethod>('pago_movil');

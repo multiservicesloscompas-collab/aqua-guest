@@ -8,7 +8,7 @@ import {
   isBefore,
 } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { useAppStore } from '@/store/useAppStore';
+import { useExpenseStore } from '@/store/useExpenseStore';
 import { Expense } from '@/types';
 import { getVenezuelaDate } from '@/services/DateService';
 
@@ -68,7 +68,7 @@ function formatDayLabel(dateStr: string): string {
 const MAX_WEEKS = 12;
 
 export function useWeeklyExpenses(anchorDate: string): UseWeeklyExpensesReturn {
-  const { getExpensesByDate, loadExpensesByDates } = useAppStore();
+  const { getExpensesByDate, loadExpensesByDates } = useExpenseStore();
   const [loadedWeekStarts, setLoadedWeekStarts] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);

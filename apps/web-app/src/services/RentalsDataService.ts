@@ -1,8 +1,3 @@
-/**
- * Servicio de carga de alquileres - SRP: Single Responsibility Principle
- * Responsabilidad única: cargar alquileres de forma optimizada con caching
- */
-
 import { supabase } from '@/lib/supabaseClient';
 import { WasherRental } from '@/types';
 import { getSafeTimestamp, normalizeTimestamp } from '@/lib/date-utils';
@@ -13,13 +8,12 @@ export interface IRentalsDataService {
   invalidateCache(date: string): void;
   getCachedRentals(date: string): WasherRental[] | null;
   hasCachedDate(date: string): boolean;
-  loadRentalsByDateRange(startDate: string, endDate: string): Promise<Map<string, WasherRental[]>>;
+  loadRentalsByDateRange(
+    startDate: string,
+    endDate: string
+  ): Promise<Map<string, WasherRental[]>>;
 }
 
-/**
- * Servicio de caché de alquileres por fecha
- * Implementa LSP: Liskov Substitution Principle
- */
 class RentalsCache {
   private cache: Map<string, WasherRental[]> = new Map();
   private maxSize = 30;
@@ -55,10 +49,6 @@ class RentalsCache {
   }
 }
 
-/**
- * Servicio de datos de alquileres
- * Implementa OCP: Open/Closed Principle
- */
 export class RentalsDataService implements IRentalsDataService {
   private rentalsCache: RentalsCache;
 
@@ -75,7 +65,8 @@ export class RentalsDataService implements IRentalsDataService {
     const { data, error } = await supabase
       .from('washer_rentals')
       .select('*, customers(name, phone, address)')
-      .eq('date', date)
+      .lte('date', date)
+      .gte('pickup_date', date)
       .order('created_at', { ascending: true });
 
     if (error) {
@@ -85,7 +76,7 @@ export class RentalsDataService implements IRentalsDataService {
 
     const rentals: WasherRental[] = (data || []).map((r: any) => ({
       id: r.id,
-      date: r.date,
+      date: r.date.substring(0, 10),
       customerId: r.customer_id,
       customerName: r.customers?.name || r.customer_name,
       customerPhone: r.customers?.phone || r.customer_phone,
@@ -97,10 +88,11 @@ export class RentalsDataService implements IRentalsDataService {
       pickupDate: r.pickup_date,
       deliveryFee: Number(r.delivery_fee),
       totalUsd: Number(r.total_usd),
-        paymentMethod: r.payment_method || 'efectivo',
-        status: r.status,
-        isPaid: r.is_paid,
-        notes: r.notes,
+      paymentMethod: r.payment_method || 'efectivo',
+      status: r.status,
+      isPaid: r.is_paid,
+      datePaid: r.date_paid ? r.date_paid.substring(0, 10) : undefined,
+      notes: r.notes,
       createdAt: normalizeTimestamp(
         r.created_at ?? r.createdAt,
         getSafeTimestamp()
@@ -162,7 +154,7 @@ export class RentalsDataService implements IRentalsDataService {
 
       const rentals: WasherRental[] = (data || []).map((r: any) => ({
         id: r.id,
-        date: r.date,
+        date: r.date.substring(0, 10),
         customerId: r.customer_id,
         customerName: r.customers?.name || r.customer_name,
         customerPhone: r.customers?.phone || r.customer_phone,
@@ -177,7 +169,7 @@ export class RentalsDataService implements IRentalsDataService {
         paymentMethod: r.payment_method || 'efectivo',
         status: r.status,
         isPaid: r.is_paid,
-        datePaid: r.date_paid || undefined,
+        datePaid: r.date_paid ? r.date_paid.substring(0, 10) : undefined,
         notes: r.notes,
         createdAt: normalizeTimestamp(
           r.created_at ?? r.createdAt,
@@ -206,9 +198,6 @@ export class RentalsDataService implements IRentalsDataService {
     return results;
   }
 
-  /**
-   * Carga alquileres en un rango de fechas de forma eficiente (1 query)
-   */
   async loadRentalsByDateRange(
     startDate: string,
     endDate: string
@@ -236,13 +225,12 @@ export class RentalsDataService implements IRentalsDataService {
       return results;
     }
 
-    // Cargar solo alquileres pagados (is_paid=true) por fecha de pago (date_paid)
     const { data, error } = await supabase
       .from('washer_rentals')
       .select('*, customers(name, phone, address)')
-      .eq('is_paid', true)
-      .gte('date_paid', startDate)
-      .lte('date_paid', endDate)
+      .or(
+        `and(date.gte.${startDate},date.lte.${endDate}),and(date_paid.gte.${startDate},date_paid.lte.${endDate})`
+      )
       .order('created_at', { ascending: true });
 
     if (error) {
@@ -259,15 +247,14 @@ export class RentalsDataService implements IRentalsDataService {
     }
 
     (data || []).forEach((r: any) => {
-      // Agrupar por fecha de pago (date_paid), no por fecha de servicio (date)
-      const dateKey = r.date_paid ? r.date_paid.substring(0, 10) : r.date.substring(0, 10);
+      // Agrupar por fecha de servicio (date)
+      const dateKey = r.date.substring(0, 10);
 
       if (!grouped[dateKey]) grouped[dateKey] = [];
 
       grouped[dateKey].push({
         id: r.id,
-        date: r.date.substring(0, 10), // Fecha de servicio original
-        datePaid: dateKey, // Fecha de pago usada para agrupar
+        date: r.date.substring(0, 10),
         customerId: r.customer_id,
         customerName: r.customers?.name || r.customer_name,
         customerPhone: r.customers?.phone || r.customer_phone,
@@ -282,6 +269,7 @@ export class RentalsDataService implements IRentalsDataService {
         paymentMethod: r.payment_method || 'efectivo',
         status: r.status,
         isPaid: r.is_paid,
+        datePaid: r.date_paid ? r.date_paid.substring(0, 10) : undefined,
         notes: r.notes,
         createdAt: normalizeTimestamp(
           r.created_at ?? r.createdAt,
@@ -294,8 +282,6 @@ export class RentalsDataService implements IRentalsDataService {
       });
     });
 
-    // Populate results and cache
-    // We iterate over Object.keys(grouped) to include dates outside the range that were fetched
     for (const date of Object.keys(grouped)) {
       const rentals = grouped[date];
       this.rentalsCache.set(date, rentals);

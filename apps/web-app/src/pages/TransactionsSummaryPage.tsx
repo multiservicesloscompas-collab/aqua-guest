@@ -1,5 +1,11 @@
 import { useMemo } from 'react';
 import { useAppStore } from '@/store/useAppStore';
+import { usePrepaidStore } from '@/store/usePrepaidStore';
+import { useWaterSalesStore } from '@/store/useWaterSalesStore';
+import { useExpenseStore } from '@/store/useExpenseStore';
+import { usePaymentBalanceStore } from '@/store/usePaymentBalanceStore';
+import { useConfigStore } from '@/store/useConfigStore';
+import { useRentalStore } from '@/store/useRentalStore';
 import { Header } from '@/components/layout/Header';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -42,15 +48,13 @@ interface TransactionItem {
 export function TransactionsSummaryPage({
     onNavigate,
 }: TransactionsSummaryPageProps = {}) {
-    const {
-        sales,
-        rentals,
-        expenses,
-        prepaidOrders,
-        paymentBalanceTransactions,
-        selectedDate,
-        config,
-    } = useAppStore();
+    const { selectedDate } = useAppStore();
+    const { prepaidOrders } = usePrepaidStore();
+    const { sales } = useWaterSalesStore();
+    const { expenses } = useExpenseStore();
+    const { paymentBalanceTransactions } = usePaymentBalanceStore();
+    const { config } = useConfigStore();
+  const { rentals } = useRentalStore();
 
     const transactions = useMemo(() => {
         const items: TransactionItem[] = [];
