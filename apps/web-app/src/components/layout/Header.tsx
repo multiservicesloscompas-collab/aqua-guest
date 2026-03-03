@@ -4,6 +4,7 @@ import { useRentalStore } from '@/store/useRentalStore';
 import { useMemo, useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { useConfigStore } from '@/store/useConfigStore';
+import { LogoutButton } from '@/components/auth/LogoutButton';
 
 interface HeaderProps {
   title: string;
@@ -54,14 +55,14 @@ export function Header({ title, subtitle, showBack, onBack }: HeaderProps) {
     // Ventas de agua del día
     const todaySales = sales.filter((sale: import('@/types').Sale) => sale.date === currentDate);
     const waterToday = todaySales.reduce((sum: number, sale: import('@/types').Sale) => sum + sale.totalBs, 0);
-    
+
     // Alquileres del día (convertir USD a Bs y luego a USD para el total)
     const todayRentals = rentals.filter((rental) => rental.date === currentDate);
     const rentalTodayBs = todayRentals.reduce(
       (sum, rental) => sum + rental.totalUsd * config.exchangeRate,
       0
     );
-    
+
     // Total combinado en Bs, luego convertir a USD
     const totalToday = waterToday + rentalTodayBs;
     return totalToday / config.exchangeRate;
@@ -91,12 +92,21 @@ export function Header({ title, subtitle, showBack, onBack }: HeaderProps) {
           </div>
         </div>
 
-        <div className="flex items-center gap-1.5 bg-primary/10 px-3 py-1.5 rounded-full border border-primary/20 shrink-0">
-          <DollarSign className="w-4 h-4 text-primary" />
-          <span className="text-sm font-bold text-primary">
-            ${todayEarningsUSD.toFixed(2)}
-          </span>
-          <span className="text-xs text-muted-foreground">hoy</span>
+        <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-1.5 bg-primary/10 px-3 py-1.5 rounded-full border border-primary/20">
+            <DollarSign className="w-4 h-4 text-primary" />
+            <span className="text-sm font-bold text-primary">
+              ${todayEarningsUSD.toFixed(2)}
+            </span>
+            <span className="text-xs text-muted-foreground">hoy</span>
+          </div>
+          <LogoutButton
+            variant="ghost"
+            size="icon"
+            showIcon={true}
+            showText={false}
+            className="h-9 w-9 text-destructive hover:text-destructive hover:bg-destructive/10"
+          />
         </div>
       </div>
     </header>
