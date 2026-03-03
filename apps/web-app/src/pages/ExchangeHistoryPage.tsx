@@ -1,5 +1,5 @@
 import { Header } from '@/components/layout/Header';
-import { useAppStore } from '@/store/useAppStore';
+import { useConfigStore } from '@/store/useConfigStore';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { TrendingUp, TrendingDown, Minus, Calendar } from 'lucide-react';
@@ -10,9 +10,8 @@ interface ExchangeHistoryPageProps {
 }
 
 export function ExchangeHistoryPage({ onNavigate }: ExchangeHistoryPageProps) {
-  const { config } = useAppStore();
+  const { config } = useConfigStore();
 
-  // Ordenar historial por fecha descendente
   const sortedHistory = [...(config.exchangeRateHistory || [])].sort(
     (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
   );

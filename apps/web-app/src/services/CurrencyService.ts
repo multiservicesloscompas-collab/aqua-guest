@@ -10,30 +10,20 @@ export interface CurrencyConverter {
   formatUsd(amount: number, fractionDigits?: number): string;
 }
 
-/**
- * Crea un convertidor de moneda con una tasa específica
- */
-export function createCurrencyConverter(exchangeRate: number): CurrencyConverter {
+export function createCurrencyConverter(
+  exchangeRate: number
+): CurrencyConverter {
   return {
-    /**
-     * Convierte Bolívares a USD
-     */
     toUsd(bs: number): number {
       if (!exchangeRate || exchangeRate <= 0) return 0;
       return bs / exchangeRate;
     },
 
-    /**
-     * Convierte USD a Bolívares
-     */
     toBs(usd: number): number {
       if (!exchangeRate || exchangeRate <= 0) return 0;
       return usd * exchangeRate;
     },
 
-    /**
-     * Formatea un monto en Bolívares
-     */
     formatBs(amount: number, fractionDigits: number = 2): string {
       return amount.toLocaleString('es-VE', {
         minimumFractionDigits: fractionDigits,
@@ -41,9 +31,6 @@ export function createCurrencyConverter(exchangeRate: number): CurrencyConverter
       });
     },
 
-    /**
-     * Formatea un monto en USD
-     */
     formatUsd(amount: number, fractionDigits: number = 2): string {
       return amount.toLocaleString('es-VE', {
         minimumFractionDigits: fractionDigits,
@@ -53,13 +40,7 @@ export function createCurrencyConverter(exchangeRate: number): CurrencyConverter
   };
 }
 
-/**
- * Funciones utilitarias estáticas para formateo
- */
 export const CurrencyFormatter = {
-  /**
-   * Formatea un monto en Bolívares con el símbolo
-   */
   formatBsWithSymbol(amount: number, fractionDigits: number = 2): string {
     return `Bs ${amount.toLocaleString('es-VE', {
       minimumFractionDigits: fractionDigits,
@@ -67,9 +48,6 @@ export const CurrencyFormatter = {
     })}`;
   },
 
-  /**
-   * Formatea un monto en USD con el símbolo
-   */
   formatUsdWithSymbol(amount: number, fractionDigits: number = 2): string {
     return `$${amount.toLocaleString('es-VE', {
       minimumFractionDigits: fractionDigits,
@@ -77,14 +55,11 @@ export const CurrencyFormatter = {
     })}`;
   },
 
-  /**
-   * Formatea un monto según la moneda seleccionada
-   */
   formatByCurrency(
     amount: number,
     currency: 'Bs' | 'USD',
     exchangeRate: number,
-    fractionDigits: number = 2
+    fractionDigits = 2
   ): string {
     if (currency === 'USD') {
       const usd = exchangeRate > 0 ? amount / exchangeRate : 0;

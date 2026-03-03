@@ -8,8 +8,17 @@ import {
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useAppStore } from '@/store/useAppStore';
+import { useConfigStore } from '@/store/useConfigStore';
+import { useWaterSalesStore } from '@/store/useWaterSalesStore';
 import { PaymentMethod, PaymentMethodLabels } from '@/types';
-import { Trash2, Smartphone, Banknote, CreditCard, Check, DollarSign } from 'lucide-react';
+import {
+  Trash2,
+  Smartphone,
+  Banknote,
+  CreditCard,
+  Check,
+  DollarSign,
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -26,8 +35,10 @@ const paymentOptions: { method: PaymentMethod; icon: typeof Smartphone }[] = [
 ];
 
 export function CartSheet({ open, onOpenChange }: CartSheetProps) {
-  const { cart, config, removeFromCart, clearCart, completeSale } =
-    useAppStore();
+  const { selectedDate } = useAppStore();
+  const { config } = useConfigStore();
+  const { cart, removeFromCart, completeSale } = useWaterSalesStore();
+
   const [saving, setSaving] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('efectivo');
   const [notes, setNotes] = useState('');
@@ -41,7 +52,7 @@ export function CartSheet({ open, onOpenChange }: CartSheetProps) {
     (async () => {
       try {
         setSaving(true);
-        await completeSale(paymentMethod, notes || undefined);
+        await completeSale(paymentMethod, selectedDate, notes || undefined);
         setNotes('');
         setPaymentMethod('efectivo');
         onOpenChange(false);

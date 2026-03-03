@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { Header } from '@/components/layout/Header';
-import { useAppStore } from '@/store/useAppStore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -16,6 +15,7 @@ import {
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { useConfigStore } from '@/store/useConfigStore';
 import { LiterPricing, DEFAULT_LITER_BREAKPOINTS, AppRoute } from '@/types';
 
 interface ConfigPageProps {
@@ -23,7 +23,7 @@ interface ConfigPageProps {
 }
 
 export function ConfigPage({ onNavigate }: ConfigPageProps) {
-  const { config, setExchangeRate, setLiterPricing } = useAppStore();
+  const { config, setExchangeRate, setLiterPricing } = useConfigStore();
   const [rate, setRate] = useState(config.exchangeRate.toString());
   const [literPrices, setLiterPrices] = useState<LiterPricing[]>(
     config.literPricing || DEFAULT_LITER_BREAKPOINTS
@@ -127,7 +127,11 @@ export function ConfigPage({ onNavigate }: ConfigPageProps) {
                 disabled={isSavingRate}
                 className="h-14 w-14 gradient-primary rounded-xl"
               >
-                {isSavingRate ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
+                {isSavingRate ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <Save className="w-5 h-5" />
+                )}
               </Button>
             </div>
           </div>
@@ -201,7 +205,11 @@ export function ConfigPage({ onNavigate }: ConfigPageProps) {
             disabled={isSavingPrices}
             className="w-full h-12 gradient-primary rounded-xl font-semibold"
           >
-            {isSavingPrices ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+            {isSavingPrices ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <Save className="w-4 h-4 mr-2" />
+            )}
             {isSavingPrices ? 'Guardando...' : 'Guardar Precios'}
           </Button>
 

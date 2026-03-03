@@ -11,27 +11,34 @@ import {
 } from 'date-fns';
 import { es } from 'date-fns/locale';
 
-/**
- * Calcula la hora y fecha de retiro de una lavadora
- * respetando el horario comercial (Lunes-Sábado 9AM-8PM, Domingo 9AM-2PM)
- */
 export function calculatePickupTime(
   deliveryDate: Date,
   deliveryTime: string, // HH:mm
   shift: RentalShift
 ): { pickupTime: string; pickupDate: string } {
+  if (!deliveryTime) {
+    return {
+      pickupTime: format(deliveryDate, 'HH:mm'),
+      pickupDate: format(deliveryDate, 'yyyy-MM-dd'),
+    };
+  }
+
   const shiftConfig = RentalShiftConfig[shift];
+  if (!shiftConfig) {
+    return {
+      pickupTime: format(deliveryDate, 'HH:mm'),
+      pickupDate: format(deliveryDate, 'yyyy-MM-dd'),
+    };
+  }
+
   const [hours, minutes] = deliveryTime.split(':').map(Number);
 
-  // Crear fecha/hora de entrega
   const deliveryDateTime = setMinutes(setHours(deliveryDate, hours), minutes);
 
-  // Agregar horas del turno
   let pickupDateTime = new Date(
     deliveryDateTime.getTime() + shiftConfig.hours * 60 * 60 * 1000
   );
 
-  // Determinar horario del día de retiro calculado
   const pickupDay = getDay(pickupDateTime);
   const isSunday = pickupDay === 0;
   const openHour = BUSINESS_HOURS.openHour;
@@ -44,22 +51,18 @@ export function calculatePickupTime(
     0
   );
 
-  // Excepción: para entregas a las 1PM o 2PM, permitir retiro hasta las 8PM
   const isExceptionDelivery =
     deliveryTime === '13:00' || deliveryTime === '14:00';
   const sameDay =
     format(pickupDateTime, 'yyyy-MM-dd') === format(deliveryDate, 'yyyy-MM-dd');
 
-  // Verificar si el pickupTime está dentro del horario laboral
   const isWithinBusinessHours =
     !isBefore(pickupDateTime, openTime) && !isAfter(pickupDateTime, closeTime);
 
   if (!isWithinBusinessHours) {
     if (isExceptionDelivery && sameDay && isAfter(pickupDateTime, closeTime)) {
-      // Para entregas a 1PM o 2PM, si excede 8PM, establecer a 8PM del mismo día
       pickupDateTime = setMinutes(setHours(deliveryDate, 20), 0);
     } else {
-      // Si el día calculado es laboral y la hora es antes de apertura, establecer a apertura del mismo día
       if (
         BUSINESS_HOURS.workDays.includes(pickupDay) &&
         isBefore(pickupDateTime, openTime)
@@ -85,9 +88,6 @@ export function calculatePickupTime(
   };
 }
 
-/**
- * Genera opciones de horario disponibles (cada 30 min)
- */
 export function generateTimeSlots(): string[] {
   const slots: string[] = [];
   for (
@@ -101,16 +101,10 @@ export function generateTimeSlots(): string[] {
   return slots;
 }
 
-/**
- * Verifica si un día es laboral
- */
 export function isWorkDay(date: Date): boolean {
   return BUSINESS_HOURS.workDays.includes(getDay(date));
 }
 
-/**
- * Formatea fecha y hora para mostrar
- */
 export function formatPickupInfo(
   pickupDate: string,
   pickupTime: string,

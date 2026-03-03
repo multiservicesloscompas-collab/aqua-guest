@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Sale, PaymentMethod, PaymentMethodLabels } from '@/types';
-import { useAppStore } from '@/store/useAppStore';
+import { useWaterSalesStore } from '@/store/useWaterSalesStore';
 import {
   Trash2,
   Smartphone,
@@ -12,16 +12,14 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerClose,
+} from '@/components/ui/drawer';
 import { EditSaleSheet } from './EditSaleSheet';
 import { toast } from 'sonner';
 import { getSafeTimestampForSorting } from '@/lib/date-utils';
@@ -39,18 +37,22 @@ const paymentIcons: Record<PaymentMethod, any> = {
 };
 
 export function SalesList({ sales, paymentFilter = 'todos' }: SalesListProps) {
-  const { deleteSale } = useAppStore();
+  const { deleteSale } = useWaterSalesStore();
   const [editingSale, setEditingSale] = useState<Sale | null>(null);
   const [editSheetOpen, setEditSheetOpen] = useState(false);
+  const [saleToDelete, setSaleToDelete] = useState<string | null>(null);
 
   // Filtrar ventas por método de pago si es necesario
   const filteredSales = paymentFilter === 'todos' 
     ? sales 
     : sales.filter(sale => sale.paymentMethod === paymentFilter);
 
-  const handleDelete = (id: string) => {
-    deleteSale(id);
-    toast.success('Venta eliminada');
+  const handleDelete = () => {
+    if (saleToDelete) {
+      deleteSale(saleToDelete);
+      toast.success('Venta eliminada');
+      setSaleToDelete(null);
+    }
   };
 
   const handleEdit = (sale: Sale) => {
@@ -145,35 +147,14 @@ export function SalesList({ sales, paymentFilter = 'todos' }: SalesListProps) {
                     >
                       <Pencil className="w-4 h-4" />
                     </Button>
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent className="max-w-[90vw] rounded-xl">
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>¿Eliminar venta?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            Esta acción no se puede deshacer. Se eliminará
-                            permanentemente este registro.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                          <AlertDialogAction
-                            onClick={() => handleDelete(sale.id)}
-                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                          >
-                            Eliminar
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setSaleToDelete(sale.id)}
+                      className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
                   </div>
                 </div>
 
@@ -206,6 +187,41 @@ export function SalesList({ sales, paymentFilter = 'todos' }: SalesListProps) {
         open={editSheetOpen}
         onOpenChange={setEditSheetOpen}
       />
+
+      <Drawer open={saleToDelete !== null} onOpenChange={(open) => !open && setSaleToDelete(null)}>
+        <DrawerContent className="p-4 sm:p-6 pb-8">
+          <DrawerHeader className="px-0 pt-2">
+            <DrawerTitle className="text-xl font-bold flex items-center gap-2 text-destructive">
+              <Trash2 className="w-6 h-6" />
+              Eliminar venta
+            </DrawerTitle>
+            <DrawerDescription className="text-sm pt-1">
+              Esta acción no se puede deshacer. Se eliminará permanentemente
+              este registro de la base de datos.
+            </DrawerDescription>
+          </DrawerHeader>
+
+          <DrawerFooter className="px-0 pb-0 gap-3 pt-6">
+            <Button
+              size="lg"
+              variant="destructive"
+              className="w-full h-14 rounded-2xl text-base font-semibold shadow-lg"
+              onClick={handleDelete}
+            >
+              Eliminar Permanentemente
+            </Button>
+            <DrawerClose asChild>
+              <Button
+                variant="outline"
+                size="lg"
+                className="w-full h-14 rounded-2xl text-base font-medium border-border/50 bg-background"
+              >
+                Cancelar
+              </Button>
+            </DrawerClose>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
     </>
   );
 }

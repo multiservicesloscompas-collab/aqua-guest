@@ -29,16 +29,7 @@ El sistema calcula automáticamente los horarios de retiro de alquileres basánd
 - **Estilos**: TailwindCSS v3.4 + Componentes Radix UI
 - **Estado**: Zustand (con persistencia) + TanStack Query (React Query)
 - **Routing**: React Router v7
-- **Base de Datos**: Supabase (PostgreSQL)
-
-### Backend (`apps/backend`)
-
-- **Framework**: NestJS v11
-- **Base de Datos**: SQLite (desarrollo)
-- **ORM**: TypeORM
-- **Arquitectura**: Hexagonal, DDD, SOLID
-- **Validación**: class-validator + class-transformer
-- **Logging**: Morgan
+- **Base de Datos / Backend as a Service**: Supabase (PostgreSQL)
 
 ### Herramientas
 
@@ -66,14 +57,9 @@ npm install
 Crea un archivo `.env` en la raíz del proyecto con las siguientes variables:
 
 ```env
-# Supabase (para frontend)
+# Supabase
 VITE_SUPABASE_URL=tu_url_de_supabase
 VITE_SUPABASE_ANON_KEY=tu_clave_anonima
-
-# Supabase (para backend)
-SUPABASE_URL=tu_url_de_supabase
-SUPABASE_SERVICE_ROLE_KEY=tu_clave_de_servicio
-SUPABASE_ANON_KEY=tu_clave_anonima
 ```
 
 ### 3. Iniciar el entorno de desarrollo
@@ -84,15 +70,7 @@ SUPABASE_ANON_KEY=tu_clave_anonima
 npx nx serve web-app
 ```
 
-La aplicación estará disponible en [http://localhost:5173](http://localhost:5173).
-
-**Backend** (API):
-
-```bash
-npx nx serve backend
-```
-
-El servidor estará disponible en [http://localhost:3100](http://localhost:3100).
+La aplicación estará disponible en [http://localhost:4200](http://localhost:4200).
 
 ## 📝 Funcionalidades Principales
 
@@ -125,7 +103,7 @@ El servidor estará disponible en [http://localhost:3100](http://localhost:3100)
 
 - **Tasas de cambio**: Historial diario de tasas Bs/USD
 - **Precios configurables**: Breakpoints de precios por litros editables
-- **Métodos de pago**: Efectivo, Pago Móvil, Punto de Venta
+- **Métodos de pago**: Efectivo, Pago Móvil, Punto de Venta, Divisa
 - **Reportes**: Dashboard con estadísticas de ventas y egresos
 
 ### 📊 Egresos
@@ -145,53 +123,25 @@ El servidor estará disponible en [http://localhost:3100](http://localhost:3100)
 - Seguimiento de estado: Pendiente, Entregado
 - Control de fechas de pago y entrega
 
-## 🏗️ Arquitectura y Convenciones
+## 🏗️ Estructura del Proyecto
 
-### Principios de Diseño
-
-- **Arquitectura Hexagonal**: Separación clara entre dominio, aplicación e infraestructura
-- **DDD (Domain-Driven Design)**: Modelado basado en el dominio del negocio
-- **SOLID**: Principios de diseño orientado a objetos
-
-### Convenciones de Código
-
-#### Base de Datos (TypeORM)
-
-- **Tablas**: Nombres en inglés y plural (`clients`, `sales`, `rentals`)
-- **Entidades**: CamelCase (`Client`, `Sale`, `WasherRental`)
-- **Columnas en código**: CamelCase (`customerId`, `totalUsd`)
-- **Columnas en BD**: Snake_case (`customer_id`, `total_usd`)
-
-#### Estructura del Proyecto
-
-```
+```text
 apps/
-├── backend/          # API NestJS
-│   └── src/app/
-│       ├── clients/     # Módulo de clientes
-│       ├── sales/       # Módulo de ventas
-│       ├── rentals/     # Módulo de alquileres
-│       ├── expenses/    # Módulo de egresos
-│       ├── rates/       # Módulo de tasas de cambio
-│       ├── migration/   # Módulo de migración
-│       └── supabase/    # Servicio de Supabase
-│
 └── web-app/          # Frontend React
     └── src/
-        ├── pages/       # Páginas principales
         ├── components/  # Componentes UI
+        ├── data/        # Datos por defecto
+        ├── hooks/       # Custom hooks
+        ├── lib/         # Utilidades y configuración (Supabase)
+        ├── pages/       # Páginas principales de la app
+        ├── services/    # Servicios para lógica de negocio
         ├── store/       # Estado global (Zustand)
-        ├── types/       # Definiciones TypeScript
-        └── lib/         # Utilidades
+        └── types/       # Definiciones TypeScript
 
 libs/
 └── models/           # Librería compartida de modelos
 
 docs/                 # Documentación del proyecto
-├── prd-general.md
-├── prd-agua.md
-├── prd-lavadora.md
-└── tech.md
 ```
 
 ## 🔧 Comandos Útiles
@@ -199,58 +149,31 @@ docs/                 # Documentación del proyecto
 ### Desarrollo
 
 ```bash
-# Frontend
 npx nx serve web-app
-
-# Backend
-npx nx serve backend
-
-# Ambos en paralelo (si está configurado)
-npx nx run-many --target=serve --projects=web-app,backend
 ```
 
 ### Construcción (Build)
 
 ```bash
-# Frontend
 npx nx build web-app
-
-# Backend
-npx nx build backend
-
-# Todos los proyectos
-npx nx run-many --target=build --all
 ```
 
 ### Tests
 
 ```bash
-# Frontend
 npx nx test web-app
-
-# Backend
-npx nx test backend
-
-# Todos los tests
-npx nx run-many --target=test --all
 ```
 
 ### Linting
 
 ```bash
-# Lint de un proyecto específico
 npx nx lint web-app
-npx nx lint backend
-
-# Lint de todos los proyectos
-npx nx run-many --target=lint --all
 ```
 
 ### Type Checking
 
 ```bash
 npx nx typecheck web-app
-npx nx typecheck backend
 ```
 
 ## 📚 Documentación
@@ -275,26 +198,14 @@ npx nx build web-app
 # El directorio de salida es: dist/apps/web-app
 ```
 
-### Backend
-
-El backend puede desplegarse como servicio Node.js estándar:
-
-```bash
-# Build para producción
-npx nx build backend
-
-# El directorio de salida es: apps/backend/dist
-```
-
 ## 🤝 Contribución
 
 Al trabajar en este proyecto, ten en cuenta:
 
 1. Seguir las convenciones de código establecidas
-2. Mantener la arquitectura hexagonal cuando sea posible
-3. Aplicar principios DDD y SOLID
-4. Escribir tests para nuevas funcionalidades
-5. Documentar cambios importantes
+2. Mantener una arquitectura limpia y componentes modulares
+3. Escribir tests para nuevas funcionalidades
+4. Documentar cambios importantes
 
 ## 📄 Licencia
 

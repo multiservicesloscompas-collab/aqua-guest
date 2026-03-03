@@ -51,7 +51,10 @@ vitest.config.*.timestamp*
 .env*
 
 .agent
-.agents
 .cursor
 .kilocode
 .windsurf
+
+GEMINI.md
+
+testsprite_tests/*

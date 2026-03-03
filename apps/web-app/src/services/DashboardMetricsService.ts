@@ -48,7 +48,7 @@ export function filterByDateRange<T>(
   getDate: (item: T) => string
 ): T[] {
   return items.filter((item) => {
-    const d = getDate(item);
+    const d = getDate(item).substring(0, 10);
     return d >= range.start && d <= range.end;
   });
 }
@@ -79,7 +79,6 @@ function computeScope(
   paymentBalanceTransactions: readonly PaymentBalanceTransaction[]
 ): ScopeMetrics {
   const filteredSales = filterByDateRange(sales, range, (s) => s.date);
-  // Alquileres: solo considerar pagados y usar SIEMPRE datePaid (no date)
   const filteredRentals = filterByDateRange(
     rentals.filter((r) => r.isPaid && r.datePaid),
     range,
@@ -103,18 +102,14 @@ function computeScope(
     0
   );
   const prepaidBs = filteredPrepaid.reduce((sum, p) => sum + p.amountBs, 0);
-  
-  // Total income incluye ventas, alquileres y prepagados
-  // NOTA: Los equilibrios de pago NO se incluyen en el total porque son transferencias
-  // entre métodos, no ingresos/gastos nuevos. Solo afectan los totales por método.
+
   const totalIncomeBs = waterBs + rentalBs + prepaidBs;
   const expenseBs = filteredExpenses.reduce((sum, e) => sum + e.amount, 0);
-  
-  // Neto: ingresos - egresos
+
   const netBs = totalIncomeBs - expenseBs;
-  
-  // Contar todas las transacciones incluyendo equilibrios
-  const transactionsCount = filteredSales.length + filteredRentals.length + filteredBalanceTx.length;
+
+  const transactionsCount =
+    filteredSales.length + filteredRentals.length + filteredBalanceTx.length;
 
   const methodTotalsBs = emptyMethodTotals();
 

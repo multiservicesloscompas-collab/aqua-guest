@@ -8,7 +8,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useAppStore } from '@/store/useAppStore';
+import { useWaterSalesStore } from '@/store/useWaterSalesStore';
+import { useConfigStore } from '@/store/useConfigStore';
 import { Product } from '@/types';
 import { Plus, Minus, Droplet } from 'lucide-react';
 
@@ -39,7 +40,8 @@ function useProductDisplayPrice(
 }
 
 export function AddProductSheet({ open, onOpenChange }: AddProductSheetProps) {
-  const { products, addToCart, getPriceForLiters, config } = useAppStore();
+  const { addToCart } = useWaterSalesStore();
+  const { products, getPriceForLiters, config } = useConfigStore();
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [liters, setLiters] = useState(DEFAULT_DISPLAY_LITERS);

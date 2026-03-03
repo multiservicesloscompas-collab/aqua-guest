@@ -1,7 +1,9 @@
 import { DollarSign, ArrowLeft } from 'lucide-react';
-import { useAppStore } from '@/store/useAppStore';
+import { useWaterSalesStore } from '@/store/useWaterSalesStore';
+import { useRentalStore } from '@/store/useRentalStore';
 import { useMemo, useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
+import { useConfigStore } from '@/store/useConfigStore';
 
 interface HeaderProps {
   title: string;
@@ -11,7 +13,9 @@ interface HeaderProps {
 }
 
 export function Header({ title, subtitle, showBack, onBack }: HeaderProps) {
-  const { config, sales, rentals } = useAppStore();
+  const { sales } = useWaterSalesStore();
+  const { config } = useConfigStore();
+  const { rentals } = useRentalStore();
   // Estado para forzar actualización cuando cambia el día
   const [currentDate, setCurrentDate] = useState(() => {
     const now = new Date();
@@ -48,8 +52,8 @@ export function Header({ title, subtitle, showBack, onBack }: HeaderProps) {
 
   const todayEarningsUSD = useMemo(() => {
     // Ventas de agua del día
-    const todaySales = sales.filter((sale) => sale.date === currentDate);
-    const waterToday = todaySales.reduce((sum, sale) => sum + sale.totalBs, 0);
+    const todaySales = sales.filter((sale: import('@/types').Sale) => sale.date === currentDate);
+    const waterToday = todaySales.reduce((sum: number, sale: import('@/types').Sale) => sum + sale.totalBs, 0);
     
     // Alquileres del día (convertir USD a Bs y luego a USD para el total)
     const todayRentals = rentals.filter((rental) => rental.date === currentDate);
