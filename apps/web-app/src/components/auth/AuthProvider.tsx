@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useAuthStore } from '@/store/useAuthStore';
 import supabase from '@/lib/supabaseClient';
 
@@ -7,14 +7,32 @@ interface AuthProviderProps {
 }
 
 export const AuthProvider = ({ children }: AuthProviderProps) => {
-  const { checkSession, setUser, setSession, setLoading } = useAuthStore();
+  const { checkSession, setUser, setSession, setLoading, user } = useAuthStore();
+  const userRef = useRef(user);
 
   useEffect(() => {
-    checkSession();
+    userRef.current = user;
+  }, [user]);
+
+  useEffect(() => {
+    let isInitialCheckComplete = false;
+
+    checkSession().finally(() => {
+      isInitialCheckComplete = true;
+    });
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
+
+      if (event === 'INITIAL_SESSION' || !isInitialCheckComplete) {
+        return;
+      }
+
+      if (event === 'SIGNED_IN' && session?.user && userRef.current?.id === session.user.id) {
+        return;
+      }
+
       setLoading(true);
 
       if (event === 'SIGNED_IN' && session?.user) {
@@ -58,5 +76,5 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     };
   }, [checkSession, setUser, setSession, setLoading]);
 
-  return <>{children}</>;
+  return children;
 };

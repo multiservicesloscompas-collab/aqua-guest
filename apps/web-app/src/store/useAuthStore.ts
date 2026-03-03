@@ -2,10 +2,11 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { AuthState, UserProfile } from '@/types/auth';
 import supabase from '@/lib/supabaseClient';
+import { Session } from '@supabase/supabase-js';
 
 interface AuthStore extends AuthState {
   setUser: (user: UserProfile | null) => void;
-  setSession: (session: any | null) => void;
+  setSession: (session: Session | null) => void;
   setLoading: (isLoading: boolean) => void;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
@@ -17,7 +18,7 @@ export const useAuthStore = create<AuthStore>()(
     (set, get) => ({
       user: null,
       session: null,
-      isLoading: true,
+      isLoading: false,
       isAuthenticated: false,
 
       setUser: (user) =>
@@ -164,6 +165,11 @@ export const useAuthStore = create<AuthStore>()(
         session: state.session,
         isAuthenticated: state.isAuthenticated,
       }),
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          state.isLoading = false;
+        }
+      },
     }
   )
 );
