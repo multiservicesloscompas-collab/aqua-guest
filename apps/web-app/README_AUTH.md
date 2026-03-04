@@ -5,7 +5,9 @@
 Se ha implementado un sistema completo de autenticación con Supabase que incluye:
 
 - ✅ Login con email y contraseña
-- ✅ Tres roles de usuario: **admin**, **employee**, **client**
+- ✅ Tres roles de usuario: **admin** (super admin), **client** (admin de compañía), **employee** (empleado)
+- ✅ Sistema multi-tenant con compañías
+- ✅ Jerarquía de usuarios: admin crea clients, client crea employees
 - ✅ Rutas protegidas con control de acceso basado en roles
 - ✅ Persistencia de sesión
 - ✅ Componentes reutilizables (Login, Logout, UserInfo)
@@ -40,23 +42,72 @@ Documentación:
 
 ## Roles y Permisos
 
-### Admin
-- Acceso completo a todas las funcionalidades
-- Gestión de usuarios
-- Configuración del sistema
-- Todos los reportes y estadísticas
+### Admin (Super Administrador del Sistema)
 
-### Employee (Empleado)
-- Crear y gestionar ventas
-- Gestionar alquileres
-- Gestionar egresos
-- Ver reportes básicos
-- **NO** puede modificar configuración del sistema
+- **Alcance**: Todo el sistema (sin compañía asociada)
+- **Permisos**:
+  - ✅ Acceso completo a todas las funcionalidades
+  - ✅ Crear y gestionar compañías
+  - ✅ Crear usuarios tipo "client" (admins de compañía)
+  - ✅ Ver todas las compañías y sus datos
+  - ✅ Configuración global del sistema
+  - ✅ Todos los reportes y estadísticas
 
-### Client (Cliente)
-- Ver sus propios pedidos prepagados
-- Ver historial de alquileres (si aplica)
-- Acceso limitado solo a lectura
+### Client (Administrador de Compañía)
+
+- **Alcance**: Su compañía únicamente
+- **Permisos**:
+  - ✅ Acceso completo a su compañía
+  - ✅ Crear usuarios tipo "employee" (empleados de su compañía)
+  - ✅ Gestionar ventas, alquileres, egresos
+  - ✅ Ver todas las métricas y reportes de su compañía
+  - ✅ Configuración de su compañía
+- **Restricciones**:
+  - ❌ No puede ver otras compañías
+  - ❌ No puede crear otros clients o admins
+
+### Employee (Empleado de Compañía)
+
+- **Alcance**: Su compañía únicamente
+- **Permisos**:
+  - ✅ Crear y gestionar ventas
+  - ✅ Gestionar alquileres
+  - ✅ Gestionar egresos
+  - ✅ Ver reportes básicos
+- **Restricciones**:
+  - ❌ No puede ver métricas completas
+  - ❌ No puede modificar configuración del sistema
+  - ❌ No puede crear usuarios
+
+## Sistema de Compañías (Multi-tenant)
+
+El sistema implementa una arquitectura multi-tenant donde:
+
+1. **Admin** (super admin) no está asociado a ninguna compañía
+2. **Client** y **Employee** DEBEN estar asociados a una compañía
+3. Cada compañía tiene sus propios datos aislados
+4. Los usuarios solo ven datos de su compañía (excepto admin que ve todo)
+
+### Jerarquía de Creación de Usuarios
+
+```
+Admin (super admin)
+    └── Crea Compañías
+    └── Crea Clients (admins de compañía)
+        └── Client crea Employees (empleados de su compañía)
+```
+
+### Tabla Companies
+
+Campos:
+
+- `id`: UUID (primary key)
+- `name`: Nombre de la compañía
+- `rif`: RIF (único)
+- `address`: Dirección
+- `phone`: Teléfono
+- `is_active`: Estado activo/inactivo
+- `created_at`, `updated_at`: Timestamps
 
 ## Pasos de Implementación
 
@@ -83,6 +134,7 @@ VITE_SUPABASE_ANON_KEY=tu_anon_key
 ### 3. Instalar Dependencias (si es necesario)
 
 El proyecto ya usa:
+
 - `@supabase/supabase-js`
 - `zustand`
 - `react-router-dom`
@@ -90,6 +142,7 @@ El proyecto ya usa:
 ### 4. Probar el Sistema
 
 1. Inicia el servidor de desarrollo:
+
    ```bash
    npx nx serve web-app
    ```
@@ -166,10 +219,8 @@ function MyComponent() {
 
   return (
     <div>
-      {user?.role === 'admin' && (
-        <button>Configuración Avanzada</button>
-      )}
-      
+      {user?.role === 'admin' && <button>Configuración Avanzada</button>}
+
       {(user?.role === 'admin' || user?.role === 'employee') && (
         <button>Crear Venta</button>
       )}
@@ -201,11 +252,11 @@ function MyComponent() {
 
 Crea estos usuarios en Supabase:
 
-| Email | Rol | Password |
-|-------|-----|----------|
-| admin@aquagest.com | admin | (tu password) |
+| Email                 | Rol      | Password      |
+| --------------------- | -------- | ------------- |
+| admin@aquagest.com    | admin    | (tu password) |
 | empleado@aquagest.com | employee | (tu password) |
-| cliente@aquagest.com | client | (tu password) |
+| cliente@aquagest.com  | client   | (tu password) |
 
 ### Escenarios de Prueba
 
@@ -218,13 +269,17 @@ Crea estos usuarios en Supabase:
 
 ## Próximos Pasos Recomendados
 
-1. **Proteger rutas existentes** según roles apropiados
-2. **Agregar RLS a tablas existentes** (sales, expenses, rentals, etc.)
-3. **Implementar registro de usuarios** (si es necesario)
-4. **Agregar recuperación de contraseña**
-5. **Implementar cambio de contraseña**
-6. **Agregar perfil de usuario editable**
-7. **Logs de auditoría** para acciones importantes
+1. **Agregar `company_id` a tablas existentes** (sales, expenses, rentals, washing_machines, etc.)
+2. **Actualizar RLS en todas las tablas** para filtrar por compañía
+3. **Crear página de gestión de compañías** (solo para admin)
+4. **Crear página de gestión de usuarios** (para admin y client)
+5. **Actualizar stores** para incluir `company_id` al crear registros
+6. **Proteger rutas existentes** según roles apropiados
+7. **Implementar registro de usuarios** con asignación de compañía
+8. **Agregar recuperación de contraseña**
+9. **Implementar cambio de contraseña**
+10. **Agregar perfil de usuario editable**
+11. **Logs de auditoría** para acciones importantes
 
 ## Troubleshooting
 
@@ -280,6 +335,7 @@ Para más información sobre la implementación, revisa:
 ---
 
 **Implementado siguiendo las mejores prácticas de:**
+
 - Arquitectura hexagonal
 - Separación de responsabilidades (SRP)
 - TypeScript strict mode

@@ -50,7 +50,7 @@ export const useAuthStore = create<AuthStore>()(
 
           if (data.user) {
             const { data: profileData, error: profileError } = await supabase
-              .from('user_profiles')
+              .from('user_profiles_with_company')
               .select('*')
               .eq('id', data.user.id)
               .single();
@@ -62,6 +62,18 @@ export const useAuthStore = create<AuthStore>()(
               email: profileData.email,
               role: profileData.role,
               fullName: profileData.full_name,
+              companyId: profileData.company_id,
+              company: profileData.company_id ? {
+                id: profileData.company_id,
+                name: profileData.company_name,
+                rif: profileData.company_rif,
+                address: profileData.address,
+                phone: profileData.phone,
+                isActive: profileData.company_is_active,
+                createdAt: profileData.created_at,
+                updatedAt: profileData.updated_at,
+              } : undefined,
+              createdBy: profileData.created_by,
               createdAt: profileData.created_at,
               updatedAt: profileData.updated_at,
             };
@@ -109,7 +121,7 @@ export const useAuthStore = create<AuthStore>()(
 
           if (session?.user) {
             const { data: profileData, error: profileError } = await supabase
-              .from('user_profiles')
+              .from('user_profiles_with_company')
               .select('*')
               .eq('id', session.user.id)
               .single();
@@ -129,6 +141,18 @@ export const useAuthStore = create<AuthStore>()(
               email: profileData.email,
               role: profileData.role,
               fullName: profileData.full_name,
+              companyId: profileData.company_id,
+              company: profileData.company_id ? {
+                id: profileData.company_id,
+                name: profileData.company_name,
+                rif: profileData.company_rif,
+                address: profileData.address,
+                phone: profileData.phone,
+                isActive: profileData.company_is_active,
+                createdAt: profileData.created_at,
+                updatedAt: profileData.updated_at,
+              } : undefined,
+              createdBy: profileData.created_by,
               createdAt: profileData.created_at,
               updatedAt: profileData.updated_at,
             };
