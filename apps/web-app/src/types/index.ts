@@ -1,3 +1,5 @@
+import type { PaymentSplit } from './paymentSplits';
+
 export interface Product {
   id: string;
   name: string;
@@ -38,6 +40,7 @@ export interface Sale {
   date: string; // ISO date string
   items: CartItem[];
   paymentMethod: PaymentMethod;
+  paymentSplits?: PaymentSplit[];
   totalBs: number;
   totalUsd: number;
   exchangeRate: number; // Tasa al momento de la venta
@@ -149,6 +152,7 @@ export interface WasherRental {
   deliveryFee: number; // $0 - $5
   totalUsd: number; // Precio jornada + delivery
   paymentMethod: PaymentMethod; // Método de pago
+  paymentSplits?: PaymentSplit[];
   status: RentalStatus;
   isPaid: boolean;
   datePaid?: string; // Fecha en que se realizó el pago (YYYY-MM-DD)

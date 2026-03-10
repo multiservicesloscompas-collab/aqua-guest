@@ -3,6 +3,11 @@ import { persist } from 'zustand/middleware';
 import { PrepaidOrder, PrepaidStatus } from '@/types';
 import supabase from '@/lib/supabaseClient';
 import { getVenezuelaDate } from '@/services/DateService';
+import {
+  enqueueOfflinePrepaidCreate,
+  enqueueOfflinePrepaidDelete,
+  enqueueOfflinePrepaidUpdate,
+} from '@/offline/enqueue/prepaidEnqueue';
 
 interface PrepaidState {
   prepaidOrders: PrepaidOrder[];
@@ -31,6 +36,7 @@ export const usePrepaidStore = create<PrepaidState>()(
 
       addPrepaidOrder: async (order) => {
         try {
+          const timestamp = new Date().toISOString();
           const payload = {
             customer_name: order.customerName,
             customer_phone: order.customerPhone,
@@ -44,6 +50,20 @@ export const usePrepaidStore = create<PrepaidState>()(
             date_delivered: order.dateDelivered,
             notes: order.notes,
           };
+
+          if (!window.navigator.onLine) {
+            const offlineOrder = enqueueOfflinePrepaidCreate({
+              payload,
+              order,
+              createdAt: timestamp,
+              updatedAt: timestamp,
+            });
+
+            set((state) => ({
+              prepaidOrders: [...state.prepaidOrders, offlineOrder],
+            }));
+            return offlineOrder;
+          }
 
           const { data, error } = await supabase
             .from('prepaid_orders')
@@ -82,6 +102,7 @@ export const usePrepaidStore = create<PrepaidState>()(
 
       updatePrepaidOrder: async (id, updates) => {
         try {
+          const updatedAt = new Date().toISOString();
           const payload: any = {};
           if (updates.customerName !== undefined)
             payload.customer_name = updates.customerName;
@@ -102,7 +123,18 @@ export const usePrepaidStore = create<PrepaidState>()(
           if (updates.dateDelivered !== undefined)
             payload.date_delivered = updates.dateDelivered;
           if (updates.notes !== undefined) payload.notes = updates.notes;
-          payload.updated_at = new Date().toISOString();
+          payload.updated_at = updatedAt;
+
+          if (!window.navigator.onLine) {
+            enqueueOfflinePrepaidUpdate({ id, payload });
+
+            set((state) => ({
+              prepaidOrders: state.prepaidOrders.map((order) =>
+                order.id === id ? { ...order, ...updates, updatedAt } : order
+              ),
+            }));
+            return;
+          }
 
           const { error } = await supabase
             .from('prepaid_orders')
@@ -113,9 +145,7 @@ export const usePrepaidStore = create<PrepaidState>()(
 
           set((state) => ({
             prepaidOrders: state.prepaidOrders.map((order) =>
-              order.id === id
-                ? { ...order, ...updates, updatedAt: new Date().toISOString() }
-                : order
+              order.id === id ? { ...order, ...updates, updatedAt } : order
             ),
           }));
         } catch (err) {
@@ -126,6 +156,17 @@ export const usePrepaidStore = create<PrepaidState>()(
 
       deletePrepaidOrder: async (id) => {
         try {
+          if (!window.navigator.onLine) {
+            enqueueOfflinePrepaidDelete(id);
+
+            set((state) => ({
+              prepaidOrders: state.prepaidOrders.filter(
+                (order) => order.id !== id
+              ),
+            }));
+            return;
+          }
+
           const { error } = await supabase
             .from('prepaid_orders')
             .delete()
@@ -148,6 +189,32 @@ export const usePrepaidStore = create<PrepaidState>()(
         const dateDelivered = getVenezuelaDate();
         const updatedAt = new Date().toISOString();
         try {
+          if (!window.navigator.onLine) {
+            enqueueOfflinePrepaidUpdate({
+              id,
+              payload: {
+                status: 'entregado',
+                date_delivered: dateDelivered,
+                updated_at: updatedAt,
+              },
+              actionSource: 'prepaid/markPrepaidAsDelivered',
+            });
+
+            set((state) => ({
+              prepaidOrders: state.prepaidOrders.map((order) =>
+                order.id === id
+                  ? {
+                      ...order,
+                      status: 'entregado' as PrepaidStatus,
+                      dateDelivered,
+                      updatedAt,
+                    }
+                  : order
+              ),
+            }));
+            return;
+          }
+
           const { error } = await supabase
             .from('prepaid_orders')
             .update({

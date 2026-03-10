@@ -3,6 +3,7 @@ import { useAppStore } from '@/store/useAppStore';
 import { useMachineStore } from '@/store/useMachineStore';
 import { BottomNav } from '@/components/layout/BottomNav';
 import { MenuSheet } from '@/components/layout/MenuSheet';
+import { TabletNavigationRail } from '@/components/layout/TabletNavigationRail';
 import { DashboardPage } from '@/pages/DashboardPage';
 import { WaterSalesPage } from '@/pages/WaterSalesPage';
 import { RentalsPage } from '@/pages/RentalsPage';
@@ -20,6 +21,9 @@ import { TransactionsSummaryPage } from '@/pages/TransactionsSummaryPage';
 import { PaymentMethodDetailPage } from '@/pages/PaymentMethodDetailPage';
 import { AppRoute, PaymentMethod } from '@/types';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
+import { useViewportMode } from '@/hooks/responsive/useViewportMode';
+import { TABLET_SHELL_TOKENS } from '@/lib/responsive/layoutTokens';
+import { cn } from '@/lib/utils';
 import { RefreshCw } from 'lucide-react';
 
 const Index = () => {
@@ -30,6 +34,8 @@ const Index = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [lastLoaded, setLastLoaded] = useState<number>(Date.now());
   const isFirstLoad = useRef(true);
+  const { viewportMode, isMobileViewport, isTabletViewport } =
+    useViewportMode();
 
   const handlePaymentMethodClick = (method: PaymentMethod) => {
     setSelectedPaymentMethod(method);
@@ -133,18 +139,41 @@ const Index = () => {
         </div>
       )}
 
-      {renderPage()}
-      <BottomNav
-        currentRoute={currentRoute}
-        onNavigate={setCurrentRoute}
-        onOpenMenu={() => setMenuOpen(true)}
-      />
-      <MenuSheet
-        open={menuOpen}
-        onOpenChange={setMenuOpen}
-        currentRoute={currentRoute}
-        onNavigate={setCurrentRoute}
-      />
+      <div
+        data-testid="app-shell-layout"
+        data-viewport-mode={viewportMode}
+        className={cn(
+          'min-h-screen',
+          isTabletViewport && 'grid',
+          isTabletViewport && TABLET_SHELL_TOKENS[viewportMode]
+        )}
+      >
+        <TabletNavigationRail
+          currentRoute={currentRoute}
+          onNavigate={setCurrentRoute}
+        />
+
+        <div className={cn('min-w-0', isMobileViewport && 'pb-24')}>
+          {renderPage()}
+        </div>
+      </div>
+
+      {/* BottomNav and MenuSheet: mobile only */}
+      {isMobileViewport && (
+        <>
+          <BottomNav
+            currentRoute={currentRoute}
+            onNavigate={setCurrentRoute}
+            onOpenMenu={() => setMenuOpen(true)}
+          />
+          <MenuSheet
+            open={menuOpen}
+            onOpenChange={setMenuOpen}
+            currentRoute={currentRoute}
+            onNavigate={setCurrentRoute}
+          />
+        </>
+      )}
     </div>
   );
 };

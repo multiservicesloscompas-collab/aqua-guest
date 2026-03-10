@@ -1,6 +1,11 @@
 import { supabase } from '@/lib/supabaseClient';
 import { CartItem, PaymentMethod, Sale } from '@/types';
 import { getSafeTimestamp, normalizeTimestamp } from '@/lib/date-utils';
+import {
+  PAYMENT_SPLIT_SCHEMA,
+  type PaymentSplitRow,
+} from '@/services/payments/paymentSplitSchemaContract';
+import { salePaymentSplitAdapter } from '@/services/payments/paymentSplitSupabaseAdapters';
 
 interface SalesRow {
   id: string;
@@ -21,27 +26,37 @@ interface SalesRow {
   createdAt?: string | null;
   updated_at?: string | null;
   updatedAt?: string | null;
+  sale_payment_splits?: PaymentSplitRow[] | null;
 }
 
-const toSale = (row: SalesRow, dateOverride?: string): Sale => ({
-  id: row.id,
-  dailyNumber: row.daily_number ?? row.dailyNumber ?? 0,
-  date: dateOverride ?? row.date,
-  items: row.items ?? [],
-  paymentMethod: row.payment_method ?? row.paymentMethod ?? 'efectivo',
-  totalBs: Number(row.total_bs ?? row.totalBs ?? 0),
-  totalUsd: Number(row.total_usd ?? row.totalUsd ?? 0),
-  exchangeRate: Number(row.exchange_rate ?? row.exchangeRate ?? 0),
-  notes: row.notes ?? undefined,
-  createdAt: normalizeTimestamp(
-    row.created_at ?? row.createdAt ?? undefined,
-    getSafeTimestamp()
-  ),
-  updatedAt: normalizeTimestamp(
-    row.updated_at ?? row.updatedAt ?? undefined,
-    getSafeTimestamp()
-  ),
-});
+const toSale = (row: SalesRow, dateOverride?: string): Sale => {
+  const splits = salePaymentSplitAdapter.fromRows(
+    row.sale_payment_splits ?? []
+  );
+
+  return {
+    id: row.id,
+    dailyNumber: row.daily_number ?? row.dailyNumber ?? 0,
+    date: dateOverride ?? row.date,
+    items: row.items ?? [],
+    paymentMethod: row.payment_method ?? row.paymentMethod ?? 'efectivo',
+    paymentSplits: splits.length ? splits : undefined,
+    totalBs: Number(row.total_bs ?? row.totalBs ?? 0),
+    totalUsd: Number(row.total_usd ?? row.totalUsd ?? 0),
+    exchangeRate: Number(row.exchange_rate ?? row.exchangeRate ?? 0),
+    notes: row.notes ?? undefined,
+    createdAt: normalizeTimestamp(
+      row.created_at ?? row.createdAt ?? undefined,
+      getSafeTimestamp()
+    ),
+    updatedAt: normalizeTimestamp(
+      row.updated_at ?? row.updatedAt ?? undefined,
+      getSafeTimestamp()
+    ),
+  };
+};
+
+const SALES_SELECT = `*, ${PAYMENT_SPLIT_SCHEMA.salesSplitsTable}(payment_method, amount_bs, amount_usd, exchange_rate_used)`;
 
 export interface ISalesDataService {
   loadSalesByDate(date: string): Promise<Sale[]>;
@@ -106,7 +121,7 @@ export class SalesDataService implements ISalesDataService {
 
     const { data, error } = await supabase
       .from('sales')
-      .select('*')
+      .select(SALES_SELECT)
       .eq('date', date)
       .order('created_at', { ascending: true });
 
@@ -115,7 +130,9 @@ export class SalesDataService implements ISalesDataService {
       throw error;
     }
 
-    const sales: Sale[] = (data ?? []).map((row) => toSale(row as SalesRow));
+    const sales: Sale[] = (data ?? []).map((row) =>
+      toSale(row as unknown as SalesRow)
+    );
 
     // 4. Guardar en caché
     this.salesCache.set(date, sales);
@@ -157,7 +174,7 @@ export class SalesDataService implements ISalesDataService {
     const promises = datesToLoad.map(async (date) => {
       const { data, error } = await supabase
         .from('sales')
-        .select('*')
+        .select(SALES_SELECT)
         .eq('date', date)
         .order('created_at', { ascending: true });
 
@@ -166,7 +183,9 @@ export class SalesDataService implements ISalesDataService {
         return { date, sales: [] };
       }
 
-      const sales: Sale[] = (data ?? []).map((row) => toSale(row as SalesRow));
+      const sales: Sale[] = (data ?? []).map((row) =>
+        toSale(row as unknown as SalesRow)
+      );
 
       this.salesCache.set(date, sales);
 
@@ -214,7 +233,7 @@ export class SalesDataService implements ISalesDataService {
 
     const { data, error } = await supabase
       .from('sales')
-      .select('*')
+      .select(SALES_SELECT)
       .gte('date', startDate)
       .lte('date', endDate)
       .order('created_at', { ascending: true });
@@ -233,7 +252,7 @@ export class SalesDataService implements ISalesDataService {
     }
 
     (data ?? []).forEach((row) => {
-      const saleRow = row as SalesRow;
+      const saleRow = row as unknown as SalesRow;
       const dateKey = saleRow.date.substring(0, 10);
 
       if (grouped[dateKey]) {

@@ -14,6 +14,8 @@ import { RentalDeliveryFeeSelector } from './RentalDeliveryFeeSelector';
 import { RentalCustomerSection } from './RentalCustomerSection';
 import { RentalNotesSection } from './RentalNotesSection';
 import { RentalSheetFooter } from './RentalSheetFooter';
+import { RentalMixedPaymentFields } from './RentalMixedPaymentFields';
+import { MixedPaymentToggleButton } from '@/components/payments/MixedPaymentToggleButton';
 
 interface RentalSheetProps {
   open: boolean;
@@ -25,7 +27,12 @@ export function RentalSheet({ open, onOpenChange }: RentalSheetProps) {
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="h-[90vh] rounded-t-3xl">
+      <SheetContent
+        side="bottom"
+        tabletSide="right"
+        tabletClassName="sm:max-w-[480px]"
+        className="h-[90vh] rounded-t-3xl sm:h-full sm:rounded-none"
+      >
         <SheetHeader className="pb-4">
           <SheetTitle className="flex items-center gap-2 text-lg">
             <WashingMachine className="w-5 h-5 text-primary" />
@@ -51,6 +58,25 @@ export function RentalSheet({ open, onOpenChange }: RentalSheetProps) {
             selectedMethod={viewModel.selectedPaymentMethod}
             onSelect={viewModel.onSelectPaymentMethod}
           />
+
+          {viewModel.isMixedPaymentEnabled && (
+            <>
+              <MixedPaymentToggleButton
+                isMixedPayment={viewModel.isMixedPayment}
+                onToggle={viewModel.onToggleMixedPayment}
+              />
+              {viewModel.isMixedPayment && (
+                <RentalMixedPaymentFields
+                  amount={viewModel.split1Amount}
+                  secondaryMethod={viewModel.split2Method}
+                  selectedPaymentMethod={viewModel.selectedPaymentMethod}
+                  onAmountChange={viewModel.onChangeSplit1Amount}
+                  onSecondaryMethodChange={viewModel.onSelectSplit2Method}
+                  totalBs={viewModel.totalBs}
+                />
+              )}
+            </>
+          )}
 
           <RentalDeliveryTimeSelector
             deliveryTime={viewModel.deliveryTime}

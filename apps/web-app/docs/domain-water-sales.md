@@ -11,6 +11,8 @@ Manage the sale of drinking water (refills by liters), new bottles, and caps. Su
 - **`Product`**: `id`, `name`, `defaultPrice` (Bs), `requiresLiters`, `minLiters`, `maxLiters`, `icon`.
 - **`CartItem`**: `id`, `productId`, `productName`, `quantity`, `liters` (optional), `unitPrice` (Bs), `subtotal`.
 - **`Sale`**: `id`, `dailyNumber`, `date` (YYYY-MM-DD), `items`, `paymentMethod`, `totalBs`, `totalUsd`, `exchangeRate`, `notes`, `createdAt`, `updatedAt`.
+- **Compatibilidad pago mixto (Fase base):** `Sale` soporta `paymentSplits?: PaymentSplit[]` como campo opcional. Durante transición, `paymentMethod` se mantiene como fallback/compatibilidad para consumidores legacy.
+- **Write-path pago mixto (Fase 2):** en creación/edición se construyen splits normalizados (método principal/secundario), se validan contra `totalBs/totalUsd` y se persisten vía adapters a `sale_payment_splits`, manteniendo `payment_method` derivado para compatibilidad.
 - **`PaymentMethod`**: `'efectivo' | 'pago_movil' | 'punto_venta' | 'divisa'`.
 
 ### Zustand Store (`src/store/useAppStore.ts`)
@@ -26,7 +28,36 @@ Manage the sale of drinking water (refills by liters), new bottles, and caps. Su
 - **`SalesList` (`src/components/ventas/SalesList.tsx`)**: Renders individual sale cards with edit/delete actions.
 - **`AddProductSheet` (`src/components/ventas/AddProductSheet.tsx`)**: Bottom sheet to select a product, set quantity/liters, and add to cart.
 - **`CartSheet` (`src/components/ventas/CartSheet.tsx`)**: Bottom sheet showing cart items, total calculation (Bs and USD), payment method selection, and checkout button.
+- **UX pago mixto en CartSheet (actual):** siempre disponible sin depender de toggles en Config. Flujo: seleccionar método principal → activar CTA `Pago mixto` de alto énfasis (objetivo táctil amplio, icono coherente de billetera y texto de apoyo) → elegir método secundario + ingresar monto del split editable. El resumen inferior muestra ambos montos (`Monto método principal` y `Monto método secundario`) con la misma jerarquía visual/microcopy usada en Alquiler para mantener consistencia entre módulos.
 - **`WaterMetricsPage` (`src/pages/WaterMetricsPage.tsx`)**: Opens a detailed analytical view of water sales, consolidating statistics like total units sold, total liters dispensed, average sales, and overall total revenue generated.
+
+## 📱 Responsive Core (Phase 3)
+
+- `WaterSalesPage` adopta layout tablet con primitivas responsive (`AppPageContainer` + `TabletSplitLayout`) de forma opt-in.
+- En tablet:
+  - Flujo vertical en una sola columna: `DateSelector` + card de `PaymentFilter` + barra `Ver carrito` + `SalesList`.
+  - El carrito deja de renderizarse como bloque lateral fijo y pasa a jerarquía central entre filtros y registros.
+- Guard rail mobile estricto:
+  - El FAB de carrito flotante (`fixed bottom-24 left-4`) sigue activo **solo** en `<768px`.
+  - No se introducen columnas ni cambios estructurales en mobile.
+
+## 🛡️ Hardening de patrones tablet (Phase 5)
+
+- `WaterSalesPage` consolida clases de layout tablet en tokens compartidos (`src/lib/responsive/tabletLayoutPatterns.ts`) para mantener patrón estable de split/sticky entre módulos.
+- Se mantiene inmutable el flujo mobile `<768px` (filtros y listado en stack + FAB/carrito flotante) sin cambios de jerarquía o navegación.
+- Auditoría exhaustiva trazable de jerarquía tablet/mobile documentada en `apps/web-app/docs/audits/water-sales-tablet-layout-audit.md` (matriz de evidencia código + pruebas + docs y clasificación de gaps).
+
+## 🔄 Offline Sync Orchestration (hardening)
+
+- El procesamiento de cola offline se controla por feature flags (`src/offline/featureFlags.ts`) con modo resuelto de procesador:
+  - `global`: usa orquestador global autoritativo (`src/offline/globalOrchestrator.ts`).
+  - `legacy`: mantiene ruta previa para rollout backward-safe.
+  - `disabled`: kill switch total (no procesa cola).
+- Guardas anti-duplicado: el path global deduplica por `idempotency.key` y evita procesar acciones en vuelo/dependencias no satisfechas.
+- Reconciliación de relaciones hija: durante replay global, si una venta offline fue creada con `tempId`, el orquestador sustituye ese `tempId` por el ID real de Supabase antes de insertar `sale_payment_splits`.
+- Rollout seguro por defecto: si `GLOBAL_OFFLINE_ORCHESTRATOR` está apagado, la app conserva comportamiento legado salvo que `LEGACY_SYNC_MANAGER_DISABLED` y/o `OFFLINE_QUEUE_PROCESSING_ENABLED` lo bloqueen explícitamente.
+- Paridad CRUD offline en ventas: además de `completeSale`, los flujos `updateSale` y `deleteSale` encolan mutaciones `UPDATE/DELETE` para `sales` y reemplazo/eliminación de `sale_payment_splits`, manteniendo estado local optimista y replay consistente al reconectar.
+- Política explícita para catálogo `products`: se mantiene **read-sync-only** (sin cola offline de C/U/D desde cliente) para evitar rutas de mutación no soportadas en el scope actual.
 
 ## ⚙️ Agent Implementation Rules (CRITICAL)
 

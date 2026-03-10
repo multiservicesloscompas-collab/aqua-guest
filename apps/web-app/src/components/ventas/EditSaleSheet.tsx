@@ -17,10 +17,14 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Sale, PaymentMethod, PaymentMethodLabels, CartItem } from '@/types';
+import type { PaymentSplit } from '@/types/paymentSplits';
 import { useWaterSalesStore } from '@/store/useWaterSalesStore';
 import { useConfigStore } from '@/store/useConfigStore';
 import { Pencil, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { normalizeAndValidatePaymentSplits } from '@/services/payments/paymentSplitValidation';
+import { buildDualPaymentSplits } from '@/services/payments/paymentSplitWritePath';
+import { SaleMixedPaymentFields } from './SaleMixedPaymentFields';
 
 interface EditSaleSheetProps {
   sale: Sale | null;
@@ -35,9 +39,14 @@ export function EditSaleSheet({
 }: EditSaleSheetProps) {
   const { updateSale } = useWaterSalesStore();
   const { config } = useConfigStore();
+  const isMixedPaymentEnabled = useConfigStore((state) =>
+    state.isMixedPaymentEnabled('water')
+  );
 
   const [paymentMethod, setPaymentMethod] =
     useState<PaymentMethod>('pago_movil');
+  const [split2Method, setSplit2Method] = useState<PaymentMethod>('efectivo');
+  const [split1Amount, setSplit1Amount] = useState('');
   const [notes, setNotes] = useState('');
   const [totalBs, setTotalBs] = useState('');
   const [isSaving, setIsSaving] = useState(false);
@@ -50,11 +59,25 @@ export function EditSaleSheet({
   useEffect(() => {
     if (sale) {
       setPaymentMethod(sale.paymentMethod);
+      const splitMain = sale.paymentSplits?.find(
+        (split) => split.method === sale.paymentMethod
+      );
+      const splitSecondary = sale.paymentSplits?.find(
+        (split) => split.method !== sale.paymentMethod
+      );
+      setSplit1Amount(splitMain ? String(splitMain.amountBs) : '');
+      setSplit2Method(splitSecondary?.method ?? 'efectivo');
       setNotes(sale.notes || '');
       setTotalBs(sale.totalBs.toString());
       setItems(sale.items || []);
     }
   }, [sale]);
+
+  useEffect(() => {
+    if (split2Method === paymentMethod) {
+      setSplit2Method(paymentMethod === 'efectivo' ? 'pago_movil' : 'efectivo');
+    }
+  }, [paymentMethod, split2Method]);
 
   const handleQuantityChange = (itemId: string, newQuantity: string) => {
     // Allow empty string to let user clear the input
@@ -102,11 +125,35 @@ export function EditSaleSheet({
 
     setIsSaving(true);
     try {
+      const totalUsd = newTotalBs / config.exchangeRate;
+      const paymentSplits: PaymentSplit[] = buildDualPaymentSplits({
+        enableMixedPayment: isMixedPaymentEnabled,
+        primaryMethod: paymentMethod,
+        secondaryMethod: split2Method,
+        amountInput: split1Amount,
+        amountInputMode: 'primary',
+        totalBs: newTotalBs,
+        totalUsd,
+        exchangeRate: config.exchangeRate,
+      });
+
+      const splitValidation = normalizeAndValidatePaymentSplits({
+        splits: paymentSplits,
+        totalBs: newTotalBs,
+        totalUsd,
+      });
+
+      if (!splitValidation.validation.ok) {
+        toast.error(splitValidation.validation.errors[0]);
+        return;
+      }
+
       await updateSale(sale.id, {
         paymentMethod,
         notes: notes.trim() || undefined,
         totalBs: newTotalBs,
-        totalUsd: newTotalBs / config.exchangeRate,
+        totalUsd,
+        paymentSplits: splitValidation.splits,
         // Map back to strict CartItem type (ensure no empty strings)
         items: items.map((i) => ({
           ...i,
@@ -128,7 +175,12 @@ export function EditSaleSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="h-auto rounded-t-2xl px-4 pb-8">
+      <SheetContent
+        side="bottom"
+        tabletSide="right"
+        tabletClassName="sm:max-w-[440px]"
+        className="h-auto rounded-t-2xl px-4 pb-8 sm:h-full sm:rounded-none overflow-y-auto"
+      >
         <SheetHeader className="pb-4">
           <SheetTitle className="flex items-center gap-2 text-lg">
             <Pencil className="w-5 h-5 text-primary" />
@@ -158,14 +210,27 @@ export function EditSaleSheet({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {Object.entries(PaymentMethodLabels).map(([key, label]) => (
-                  <SelectItem key={key} value={key}>
+                {Object.entries(PaymentMethodLabels).map(([method, label]) => (
+                  <SelectItem key={method} value={method}>
                     {label}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
+
+          {isMixedPaymentEnabled && (
+            <SaleMixedPaymentFields
+              primaryMethod={paymentMethod}
+              secondaryMethod={split2Method}
+              amountInput={split1Amount}
+              totalBs={Number(totalBs) || 0}
+              variant="select"
+              amountInputMode="primary"
+              onAmountInputChange={setSplit1Amount}
+              onSecondaryMethodChange={setSplit2Method}
+            />
+          )}
 
           <div className="space-y-2">
             <Label className="text-sm font-semibold">Notas (opcional)</Label>

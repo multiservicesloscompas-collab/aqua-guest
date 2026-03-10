@@ -6,9 +6,81 @@ import {
   RentalStatus,
   WasherRental,
 } from '@/types';
+import type { PaymentSplit } from '@/types/paymentSplits';
 import supabase from '@/lib/supabaseClient';
 import { rentalsDataService } from '@/services/RentalsDataService';
+import {
+  PAYMENT_SPLIT_SCHEMA,
+  type PaymentSplitRow,
+  type RentalPaymentSplitInsertRow,
+} from '@/services/payments/paymentSplitSchemaContract';
+import { rentalPaymentSplitAdapter } from '@/services/payments/paymentSplitSupabaseAdapters';
+import { preparePaymentWritePayload } from '@/services/payments/paymentSplitWritePath';
+import {
+  enqueueOfflineRental,
+  enqueueOfflineRentalDelete,
+  enqueueOfflineRentalPaymentSplitsDelete,
+  enqueueOfflineRentalPaymentSplitsReplace,
+  enqueueOfflineRentalUpdate,
+} from '@/offline/enqueue/rentalsEnqueue';
 import { useCustomerStore } from './useCustomerStore';
+
+function buildRentalWriteContext(
+  input: {
+    paymentMethod: PaymentMethod;
+    paymentSplits?: PaymentSplit[];
+    totalUsd: number;
+  },
+  fallbackExchangeRate = 1
+) {
+  const exchangeRateUsed =
+    input.paymentSplits?.find((split) => split.exchangeRateUsed)
+      ?.exchangeRateUsed ?? fallbackExchangeRate;
+  const totalBs = input.totalUsd * exchangeRateUsed;
+
+  return preparePaymentWritePayload({
+    paymentMethod: input.paymentMethod,
+    paymentSplits: input.paymentSplits,
+    totalBs,
+    totalUsd: input.totalUsd,
+    exchangeRate: exchangeRateUsed,
+  });
+}
+
+async function replaceRentalSplits(
+  rentalId: string,
+  splits: PaymentSplit[]
+): Promise<void> {
+  const { error: deleteSplitsError } = await supabase
+    .from(PAYMENT_SPLIT_SCHEMA.rentalsSplitsTable)
+    .delete()
+    .eq(PAYMENT_SPLIT_SCHEMA.columns.rentalParentId, rentalId);
+  if (deleteSplitsError) throw deleteSplitsError;
+
+  const splitRows = rentalPaymentSplitAdapter.toInsertRows(
+    rentalId,
+    splits
+  ) as RentalPaymentSplitInsertRow[];
+
+  if (!splitRows.length) return;
+
+  const { error: splitInsertError } = await supabase
+    .from(PAYMENT_SPLIT_SCHEMA.rentalsSplitsTable)
+    .insert(splitRows);
+  if (splitInsertError) throw splitInsertError;
+}
+
+async function fetchRentalSplits(rentalId: string): Promise<PaymentSplit[]> {
+  const { data: splitData, error: splitSelectError } = await supabase
+    .from(PAYMENT_SPLIT_SCHEMA.rentalsSplitsTable)
+    .select('payment_method, amount_bs, amount_usd, exchange_rate_used')
+    .eq(PAYMENT_SPLIT_SCHEMA.columns.rentalParentId, rentalId);
+  if (splitSelectError) throw splitSelectError;
+
+  return rentalPaymentSplitAdapter.fromRows(
+    (splitData ?? []) as PaymentSplitRow[]
+  );
+}
 
 interface RentalRow {
   id: string;
@@ -22,6 +94,7 @@ interface RentalRow {
   delivery_fee: number;
   total_usd: number;
   payment_method: PaymentMethod;
+  payment_splits?: PaymentSplit[];
   status: RentalStatus;
   is_paid: boolean;
   date_paid?: string | null;
@@ -135,6 +208,12 @@ export const useRentalStore = create<RentalState>()(
             throw new Error('Customer ID is required for rental');
           }
 
+          const splitWrite = buildRentalWriteContext({
+            paymentMethod: rental.paymentMethod,
+            paymentSplits: rental.paymentSplits,
+            totalUsd: rental.totalUsd,
+          });
+
           const payload: RentalInsert = {
             date: rental.date,
             customer_id: customerId,
@@ -145,12 +224,26 @@ export const useRentalStore = create<RentalState>()(
             pickup_date: rental.pickupDate,
             delivery_fee: rental.deliveryFee,
             total_usd: rental.totalUsd,
-            payment_method: rental.paymentMethod,
+            payment_method: splitWrite.paymentMethod,
             status: rental.status,
             is_paid: rental.isPaid,
             date_paid: rental.datePaid || null,
             notes: rental.notes || undefined,
           };
+
+          if (!window.navigator.onLine) {
+            const offlineRental = enqueueOfflineRental({
+              payload,
+              rental: {
+                ...rental,
+                customerId,
+              },
+              paymentSplits: splitWrite.paymentSplits,
+            });
+
+            set((state) => ({ rentals: [...state.rentals, offlineRental] }));
+            return;
+          }
 
           const { data, error } = await supabase
             .from('washer_rentals')
@@ -164,6 +257,9 @@ export const useRentalStore = create<RentalState>()(
           if (!rentalRow) {
             throw new Error('Error al crear el alquiler');
           }
+
+          await replaceRentalSplits(rentalRow.id, splitWrite.paymentSplits);
+          const normalizedSplits = await fetchRentalSplits(rentalRow.id);
 
           const newRental: WasherRental = {
             id: rentalRow.id,
@@ -179,7 +275,8 @@ export const useRentalStore = create<RentalState>()(
             pickupDate: rentalRow.pickup_date,
             deliveryFee: Number(rentalRow.delivery_fee),
             totalUsd: Number(rentalRow.total_usd),
-            paymentMethod: rentalRow.payment_method || rental.paymentMethod,
+            paymentMethod: splitWrite.paymentMethod,
+            paymentSplits: normalizedSplits,
             status: rentalRow.status,
             isPaid: rentalRow.is_paid,
             datePaid: rentalRow.date_paid
@@ -205,6 +302,37 @@ export const useRentalStore = create<RentalState>()(
       updateRental: async (id, updates) => {
         try {
           const payload: RentalUpdate = {};
+          const nowIso = new Date().toISOString();
+
+          const currentRental = get().rentals.find((r) => r.id === id);
+          if (!currentRental) {
+            throw new Error('Alquiler no encontrado');
+          }
+
+          let splitWrite:
+            | ReturnType<typeof preparePaymentWritePayload>
+            | undefined;
+
+          if (
+            updates.paymentMethod !== undefined ||
+            updates.paymentSplits !== undefined ||
+            updates.totalUsd !== undefined
+          ) {
+            const totalUsd = updates.totalUsd ?? currentRental.totalUsd;
+            splitWrite = buildRentalWriteContext(
+              {
+                paymentMethod:
+                  updates.paymentMethod ?? currentRental.paymentMethod,
+                paymentSplits:
+                  updates.paymentSplits ?? currentRental.paymentSplits,
+                totalUsd,
+              },
+              currentRental.paymentSplits?.find(
+                (split) => split.exchangeRateUsed
+              )?.exchangeRateUsed ?? 1
+            );
+          }
+
           if (updates.machineId !== undefined)
             payload.machine_id = updates.machineId;
           if (updates.shift !== undefined) payload.shift = updates.shift;
@@ -220,7 +348,8 @@ export const useRentalStore = create<RentalState>()(
           if (updates.totalUsd !== undefined)
             payload.total_usd = updates.totalUsd;
           if (updates.paymentMethod !== undefined)
-            payload.payment_method = updates.paymentMethod;
+            payload.payment_method =
+              splitWrite?.paymentMethod ?? updates.paymentMethod;
           if (updates.status !== undefined) payload.status = updates.status;
           if (updates.isPaid !== undefined) payload.is_paid = updates.isPaid;
           if ('datePaid' in updates)
@@ -237,7 +366,55 @@ export const useRentalStore = create<RentalState>()(
           if (updates.customerAddress !== undefined)
             customerUpdates.address = updates.customerAddress;
 
-          payload.updated_at = new Date().toISOString();
+          payload.updated_at = nowIso;
+
+          if (!window.navigator.onLine) {
+            enqueueOfflineRentalUpdate({ id, payload });
+
+            if (splitWrite) {
+              enqueueOfflineRentalPaymentSplitsReplace(
+                id,
+                splitWrite.paymentSplits
+              );
+            }
+
+            set((state) => ({
+              rentals: state.rentals.map((rental) =>
+                rental.id === id
+                  ? {
+                      ...rental,
+                      ...updates,
+                      paymentMethod:
+                        splitWrite?.paymentMethod ??
+                        updates.paymentMethod ??
+                        rental.paymentMethod,
+                      paymentSplits:
+                        splitWrite?.paymentSplits ??
+                        updates.paymentSplits ??
+                        rental.paymentSplits,
+                      updatedAt: nowIso,
+                    }
+                  : rental
+              ),
+            }));
+            const updatedRental = get().rentals.find((r) => r.id === id);
+            if (updatedRental) {
+              rentalsDataService.invalidateCache(updatedRental.date);
+              if (updatedRental.datePaid) {
+                rentalsDataService.invalidateCache(updatedRental.datePaid);
+              }
+              if (updates.date && updates.date !== updatedRental.date) {
+                rentalsDataService.invalidateCache(updates.date);
+              }
+              if (
+                updates.datePaid &&
+                updates.datePaid !== updatedRental.datePaid
+              ) {
+                rentalsDataService.invalidateCache(updates.datePaid);
+              }
+            }
+            return;
+          }
 
           if (Object.keys(customerUpdates).length > 0 && updates.customerId) {
             const { error: customerError } = await supabase
@@ -253,10 +430,26 @@ export const useRentalStore = create<RentalState>()(
             .eq('id', id);
           if (error) throw error;
 
+          if (splitWrite) {
+            await replaceRentalSplits(id, splitWrite.paymentSplits);
+          }
+
           set((state) => ({
             rentals: state.rentals.map((rental) =>
               rental.id === id
-                ? { ...rental, ...updates, updatedAt: new Date().toISOString() }
+                ? {
+                    ...rental,
+                    ...updates,
+                    paymentMethod:
+                      splitWrite?.paymentMethod ??
+                      updates.paymentMethod ??
+                      rental.paymentMethod,
+                    paymentSplits:
+                      splitWrite?.paymentSplits ??
+                      updates.paymentSplits ??
+                      rental.paymentSplits,
+                    updatedAt: nowIso,
+                  }
                 : rental
             ),
           }));
@@ -285,6 +478,22 @@ export const useRentalStore = create<RentalState>()(
       deleteRental: async (id) => {
         const rentalToDelete = get().rentals.find((r) => r.id === id);
         try {
+          if (!window.navigator.onLine) {
+            enqueueOfflineRentalDelete({ id });
+            enqueueOfflineRentalPaymentSplitsDelete(id);
+
+            set((state) => ({
+              rentals: state.rentals.filter((rental) => rental.id !== id),
+            }));
+            if (rentalToDelete) {
+              rentalsDataService.invalidateCache(rentalToDelete.date);
+              if (rentalToDelete.datePaid) {
+                rentalsDataService.invalidateCache(rentalToDelete.datePaid);
+              }
+            }
+            return;
+          }
+
           const { error } = await supabase
             .from('washer_rentals')
             .delete()

@@ -1,5 +1,6 @@
 import { Home, Droplets, WashingMachine, MoreHorizontal } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useViewportMode } from '@/hooks/responsive/useViewportMode';
 import { AppRoute } from '@/types';
 
 interface BottomNavProps {
@@ -19,6 +20,12 @@ export function BottomNav({
   onNavigate,
   onOpenMenu,
 }: BottomNavProps) {
+  const { isTabletViewport } = useViewportMode();
+
+  if (isTabletViewport) {
+    return null;
+  }
+
   // Check if current route is a secondary menu item
   const isMenuActive = [
     'clientes',
@@ -30,7 +37,10 @@ export function BottomNav({
   ].includes(currentRoute);
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-lg border-t border-border pb-[calc(env(safe-area-inset-bottom,1rem)+0.5rem)]">
+    <nav
+      aria-label="Navegación principal móvil"
+      className="fixed bottom-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-lg border-t border-border pb-[calc(env(safe-area-inset-bottom,1rem)+0.5rem)]"
+    >
       <div className="flex items-center justify-around h-16 max-w-lg mx-auto px-2">
         {navItems.map(({ route, label, icon: Icon }) => {
           const isActive = currentRoute === route;
@@ -38,8 +48,10 @@ export function BottomNav({
             <button
               key={route}
               onClick={() => onNavigate(route)}
+              aria-label={`Ir a ${label}`}
+              aria-pressed={isActive}
               className={cn(
-                'flex flex-col items-center justify-center flex-1 h-full gap-0.5 touch-target transition-all duration-200',
+                'flex flex-col items-center justify-center flex-1 h-full min-h-11 gap-0.5 touch-target transition-all duration-200',
                 isActive
                   ? 'text-primary'
                   : 'text-muted-foreground hover:text-foreground'
@@ -74,8 +86,10 @@ export function BottomNav({
         {/* Menu Button */}
         <button
           onClick={onOpenMenu}
+          aria-label="Abrir más opciones"
+          aria-pressed={isMenuActive}
           className={cn(
-            'flex flex-col items-center justify-center flex-1 h-full gap-0.5 touch-target transition-all duration-200',
+            'flex flex-col items-center justify-center flex-1 h-full min-h-11 gap-0.5 touch-target transition-all duration-200',
             isMenuActive
               ? 'text-primary'
               : 'text-muted-foreground hover:text-foreground'

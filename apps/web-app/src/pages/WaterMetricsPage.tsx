@@ -134,12 +134,6 @@ export function WaterMetricsPage({ onNavigate }: WaterMetricsPageProps = {}) {
     };
   }, [filteredSales]);
 
-  const rangeLabels: Record<DateRange, string> = {
-    day: 'Día',
-    week: 'Semana',
-    month: 'Mes',
-  };
-
   return (
     <div className="flex flex-col min-h-screen pb-24">
       <Header

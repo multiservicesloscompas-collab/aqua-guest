@@ -3,6 +3,12 @@ import { persist } from 'zustand/middleware';
 import { Expense, PaymentMethod } from '@/types';
 import supabase from '@/lib/supabaseClient';
 import { expensesDataService } from '@/services/ExpensesDataService';
+import {
+  enqueueOfflineExpenseCreate,
+  enqueueOfflineExpenseDelete,
+  enqueueOfflineExpenseUpdate,
+} from '@/offline/enqueue/expensesEnqueue';
+import { dedupExpensesByDateRange } from './useExpenseStore.helpers';
 
 interface ExpenseState {
   expenses: Expense[];
@@ -67,6 +73,20 @@ export const useExpenseStore = create<ExpenseState>()(
 
       addExpense: async (expense) => {
         try {
+          if (!window.navigator.onLine) {
+            const createdAt = new Date().toISOString();
+            const offlineExpense = enqueueOfflineExpenseCreate(
+              expense,
+              createdAt
+            );
+
+            set((state) => ({
+              expenses: [...state.expenses, offlineExpense],
+            }));
+            expensesDataService.invalidateCache(expense.date);
+            return;
+          }
+
           const payload: ExpenseInsertPayload = {
             date: expense.date,
             description: expense.description,
@@ -104,6 +124,25 @@ export const useExpenseStore = create<ExpenseState>()(
 
       updateExpense: async (id, updates) => {
         try {
+          if (!window.navigator.onLine) {
+            enqueueOfflineExpenseUpdate(id, updates);
+
+            set((state) => ({
+              expenses: state.expenses.map((exp) =>
+                exp.id === id ? { ...exp, ...updates } : exp
+              ),
+            }));
+
+            const updatedExpense = get().expenses.find((e) => e.id === id);
+            if (updatedExpense) {
+              expensesDataService.invalidateCache(updatedExpense.date);
+              if (updates.date && updates.date !== updatedExpense.date) {
+                expensesDataService.invalidateCache(updates.date);
+              }
+            }
+            return;
+          }
+
           const payload: ExpenseUpdatePayload = {};
           if (updates.description !== undefined)
             payload.description = updates.description;
@@ -142,6 +181,17 @@ export const useExpenseStore = create<ExpenseState>()(
       deleteExpense: async (id) => {
         const expenseToDelete = get().expenses.find((e) => e.id === id);
         try {
+          if (!window.navigator.onLine) {
+            enqueueOfflineExpenseDelete(id);
+            set((state) => ({
+              expenses: state.expenses.filter((exp) => exp.id !== id),
+            }));
+            if (expenseToDelete) {
+              expensesDataService.invalidateCache(expenseToDelete.date);
+            }
+            return;
+          }
+
           const { error } = await supabase
             .from('expenses')
             .delete()
@@ -230,23 +280,14 @@ export const useExpenseStore = create<ExpenseState>()(
             allExpenses.push(...entries);
           }
 
-          const dedupItems = <T extends { id: string; date: string }>(
-            currentItems: T[],
-            newItems: T[],
-            datesToExclude: Set<string>
-          ): T[] => {
-            const map = new Map<string, T>();
-            currentItems
-              .filter((item) => !datesToExclude.has(item.date))
-              .forEach((item) => map.set(item.id, item));
-            newItems.forEach((item) => map.set(item.id, item));
-            return Array.from(map.values());
-          };
-
           const loadedDatesSet = new Set(dates);
 
           set((state) => ({
-            expenses: dedupItems(state.expenses, allExpenses, loadedDatesSet),
+            expenses: dedupExpensesByDateRange(
+              state.expenses,
+              allExpenses,
+              loadedDatesSet
+            ),
           }));
         } catch (err) {
           console.error('Error loading expenses for date range:', err);

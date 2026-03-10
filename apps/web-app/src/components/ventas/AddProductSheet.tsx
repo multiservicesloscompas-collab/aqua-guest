@@ -101,7 +101,12 @@ export function AddProductSheet({ open, onOpenChange }: AddProductSheetProps) {
         onOpenChange(o);
       }}
     >
-      <SheetContent side="bottom" className="h-[90vh] rounded-t-2xl px-4 pb-8">
+      <SheetContent
+        side="bottom"
+        tabletSide="right"
+        tabletClassName="sm:max-w-[440px]"
+        className="h-[90vh] rounded-t-2xl px-4 pb-8 sm:flex sm:h-full sm:flex-col sm:rounded-none"
+      >
         <SheetHeader className="pb-4">
           <SheetTitle className="text-lg font-bold">
             Agregar Producto
@@ -110,9 +115,10 @@ export function AddProductSheet({ open, onOpenChange }: AddProductSheetProps) {
 
         {!selectedProduct ? (
           /* Selector de producto */
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-3 sm:flex-1 sm:content-center">
             {products.map((product) => {
-              const displayPrice = displayPrices.get(product.id) ?? product.defaultPrice;
+              const displayPrice =
+                displayPrices.get(product.id) ?? product.defaultPrice;
               return (
                 <button
                   key={product.id}

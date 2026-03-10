@@ -24,14 +24,14 @@ export function createCurrencyConverter(
       return usd * exchangeRate;
     },
 
-    formatBs(amount: number, fractionDigits: number = 2): string {
+    formatBs(amount: number, fractionDigits = 2): string {
       return amount.toLocaleString('es-VE', {
         minimumFractionDigits: fractionDigits,
         maximumFractionDigits: fractionDigits,
       });
     },
 
-    formatUsd(amount: number, fractionDigits: number = 2): string {
+    formatUsd(amount: number, fractionDigits = 2): string {
       return amount.toLocaleString('es-VE', {
         minimumFractionDigits: fractionDigits,
         maximumFractionDigits: fractionDigits,
@@ -41,14 +41,14 @@ export function createCurrencyConverter(
 }
 
 export const CurrencyFormatter = {
-  formatBsWithSymbol(amount: number, fractionDigits: number = 2): string {
+  formatBsWithSymbol(amount: number, fractionDigits = 2): string {
     return `Bs ${amount.toLocaleString('es-VE', {
       minimumFractionDigits: fractionDigits,
       maximumFractionDigits: fractionDigits,
     })}`;
   },
 
-  formatUsdWithSymbol(amount: number, fractionDigits: number = 2): string {
+  formatUsdWithSymbol(amount: number, fractionDigits = 2): string {
     return `$${amount.toLocaleString('es-VE', {
       minimumFractionDigits: fractionDigits,
       maximumFractionDigits: fractionDigits,

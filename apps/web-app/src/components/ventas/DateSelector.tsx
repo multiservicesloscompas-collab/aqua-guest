@@ -2,7 +2,6 @@ import { ChevronLeft, ChevronRight, Calendar, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { format, addDays, subDays, isToday } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { cn } from '@/lib/utils';
 
 interface DateSelectorProps {
   selectedDate: string;
@@ -10,7 +9,11 @@ interface DateSelectorProps {
   loading?: boolean;
 }
 
-export function DateSelector({ selectedDate, onDateChange, loading = false }: DateSelectorProps) {
+export function DateSelector({
+  selectedDate,
+  onDateChange,
+  loading = false,
+}: DateSelectorProps) {
   const date = new Date(selectedDate + 'T12:00:00');
   const isCurrentDay = isToday(date);
 
@@ -74,4 +77,3 @@ export function DateSelector({ selectedDate, onDateChange, loading = false }: Da
     </div>
   );
 }
-

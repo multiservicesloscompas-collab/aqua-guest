@@ -65,7 +65,10 @@ export function ExtensionDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px] max-h-[90vh] flex flex-col">
+      <DialogContent
+        tabletClassName="sm:max-w-[520px]"
+        className="sm:max-w-[425px] max-h-[90vh] flex flex-col"
+      >
         <ExtensionDialogHeader customerName={rental.customerName} />
 
         <div className="flex-1 overflow-y-auto space-y-6 py-1">

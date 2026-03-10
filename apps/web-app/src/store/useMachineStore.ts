@@ -2,6 +2,11 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { WashingMachine } from '@/types';
 import supabase from '@/lib/supabaseClient';
+import {
+  enqueueOfflineWashingMachineCreate,
+  enqueueOfflineWashingMachineDelete,
+  enqueueOfflineWashingMachineUpdate,
+} from '@/offline/enqueue/machinesEnqueue';
 
 interface MachineState {
   washingMachines: WashingMachine[];
@@ -23,6 +28,14 @@ export const useMachineStore = create<MachineState>()(
 
       addWashingMachine: async (machine) => {
         try {
+          if (!window.navigator.onLine) {
+            const offlineMachine = enqueueOfflineWashingMachineCreate(machine);
+            set((state) => ({
+              washingMachines: [...state.washingMachines, offlineMachine],
+            }));
+            return;
+          }
+
           const { data, error } = await supabase
             .from('washing_machines')
             .insert({
@@ -56,6 +69,16 @@ export const useMachineStore = create<MachineState>()(
 
       updateWashingMachine: async (id, updates) => {
         try {
+          if (!window.navigator.onLine) {
+            enqueueOfflineWashingMachineUpdate(id, updates);
+            set((state) => ({
+              washingMachines: state.washingMachines.map((m) =>
+                m.id === id ? { ...m, ...updates } : m
+              ),
+            }));
+            return;
+          }
+
           const payload: any = {};
           if (updates.name !== undefined) payload.name = updates.name;
           if (updates.kg !== undefined) payload.kg = updates.kg;
@@ -83,6 +106,14 @@ export const useMachineStore = create<MachineState>()(
 
       deleteWashingMachine: async (id) => {
         try {
+          if (!window.navigator.onLine) {
+            enqueueOfflineWashingMachineDelete(id);
+            set((state) => ({
+              washingMachines: state.washingMachines.filter((m) => m.id !== id),
+            }));
+            return;
+          }
+
           const { error } = await supabase
             .from('washing_machines')
             .delete()

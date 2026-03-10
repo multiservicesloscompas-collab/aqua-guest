@@ -18,7 +18,8 @@ Manage the core financial parameters of the application, including the daily exc
 ### Zustand Store (`src/store/useAppStore.ts`)
 
 - **State:** `config`, `expenses`, `paymentBalanceTransactions`.
-- **Actions:** `setExchangeRate`, `setLiterPricing`, `addExpense`, `updateExpense`, `deleteExpense`, `addPaymentBalanceTransaction`, `updatePaymentBalanceTransaction`, `deletePaymentBalanceTransaction`.
+- **State (mixed payment flags):** `mixedPaymentFlags` (`enabled`, `water`, `rentals`) persisted in `useConfigStore`.
+- **Actions:** `setExchangeRate`, `setLiterPricing`, `setMixedPaymentFlags`, `addExpense`, `updateExpense`, `deleteExpense`, `addPaymentBalanceTransaction`, `updatePaymentBalanceTransaction`, `deletePaymentBalanceTransaction`.
 - **Getters/Derived:** `getExchangeRateForDate(date)`, `getPriceForLiters(liters)`, `getExpensesByDate(date)`, `getPaymentBalanceSummary(date)`.
 
 ### Services (`src/services/`)
@@ -28,10 +29,35 @@ Manage the core financial parameters of the application, including the daily exc
 
 ## 🧩 Key UI Components
 
-- **`ConfigPage` (`src/pages/ConfigPage.tsx`)**: UI to update the `exchangeRate` and `literPricing`.
+- **`ConfigPage` (`src/pages/ConfigPage.tsx`)**: UI to update `exchangeRate` and `literPricing`.
 - **`ExchangeHistoryPage` (`src/pages/ExchangeHistoryPage.tsx`)**: Displays the `exchangeRateHistory` with trend indicators.
 - **`ExpensesPage` (`src/pages/ExpensesPage.tsx`)**: List of expenses by day or week (`WeeklyExpensesView`), with actions to add, edit, or delete.
 - **`PaymentBalancePage` (`src/pages/PaymentBalancePage.tsx`)**: UI to transfer funds between payment methods (e.g., from 'pago_movil' to 'efectivo') and view the daily summary.
+
+## 📱 Responsive Secondary Flows (Phase 4)
+
+- `ExpensesPage` ahora usa `AppPageContainer` + `TabletSplitLayout` en tablet:
+  - columna principal: controles (`DateSelector`, toggle de vista, total diario, CTA) seguidos del listado diario/semanal de egresos.
+  - columna secundaria sticky: reservada para contenido complementario no bloqueante.
+  - en mobile `<768px` se conserva el stack original y FAB.
+- `PaymentBalancePage` en tablet separa:
+  - columna principal: `DateSelector` + resumen + controles/formulario, y luego historial de transferencias.
+  - columna secundaria sticky: reservada para contenido complementario no bloqueante.
+  - en mobile `<768px` se mantiene orden original sin cambios estructurales.
+- `TransactionsSummaryPage` en tablet separa:
+  - columna principal: timeline de transacciones.
+  - columna secundaria sticky: cards de totales (ingresos/egresos).
+  - en mobile `<768px` continúa el flujo original (totales arriba + lista).
+- `PaymentMethodDetailPage` en tablet separa:
+  - columna principal: lista de transacciones por método.
+  - columna secundaria sticky: fecha + KPI total + resumen/switcher.
+  - en mobile `<768px` se mantiene el flujo preexistente.
+
+## 🛡️ Hardening + verify-ready responsive (Phase 5)
+
+- `ExpensesPage`, `TransactionsSummaryPage`, `PaymentMethodDetailPage` y `PaymentBalancePage` usan patrones compartidos de split/sticky tablet (`tabletLayoutPatterns`) para reducir drift visual y facilitar mantenimiento.
+- Overlays en finanzas quedan estandarizados con soporte tablet opt-in (`SheetContent.tabletSide/tabletClassName`) manteniendo variante mobile bottom-sheet en `<768px`.
+- Se incorporó matriz formal de validación viewport/orientación (`viewportValidationMatrix.test.ts`) y cobertura responsive focalizada para dejar el batch listo para verify.
 
 ## ⚙️ Agent Implementation Rules (CRITICAL)
 
@@ -50,3 +76,11 @@ Manage the core financial parameters of the application, including the daily exc
 
 1.  **Transfers:** A `PaymentBalanceTransaction` represents moving money from one method to another (e.g., cashing out 'punto_venta' to 'efectivo').
 2.  **Divisa Exception:** Transfers involving 'divisa' require special handling. The input amount is usually treated as USD and must be converted to Bs internally using the _current_ `exchangeRate` before saving, while storing the original USD value in `amountUsd`.
+3.  **Resumen diario split-aware (Fase 3):** `getPaymentBalanceSummary(date)` must build `originalTotal` from split-aware attribution for sales/rentals (fallback to legacy `paymentMethod` when no splits exist), then apply transfer adjustments using deterministic amount priority: `amountBs` → `amountUsd * exchangeRate` → `amount`.
+
+### Mixed Payment Availability
+
+1.  **Siempre activo:** mixed payment is treated as always enabled at runtime through `isMixedPaymentEnabledForModule(...)`, independent of persisted flags.
+2.  **Sin controles en Configuración:** `ConfigPage` no longer renders the mixed-payment card/switches, so users cannot disable the feature from settings.
+3.  **Compatibilidad:** persisted `mixedPaymentFlags` may still exist in storage for backward compatibility, but they are no longer authoritative for enabling/disabling the flow.
+4.  **Flujos de Agua/Alquileres:** both modules continue exposing their local mixed-payment UX without depending on configuration toggles.

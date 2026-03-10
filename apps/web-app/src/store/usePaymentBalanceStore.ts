@@ -5,7 +5,13 @@ import {
   PaymentBalanceSummary,
   PaymentMethod,
 } from '@/types';
+import { calculatePaymentBalanceSummary } from '@/services/payments/paymentBalanceSummary';
 import supabase from '@/lib/supabaseClient';
+import {
+  enqueueOfflinePaymentBalanceCreate,
+  enqueueOfflinePaymentBalanceDelete,
+  enqueueOfflinePaymentBalanceUpdate,
+} from '@/offline/enqueue/paymentBalanceEnqueue';
 import { useConfigStore } from './useConfigStore';
 import { useRentalStore } from './useRentalStore';
 import { useWaterSalesStore } from './useWaterSalesStore';
@@ -40,6 +46,8 @@ type PaymentBalanceInsertPayload = {
   from_method: PaymentMethod;
   to_method: PaymentMethod;
   amount: number;
+  amount_bs?: number;
+  amount_usd?: number;
   notes?: string;
 };
 
@@ -47,6 +55,8 @@ type PaymentBalanceUpdatePayload = {
   from_method?: PaymentMethod;
   to_method?: PaymentMethod;
   amount?: number;
+  amount_bs?: number;
+  amount_usd?: number;
   notes?: string;
   date?: string;
   updated_at: string;
@@ -78,11 +88,32 @@ export const usePaymentBalanceStore = create<PaymentBalanceState>()(
 
       addPaymentBalanceTransaction: async (transaction) => {
         try {
+          if (!window.navigator.onLine) {
+            const now = new Date().toISOString();
+            const offlineTransaction = enqueueOfflinePaymentBalanceCreate(
+              transaction,
+              {
+                createdAt: now,
+                updatedAt: now,
+              }
+            );
+
+            set((state) => ({
+              paymentBalanceTransactions: [
+                ...state.paymentBalanceTransactions,
+                offlineTransaction,
+              ],
+            }));
+            return;
+          }
+
           const payload: PaymentBalanceInsertPayload = {
             date: transaction.date,
             from_method: transaction.fromMethod,
             to_method: transaction.toMethod,
             amount: transaction.amount,
+            amount_bs: transaction.amountBs,
+            amount_usd: transaction.amountUsd,
             notes: transaction.notes,
           };
           const { data, error } = await supabase
@@ -99,6 +130,14 @@ export const usePaymentBalanceStore = create<PaymentBalanceState>()(
             fromMethod: row.from_method,
             toMethod: row.to_method,
             amount: Number(row.amount),
+            amountBs:
+              row.amount_bs !== null && row.amount_bs !== undefined
+                ? Number(row.amount_bs)
+                : Number(row.amount),
+            amountUsd:
+              row.amount_usd !== null && row.amount_usd !== undefined
+                ? Number(row.amount_usd)
+                : undefined,
             notes: row.notes || undefined,
             createdAt: row.created_at || new Date().toISOString(),
             updatedAt: row.updated_at || new Date().toISOString(),
@@ -121,14 +160,38 @@ export const usePaymentBalanceStore = create<PaymentBalanceState>()(
 
       updatePaymentBalanceTransaction: async (id, updates) => {
         try {
+          const updatedAt = new Date().toISOString();
+
+          if (!window.navigator.onLine) {
+            enqueueOfflinePaymentBalanceUpdate(id, updates, updatedAt);
+
+            set((state) => ({
+              paymentBalanceTransactions: state.paymentBalanceTransactions.map(
+                (transaction) =>
+                  transaction.id === id
+                    ? {
+                        ...transaction,
+                        ...updates,
+                        updatedAt,
+                      }
+                    : transaction
+              ),
+            }));
+            return;
+          }
+
           const payload: PaymentBalanceUpdatePayload = {
-            updated_at: new Date().toISOString(),
+            updated_at: updatedAt,
           };
           if (updates.fromMethod !== undefined)
             payload.from_method = updates.fromMethod;
           if (updates.toMethod !== undefined)
             payload.to_method = updates.toMethod;
           if (updates.amount !== undefined) payload.amount = updates.amount;
+          if (updates.amountBs !== undefined)
+            payload.amount_bs = updates.amountBs;
+          if (updates.amountUsd !== undefined)
+            payload.amount_usd = updates.amountUsd;
           if (updates.notes !== undefined) payload.notes = updates.notes;
           if (updates.date !== undefined) payload.date = updates.date;
 
@@ -145,7 +208,7 @@ export const usePaymentBalanceStore = create<PaymentBalanceState>()(
                   ? {
                       ...transaction,
                       ...updates,
-                      updatedAt: new Date().toISOString(),
+                      updatedAt,
                     }
                   : transaction
             ),
@@ -161,6 +224,17 @@ export const usePaymentBalanceStore = create<PaymentBalanceState>()(
 
       deletePaymentBalanceTransaction: async (id) => {
         try {
+          if (!window.navigator.onLine) {
+            enqueueOfflinePaymentBalanceDelete(id);
+            set((state) => ({
+              paymentBalanceTransactions:
+                state.paymentBalanceTransactions.filter(
+                  (transaction) => transaction.id !== id
+                ),
+            }));
+            return;
+          }
+
           const { error } = await supabase
             .from('payment_balance_transactions')
             .delete()
@@ -182,82 +256,17 @@ export const usePaymentBalanceStore = create<PaymentBalanceState>()(
 
       getPaymentBalanceSummary: (date) => {
         const { paymentBalanceTransactions } = get();
-        // Dependencias externas
         const sales = useWaterSalesStore.getState().sales;
         const prepaidOrders = usePrepaidStore.getState().prepaidOrders;
-
-        const configStoreState = useConfigStore.getState();
-        const config = configStoreState.config;
-
+        const config = useConfigStore.getState().config;
         const rentals = useRentalStore.getState().rentals;
-
-        const salesOfDay = sales.filter((s) => s.date === date);
-        const prepaidOfDay = prepaidOrders.filter((p) => p.datePaid === date);
-        const rentalsOfDay = rentals.filter(
-          (r) => r.datePaid === date || r.date === date
-        );
-
-        const calculateOriginalTotal = (method: PaymentMethod) => {
-          const salesTotal = salesOfDay
-            .filter((s) => s.paymentMethod === method)
-            .reduce((sum, s) => sum + s.totalBs, 0);
-          const prepaidTotal = prepaidOfDay
-            .filter((p) => p.paymentMethod === method)
-            .reduce((sum, p) => sum + p.amountBs, 0);
-
-          const rentalsTotal = rentalsOfDay
-            .filter((r) => r.paymentMethod === method && r.isPaid)
-            .reduce((sum, r) => sum + r.totalUsd * config.exchangeRate, 0);
-
-          return salesTotal + rentalsTotal + prepaidTotal;
-        };
-
-        const balanceTransactionsOfDay = paymentBalanceTransactions.filter(
-          (t) => t.date === date
-        );
-
-        const calculateAdjustments = (method: PaymentMethod) => {
-          return balanceTransactionsOfDay.reduce((adjustment, transaction) => {
-            if (transaction.fromMethod === method) {
-              if (method === 'divisa') {
-                const usdAmount =
-                  transaction.amountUsd ||
-                  transaction.amount / config.exchangeRate;
-                return adjustment - usdAmount * config.exchangeRate;
-              } else {
-                return adjustment - transaction.amount;
-              }
-            } else if (transaction.toMethod === method) {
-              if (method === 'divisa') {
-                const usdAmount =
-                  transaction.amountUsd ||
-                  transaction.amount / config.exchangeRate;
-                return adjustment + usdAmount * config.exchangeRate;
-              } else {
-                return adjustment + transaction.amount;
-              }
-            }
-            return adjustment;
-          }, 0);
-        };
-
-        const methods: PaymentMethod[] = [
-          'efectivo',
-          'pago_movil',
-          'punto_venta',
-          'divisa',
-        ];
-        return methods.map((method) => {
-          const originalTotal = calculateOriginalTotal(method);
-          const adjustments = calculateAdjustments(method);
-          const finalTotal = originalTotal + adjustments;
-
-          return {
-            method,
-            originalTotal,
-            adjustments,
-            finalTotal,
-          } as PaymentBalanceSummary;
+        return calculatePaymentBalanceSummary({
+          date,
+          exchangeRate: config.exchangeRate,
+          sales,
+          prepaidOrders,
+          rentals,
+          paymentBalanceTransactions,
         });
       },
 

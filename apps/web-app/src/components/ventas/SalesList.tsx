@@ -43,9 +43,10 @@ export function SalesList({ sales, paymentFilter = 'todos' }: SalesListProps) {
   const [saleToDelete, setSaleToDelete] = useState<string | null>(null);
 
   // Filtrar ventas por método de pago si es necesario
-  const filteredSales = paymentFilter === 'todos' 
-    ? sales 
-    : sales.filter(sale => sale.paymentMethod === paymentFilter);
+  const filteredSales =
+    paymentFilter === 'todos'
+      ? sales
+      : sales.filter((sale) => sale.paymentMethod === paymentFilter);
 
   const handleDelete = () => {
     if (saleToDelete) {
@@ -65,7 +66,11 @@ export function SalesList({ sales, paymentFilter = 'todos' }: SalesListProps) {
       <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
         <FileText className="w-12 h-12 mb-3 opacity-40" />
         <p className="text-sm font-medium">
-          {paymentFilter === 'todos' ? 'Sin ventas este día' : `Sin ventas con ${PaymentMethodLabels[paymentFilter as PaymentMethod]}`}
+          {paymentFilter === 'todos'
+            ? 'Sin ventas este día'
+            : `Sin ventas con ${
+                PaymentMethodLabels[paymentFilter as PaymentMethod]
+              }`}
         </p>
         <p className="text-xs">Presiona + para agregar una venta</p>
       </div>
@@ -84,7 +89,10 @@ export function SalesList({ sales, paymentFilter = 'todos' }: SalesListProps) {
               </span>
             )}
           </h3>
-          <span className="text-sm font-bold text-primary" data-testid="total-sales">
+          <span
+            className="text-sm font-bold text-primary"
+            data-testid="total-sales"
+          >
             Bs{' '}
             {filteredSales
               .reduce((sum, s) => {
@@ -119,14 +127,17 @@ export function SalesList({ sales, paymentFilter = 'todos' }: SalesListProps) {
                     <div className="p-2 bg-primary/10 rounded-full">
                       <PaymentIcon className="w-4 h-4 text-primary" />
                     </div>
-                     <div>
-                       <p className="text-sm font-bold text-foreground" data-testid={`sale-price-${sale.id}`}>
-                         Bs{' '}
-                         {(() => {
-                           const num = Number(sale.totalBs);
-                           return (isNaN(num) ? 0 : num).toFixed(2);
-                         })()}
-                       </p>
+                    <div>
+                      <p
+                        className="text-sm font-bold text-foreground"
+                        data-testid={`sale-price-${sale.id}`}
+                      >
+                        Bs{' '}
+                        {(() => {
+                          const num = Number(sale.totalBs);
+                          return (isNaN(num) ? 0 : num).toFixed(2);
+                        })()}
+                      </p>
                       <p className="text-xs text-muted-foreground">
                         {PaymentMethodLabels[sale.paymentMethod]} • $
                         {(() => {
@@ -188,8 +199,11 @@ export function SalesList({ sales, paymentFilter = 'todos' }: SalesListProps) {
         onOpenChange={setEditSheetOpen}
       />
 
-      <Drawer open={saleToDelete !== null} onOpenChange={(open) => !open && setSaleToDelete(null)}>
-        <DrawerContent className="p-4 sm:p-6 pb-8">
+      <Drawer
+        open={saleToDelete !== null}
+        onOpenChange={(open) => !open && setSaleToDelete(null)}
+      >
+        <DrawerContent className="p-4 sm:p-6 pb-8 sm:pb-10 sm:min-h-[360px]">
           <DrawerHeader className="px-0 pt-2">
             <DrawerTitle className="text-xl font-bold flex items-center gap-2 text-destructive">
               <Trash2 className="w-6 h-6" />
@@ -201,11 +215,11 @@ export function SalesList({ sales, paymentFilter = 'todos' }: SalesListProps) {
             </DrawerDescription>
           </DrawerHeader>
 
-          <DrawerFooter className="px-0 pb-0 gap-3 pt-6">
+          <DrawerFooter className="px-0 pb-0 gap-3 pt-6 sm:pt-8">
             <Button
               size="lg"
               variant="destructive"
-              className="w-full h-14 rounded-2xl text-base font-semibold shadow-lg"
+              className="w-full h-14 rounded-2xl text-base font-semibold shadow-lg sm:h-16 sm:text-lg"
               onClick={handleDelete}
             >
               Eliminar Permanentemente
@@ -214,7 +228,7 @@ export function SalesList({ sales, paymentFilter = 'todos' }: SalesListProps) {
               <Button
                 variant="outline"
                 size="lg"
-                className="w-full h-14 rounded-2xl text-base font-medium border-border/50 bg-background"
+                className="w-full h-14 rounded-2xl text-base font-medium border-border/50 bg-background sm:h-16 sm:text-lg"
               >
                 Cancelar
               </Button>

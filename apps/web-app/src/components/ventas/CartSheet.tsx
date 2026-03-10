@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Sheet,
   SheetContent,
@@ -11,6 +11,7 @@ import { useAppStore } from '@/store/useAppStore';
 import { useConfigStore } from '@/store/useConfigStore';
 import { useWaterSalesStore } from '@/store/useWaterSalesStore';
 import { PaymentMethod, PaymentMethodLabels } from '@/types';
+import type { PaymentSplit } from '@/types/paymentSplits';
 import {
   Trash2,
   Smartphone,
@@ -21,6 +22,10 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { normalizeAndValidatePaymentSplits } from '@/services/payments/paymentSplitValidation';
+import { buildDualPaymentSplits } from '@/services/payments/paymentSplitWritePath';
+import { SaleMixedPaymentFields } from './SaleMixedPaymentFields';
+import { MixedPaymentToggleButton } from './MixedPaymentToggleButton';
 
 interface CartSheetProps {
   open: boolean;
@@ -36,25 +41,74 @@ const paymentOptions: { method: PaymentMethod; icon: typeof Smartphone }[] = [
 
 export function CartSheet({ open, onOpenChange }: CartSheetProps) {
   const { selectedDate } = useAppStore();
-  const { config } = useConfigStore();
+  const exchangeRate = useConfigStore((state) => state.config.exchangeRate);
   const { cart, removeFromCart, completeSale } = useWaterSalesStore();
 
   const [saving, setSaving] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('efectivo');
+  const [split2Method, setSplit2Method] = useState<PaymentMethod>('pago_movil');
+  const [isMixedPayment, setIsMixedPayment] = useState(false);
+  const [split2Amount, setSplit2Amount] = useState('');
   const [notes, setNotes] = useState('');
 
   const totalBs = cart.reduce((sum, item) => sum + item.subtotal, 0);
-  const totalUsd = totalBs / config.exchangeRate;
+  const totalUsd = totalBs / exchangeRate;
+
+  const paymentSplits = useMemo<PaymentSplit[]>(() => {
+    return buildDualPaymentSplits({
+      enableMixedPayment: isMixedPayment,
+      primaryMethod: paymentMethod,
+      secondaryMethod: split2Method,
+      amountInput: split2Amount,
+      amountInputMode: 'secondary',
+      totalBs,
+      totalUsd,
+      exchangeRate,
+    });
+  }, [
+    exchangeRate,
+    isMixedPayment,
+    paymentMethod,
+    split2Amount,
+    split2Method,
+    totalBs,
+    totalUsd,
+  ]);
+
+  useEffect(() => {
+    if (split2Method === paymentMethod) {
+      setSplit2Method(paymentMethod === 'efectivo' ? 'pago_movil' : 'efectivo');
+    }
+  }, [paymentMethod, split2Method]);
 
   const handleComplete = () => {
     if (cart.length === 0) return;
 
+    const splitValidation = normalizeAndValidatePaymentSplits({
+      splits: paymentSplits,
+      totalBs,
+      totalUsd,
+    });
+
+    if (!splitValidation.validation.ok) {
+      toast.error(splitValidation.validation.errors[0]);
+      return;
+    }
+
     (async () => {
       try {
         setSaving(true);
-        await completeSale(paymentMethod, selectedDate, notes || undefined);
+        await completeSale(
+          paymentMethod,
+          selectedDate,
+          notes || undefined,
+          splitValidation.splits
+        );
         setNotes('');
         setPaymentMethod('efectivo');
+        setSplit2Method('pago_movil');
+        setSplit2Amount('');
+        setIsMixedPayment(false);
         onOpenChange(false);
         toast.success('¡Venta registrada correctamente!');
       } catch (err) {
@@ -69,7 +123,9 @@ export function CartSheet({ open, onOpenChange }: CartSheetProps) {
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="bottom"
-        className="h-[85vh] rounded-t-2xl flex flex-col p-0 gap-0"
+        tabletSide="right"
+        tabletClassName="sm:max-w-[480px]"
+        className="h-[85vh] rounded-t-2xl flex flex-col p-0 gap-0 sm:h-full sm:rounded-none"
       >
         <SheetHeader className="px-5 py-4 border-b">
           <SheetTitle className="text-lg font-bold">
@@ -85,7 +141,6 @@ export function CartSheet({ open, onOpenChange }: CartSheetProps) {
           <div className="flex-1 overflow-y-auto px-5">
             <div className="flex flex-col min-h-full pb-8">
               <div className="flex-1 space-y-6 pt-4">
-                {/* Lista de items */}
                 <div className="space-y-3">
                   {cart.map((item) => (
                     <div
@@ -118,16 +173,18 @@ export function CartSheet({ open, onOpenChange }: CartSheetProps) {
                   ))}
                 </div>
 
-                {/* Método de pago */}
                 <div className="space-y-3">
                   <p className="text-sm font-semibold text-foreground">
-                    Forma de Pago
+                    {isMixedPayment ? 'Método principal' : 'Forma de Pago'}
                   </p>
                   <div className="grid grid-cols-3 gap-2">
                     {paymentOptions.map(({ method, icon: Icon }) => (
                       <button
                         key={method}
+                        type="button"
                         onClick={() => setPaymentMethod(method)}
+                        aria-label={`Método principal ${PaymentMethodLabels[method]}`}
+                        aria-pressed={paymentMethod === method}
                         className={cn(
                           'flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all',
                           paymentMethod === method
@@ -158,7 +215,29 @@ export function CartSheet({ open, onOpenChange }: CartSheetProps) {
                   </div>
                 </div>
 
-                {/* Notas */}
+                <MixedPaymentToggleButton
+                  isMixedPayment={isMixedPayment}
+                  onToggle={() => {
+                    const enabled = !isMixedPayment;
+                    setIsMixedPayment(enabled);
+                    if (!enabled) {
+                      setSplit2Amount('');
+                    }
+                  }}
+                />
+                {isMixedPayment && (
+                  <SaleMixedPaymentFields
+                    primaryMethod={paymentMethod}
+                    secondaryMethod={split2Method}
+                    amountInput={split2Amount}
+                    totalBs={totalBs}
+                    variant="grid"
+                    amountInputMode="secondary"
+                    onAmountInputChange={setSplit2Amount}
+                    onSecondaryMethodChange={setSplit2Method}
+                  />
+                )}
+
                 <div className="space-y-3">
                   <p className="text-sm font-semibold text-foreground">Notas</p>
                   <Textarea
@@ -170,7 +249,6 @@ export function CartSheet({ open, onOpenChange }: CartSheetProps) {
                 </div>
               </div>
 
-              {/* Total y botón */}
               <div className="space-y-4 pt-6 mt-auto border-t">
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground font-medium">

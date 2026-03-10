@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { CartItem, PaymentMethod, Sale } from '@/types';
+import type { PaymentSplit } from '@/types/paymentSplits';
 import supabase from '@/lib/supabaseClient';
 import { getSafeTimestamp, normalizeTimestamp } from '@/lib/date-utils';
 import { dateService } from '@/services/DateService';
@@ -9,7 +10,21 @@ import {
   SalesFilterService,
 } from '@/services/SalesFilterService';
 import { salesDataService } from '@/services/SalesDataService';
+import {
+  PAYMENT_SPLIT_SCHEMA,
+  type PaymentSplitRow,
+} from '@/services/payments/paymentSplitSchemaContract';
+import { salePaymentSplitAdapter } from '@/services/payments/paymentSplitSupabaseAdapters';
+import { preparePaymentWritePayload } from '@/services/payments/paymentSplitWritePath';
+import { enqueueOfflineSale } from '@/offline/enqueue/salesEnqueue';
+import {
+  enqueueOfflineSaleDelete,
+  enqueueOfflineSalePaymentSplitsDelete,
+  enqueueOfflineSalePaymentSplitsReplace,
+  enqueueOfflineSaleUpdate,
+} from '@/offline/enqueue/salesEnqueue';
 import { useConfigStore } from './useConfigStore';
+import { toast } from 'sonner';
 
 interface WaterSalesState {
   sales: Sale[];
@@ -26,7 +41,8 @@ interface WaterSalesState {
   completeSale: (
     paymentMethod: PaymentMethod,
     selectedDate: string,
-    notes?: string
+    notes?: string,
+    paymentSplits?: PaymentSplit[]
   ) => Promise<Sale>;
   updateSale: (id: string, updates: Partial<Sale>) => Promise<void>;
   deleteSale: (id: string) => Promise<void>;
@@ -46,6 +62,7 @@ interface SalesRow {
   date: string;
   items: CartItem[];
   payment_method: PaymentMethod;
+  payment_splits?: PaymentSplit[];
   total_bs: number;
   total_usd: number;
   exchange_rate: number;
@@ -67,6 +84,7 @@ type SaleInsert = {
 
 type SaleUpdate = Partial<{
   payment_method: PaymentMethod;
+  paymentSplits?: PaymentSplit[];
   total_bs: number;
   total_usd: number;
   notes?: string;
@@ -114,7 +132,12 @@ export const useWaterSalesStore = create<WaterSalesState>()(
       clearCart: () => set({ cart: [] }),
 
       // Ventas
-      completeSale: async (paymentMethod, selectedDate, notes) => {
+      completeSale: async (
+        paymentMethod,
+        selectedDate,
+        notes,
+        paymentSplits
+      ) => {
         const state = get();
         const configState = useConfigStore.getState();
         const exchangeRate = configState.config.exchangeRate;
@@ -131,18 +154,49 @@ export const useWaterSalesStore = create<WaterSalesState>()(
         const safeCreatedAt = getSafeTimestamp();
         const safeUpdatedAt = getSafeTimestamp();
 
+        const totalUsd = totalBs / exchangeRate;
+        const splitWrite = preparePaymentWritePayload({
+          paymentMethod,
+          paymentSplits,
+          totalBs,
+          totalUsd,
+          exchangeRate,
+        });
+
         const newSalePayload: SaleInsert = {
           daily_number: dailyNumber,
           date: normalizedDate,
           items: state.cart,
-          payment_method: paymentMethod,
+          payment_method: splitWrite.paymentMethod,
           total_bs: totalBs,
-          total_usd: totalBs / exchangeRate,
+          total_usd: totalUsd,
           exchange_rate: exchangeRate,
           notes: notes || undefined,
         };
 
         try {
+          // Si estamos offline, guardamos en la cola de sincronización
+          if (!window.navigator.onLine) {
+            const sale = enqueueOfflineSale({
+              newSalePayload,
+              paymentSplits: splitWrite.paymentSplits,
+              dailyNumber,
+              date: normalizedDate,
+              items: state.cart,
+              paymentMethod: splitWrite.paymentMethod,
+              totalBs,
+              totalUsd,
+              exchangeRate,
+              notes: notes || undefined,
+              createdAt: safeCreatedAt,
+              updatedAt: safeUpdatedAt,
+            });
+
+            set((state) => ({ sales: [...state.sales, sale], cart: [] }));
+            toast.info('Sin conexión: Venta guardada localmente.');
+            return sale;
+          }
+
           const { data, error } = await supabase
             .from('sales')
             .insert(newSalePayload)
@@ -155,8 +209,34 @@ export const useWaterSalesStore = create<WaterSalesState>()(
             throw new Error('Error al crear la venta');
           }
 
+          const { error: deleteSplitsError } = await supabase
+            .from(PAYMENT_SPLIT_SCHEMA.salesSplitsTable)
+            .delete()
+            .eq(PAYMENT_SPLIT_SCHEMA.columns.parentId, saleRow.id);
+          if (deleteSplitsError) throw deleteSplitsError;
+
+          const splitRows = salePaymentSplitAdapter.toInsertRows(
+            saleRow.id,
+            splitWrite.paymentSplits
+          );
+
+          const { error: splitInsertError } = await supabase
+            .from(PAYMENT_SPLIT_SCHEMA.salesSplitsTable)
+            .insert(splitRows);
+          if (splitInsertError) throw splitInsertError;
+
+          const { data: splitData, error: splitSelectError } = await supabase
+            .from(PAYMENT_SPLIT_SCHEMA.salesSplitsTable)
+            .select('payment_method, amount_bs, amount_usd, exchange_rate_used')
+            .eq(PAYMENT_SPLIT_SCHEMA.columns.parentId, saleRow.id);
+          if (splitSelectError) throw splitSelectError;
+
           const saleDate = dateService.normalizeSaleDate(
             saleRow.date || normalizedDate
+          );
+
+          const normalizedSplits = salePaymentSplitAdapter.fromRows(
+            (splitData ?? []) as PaymentSplitRow[]
           );
 
           const sale: Sale = {
@@ -164,7 +244,8 @@ export const useWaterSalesStore = create<WaterSalesState>()(
             dailyNumber: saleRow.daily_number,
             date: saleDate,
             items: saleRow.items,
-            paymentMethod: saleRow.payment_method,
+            paymentMethod: splitWrite.paymentMethod,
+            paymentSplits: normalizedSplits,
             totalBs: Number(saleRow.total_bs),
             totalUsd: Number(saleRow.total_usd),
             exchangeRate: Number(saleRow.exchange_rate),
@@ -191,14 +272,94 @@ export const useWaterSalesStore = create<WaterSalesState>()(
       updateSale: async (id, updates) => {
         try {
           const payload: SaleUpdate = {};
+          const nowIso = new Date().toISOString();
+
+          const finalTotalBs =
+            updates.totalBs ?? get().sales.find((s) => s.id === id)?.totalBs;
+          const finalTotalUsd =
+            updates.totalUsd ?? get().sales.find((s) => s.id === id)?.totalUsd;
+          const finalExchangeRate =
+            get().sales.find((s) => s.id === id)?.exchangeRate ??
+            useConfigStore.getState().config.exchangeRate;
+
+          let splitWrite:
+            | ReturnType<typeof preparePaymentWritePayload>
+            | undefined;
+
+          if (
+            updates.paymentMethod !== undefined ||
+            updates.paymentSplits !== undefined ||
+            updates.totalBs !== undefined ||
+            updates.totalUsd !== undefined
+          ) {
+            if (finalTotalBs === undefined || finalTotalUsd === undefined) {
+              throw new Error(
+                'No se pudo resolver el total para validar métodos de pago'
+              );
+            }
+
+            splitWrite = preparePaymentWritePayload({
+              paymentMethod:
+                updates.paymentMethod ??
+                get().sales.find((s) => s.id === id)?.paymentMethod ??
+                'efectivo',
+              paymentSplits:
+                updates.paymentSplits ??
+                get().sales.find((s) => s.id === id)?.paymentSplits,
+              totalBs: finalTotalBs,
+              totalUsd: finalTotalUsd,
+              exchangeRate: finalExchangeRate,
+            });
+          }
+
           if (updates.paymentMethod !== undefined)
-            payload.payment_method = updates.paymentMethod;
+            payload.payment_method =
+              splitWrite?.paymentMethod ?? updates.paymentMethod;
           if (updates.totalBs !== undefined) payload.total_bs = updates.totalBs;
           if (updates.totalUsd !== undefined)
             payload.total_usd = updates.totalUsd;
           if (updates.notes !== undefined) payload.notes = updates.notes;
           if (updates.items !== undefined) payload.items = updates.items;
-          payload.updated_at = new Date().toISOString();
+          payload.updated_at = nowIso;
+
+          if (!window.navigator.onLine) {
+            enqueueOfflineSaleUpdate({
+              id,
+              payload,
+            });
+
+            if (splitWrite) {
+              enqueueOfflineSalePaymentSplitsReplace(
+                id,
+                splitWrite.paymentSplits
+              );
+            }
+
+            set((state) => ({
+              sales: state.sales.map((sale) =>
+                sale.id === id
+                  ? {
+                      ...sale,
+                      ...updates,
+                      paymentMethod:
+                        splitWrite?.paymentMethod ??
+                        updates.paymentMethod ??
+                        sale.paymentMethod,
+                      paymentSplits:
+                        splitWrite?.paymentSplits ??
+                        updates.paymentSplits ??
+                        sale.paymentSplits,
+                      updatedAt: nowIso,
+                    }
+                  : sale
+              ),
+            }));
+            const updatedSale = get().sales.find((s) => s.id === id);
+            if (updatedSale) {
+              salesDataService.invalidateCache(updatedSale.date);
+            }
+            return;
+          }
 
           const { error } = await supabase
             .from('sales')
@@ -206,10 +367,40 @@ export const useWaterSalesStore = create<WaterSalesState>()(
             .eq('id', id);
           if (error) throw error;
 
+          if (splitWrite) {
+            const { error: deleteSplitsError } = await supabase
+              .from(PAYMENT_SPLIT_SCHEMA.salesSplitsTable)
+              .delete()
+              .eq(PAYMENT_SPLIT_SCHEMA.columns.parentId, id);
+            if (deleteSplitsError) throw deleteSplitsError;
+
+            const splitRows = salePaymentSplitAdapter.toInsertRows(
+              id,
+              splitWrite.paymentSplits
+            );
+
+            const { error: splitInsertError } = await supabase
+              .from(PAYMENT_SPLIT_SCHEMA.salesSplitsTable)
+              .insert(splitRows);
+            if (splitInsertError) throw splitInsertError;
+          }
+
           set((state) => ({
             sales: state.sales.map((sale) =>
               sale.id === id
-                ? { ...sale, ...updates, updatedAt: new Date().toISOString() }
+                ? {
+                    ...sale,
+                    ...updates,
+                    paymentMethod:
+                      splitWrite?.paymentMethod ??
+                      updates.paymentMethod ??
+                      sale.paymentMethod,
+                    paymentSplits:
+                      splitWrite?.paymentSplits ??
+                      updates.paymentSplits ??
+                      sale.paymentSplits,
+                    updatedAt: nowIso,
+                  }
                 : sale
             ),
           }));
@@ -226,6 +417,19 @@ export const useWaterSalesStore = create<WaterSalesState>()(
       deleteSale: async (id) => {
         const saleToDelete = get().sales.find((s) => s.id === id);
         try {
+          if (!window.navigator.onLine) {
+            enqueueOfflineSaleDelete({ id });
+            enqueueOfflineSalePaymentSplitsDelete(id);
+
+            set((state) => ({
+              sales: state.sales.filter((sale) => sale.id !== id),
+            }));
+            if (saleToDelete) {
+              salesDataService.invalidateCache(saleToDelete.date);
+            }
+            return;
+          }
+
           const { error } = await supabase.from('sales').delete().eq('id', id);
           if (error) throw error;
           set((state) => ({
@@ -249,7 +453,7 @@ export const useWaterSalesStore = create<WaterSalesState>()(
           .filterSales(get().sales, normalizedDate)
           .sort(
             (a, b) =>
-              new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
           );
       },
 

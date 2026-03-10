@@ -21,7 +21,13 @@ import {
 import { Button } from '@/components/ui/button';
 import { useAppStore } from '@/store/useAppStore';
 import { getVenezuelaDate } from '@/services/DateService';
-import { CheckCircle2, RotateCcw, Calendar, RefreshCw, Trash2 } from 'lucide-react';
+import {
+  CheckCircle2,
+  RotateCcw,
+  Calendar,
+  RefreshCw,
+  Trash2,
+} from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
@@ -131,7 +137,13 @@ export function RentalCardDialogs({
                   type="button"
                 >
                   <RefreshCw className="w-3.5 h-3.5" />
-                  Usar fecha actual de la vista ({selectedDate ? format(new Date(selectedDate + 'T12:00:00'), 'dd MMM', { locale: es }) : ''})
+                  Usar fecha actual de la vista (
+                  {selectedDate
+                    ? format(new Date(selectedDate + 'T12:00:00'), 'dd MMM', {
+                        locale: es,
+                      })
+                    : ''}
+                  )
                 </button>
               )}
             </div>
@@ -142,7 +154,9 @@ export function RentalCardDialogs({
               size="lg"
               variant={isPaid ? 'destructive' : 'default'}
               className="w-full h-14 rounded-2xl text-base font-semibold shadow-lg"
-              onClick={() => onConfirmPaymentChange(!isPaid ? paymentDate : undefined)}
+              onClick={() =>
+                onConfirmPaymentChange(!isPaid ? paymentDate : undefined)
+              }
             >
               {isPaid ? 'Confirmar como Pendiente' : 'Confirmar y Guardar'}
             </Button>
@@ -160,7 +174,7 @@ export function RentalCardDialogs({
       </Drawer>
 
       <Drawer open={deleteDialogOpen} onOpenChange={onDeleteDialogOpenChange}>
-        <DrawerContent className="p-4 sm:p-6 pb-8">
+        <DrawerContent className="p-4 sm:p-6 pb-8 sm:pb-10 sm:min-h-[360px]">
           <DrawerHeader className="px-0 pt-2">
             <DrawerTitle className="text-xl font-bold flex items-center gap-2 text-destructive">
               <Trash2 className="w-6 h-6" />
@@ -172,11 +186,11 @@ export function RentalCardDialogs({
             </DrawerDescription>
           </DrawerHeader>
 
-          <DrawerFooter className="px-0 pb-0 gap-3 pt-6">
+          <DrawerFooter className="px-0 pb-0 gap-3 pt-6 sm:pt-8">
             <Button
               size="lg"
               variant="destructive"
-              className="w-full h-14 rounded-2xl text-base font-semibold shadow-lg"
+              className="w-full h-14 rounded-2xl text-base font-semibold shadow-lg sm:h-16 sm:text-lg"
               onClick={onConfirmDelete}
             >
               Eliminar Permanentemente
@@ -185,7 +199,7 @@ export function RentalCardDialogs({
               <Button
                 variant="outline"
                 size="lg"
-                className="w-full h-14 rounded-2xl text-base font-medium border-border/50 bg-background"
+                className="w-full h-14 rounded-2xl text-base font-medium border-border/50 bg-background sm:h-16 sm:text-lg"
               >
                 Cancelar
               </Button>

@@ -5,6 +5,8 @@ import { useAppStore } from '@/store/useAppStore';
 import { useCustomerStore } from '@/store/useCustomerStore';
 import { useRentalStore } from '@/store/useRentalStore';
 import { useMachineStore } from '@/store/useMachineStore';
+import { useConfigStore } from '@/store/useConfigStore';
+import type { PaymentSplit } from '@/types/paymentSplits';
 import {
   BUSINESS_HOURS,
   PaymentMethod,
@@ -19,6 +21,8 @@ import {
   generateTimeSlots,
 } from '@/utils/rentalSchedule';
 import { calculateRentalPrice } from '@/utils/rentalPricing';
+import { normalizeAndValidatePaymentSplits } from '@/services/payments/paymentSplitValidation';
+import { buildDualPaymentSplits } from '@/services/payments/paymentSplitWritePath';
 
 interface RentalSheetViewModelProps {
   open: boolean;
@@ -68,6 +72,10 @@ export function useRentalSheetViewModel({
   onOpenChange,
 }: RentalSheetViewModelProps) {
   const { selectedDate } = useAppStore();
+  const isMixedPaymentEnabled = useConfigStore((state) =>
+    state.isMixedPaymentEnabled('rentals')
+  );
+  const exchangeRate = useConfigStore((state) => state.config.exchangeRate);
   const { customers } = useCustomerStore();
   const { addRental, rentals } = useRentalStore();
   const { washingMachines } = useMachineStore();
@@ -77,6 +85,9 @@ export function useRentalSheetViewModel({
   const [deliveryTime, setDeliveryTime] = useState('09:00');
   const [deliveryFee, setDeliveryFee] = useState(0);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('efectivo');
+  const [split2Method, setSplit2Method] = useState<PaymentMethod>('pago_movil');
+  const [split1Amount, setSplit1Amount] = useState('');
+  const [isMixedPayment, setIsMixedPayment] = useState(false);
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerAddress, setCustomerAddress] = useState('');
@@ -100,6 +111,39 @@ export function useRentalSheetViewModel({
   const totalUsd = useMemo(() => {
     return calculateRentalPrice(shift, paymentMethod, deliveryFee);
   }, [shift, paymentMethod, deliveryFee]);
+  const totalBs = useMemo(
+    () => totalUsd * exchangeRate,
+    [totalUsd, exchangeRate]
+  );
+
+  const hasMixedPaymentEnabled = isMixedPaymentEnabled && isMixedPayment;
+
+  const paymentSplits = useMemo<PaymentSplit[]>(() => {
+    return buildDualPaymentSplits({
+      enableMixedPayment: hasMixedPaymentEnabled,
+      primaryMethod: paymentMethod,
+      secondaryMethod: split2Method,
+      amountInput: split1Amount,
+      amountInputMode: 'primary',
+      totalBs,
+      totalUsd,
+      exchangeRate,
+    });
+  }, [
+    exchangeRate,
+    hasMixedPaymentEnabled,
+    paymentMethod,
+    split1Amount,
+    split2Method,
+    totalBs,
+    totalUsd,
+  ]);
+
+  useEffect(() => {
+    if (split2Method === paymentMethod) {
+      setSplit2Method(paymentMethod === 'efectivo' ? 'pago_movil' : 'efectivo');
+    }
+  }, [paymentMethod, split2Method]);
 
   const unavailableMachines = useMemo(() => {
     const requestedStart = new Date(`${selectedDate}T${deliveryTime}`);
@@ -183,6 +227,9 @@ export function useRentalSheetViewModel({
     setDeliveryTime(getDefaultDeliveryTime());
     setDeliveryFee(0);
     setPaymentMethod('efectivo');
+    setSplit2Method('pago_movil');
+    setSplit1Amount('');
+    setIsMixedPayment(false);
     setCustomerName('');
     setCustomerPhone('');
     setCustomerAddress('');
@@ -246,6 +293,16 @@ export function useRentalSheetViewModel({
 
     setIsSaving(true);
     try {
+      const splitValidation = normalizeAndValidatePaymentSplits({
+        splits: paymentSplits,
+        totalBs,
+        totalUsd,
+      });
+      if (!splitValidation.validation.ok) {
+        toast.error(splitValidation.validation.errors[0]);
+        return;
+      }
+
       await addRental({
         date: selectedDate,
         customerId: selectedCustomerId || undefined,
@@ -260,6 +317,7 @@ export function useRentalSheetViewModel({
         deliveryFee,
         totalUsd,
         paymentMethod,
+        paymentSplits: splitValidation.splits,
         status: 'agendado',
         isPaid: false,
         notes: notes.trim() || undefined,
@@ -288,6 +346,11 @@ export function useRentalSheetViewModel({
     selectedMachineId: machineId,
     selectedShift: shift,
     selectedPaymentMethod: paymentMethod,
+    totalBs,
+    split2Method,
+    split1Amount,
+    isMixedPaymentEnabled,
+    isMixedPayment,
     deliveryTime,
     deliveryFee,
     customerName,
@@ -299,6 +362,17 @@ export function useRentalSheetViewModel({
     onSelectMachine: setMachineId,
     onSelectShift: setShift,
     onSelectPaymentMethod: setPaymentMethod,
+    onSelectSplit2Method: setSplit2Method,
+    onChangeSplit1Amount: setSplit1Amount,
+    onToggleMixedPayment: () => {
+      setIsMixedPayment((current) => {
+        const next = !current;
+        if (!next) {
+          setSplit1Amount('');
+        }
+        return next;
+      });
+    },
     onSelectDeliveryTime: setDeliveryTime,
     onSelectDeliveryFee: setDeliveryFee,
     onChangeCustomerName: setCustomerName,

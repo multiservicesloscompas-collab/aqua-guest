@@ -1,27 +1,30 @@
 const CACHE_NAME = 'aquagest-static-v1';
 const ASSETS_TO_CACHE = ['/', '/index.html', '/favicon.ico'];
+const sw = globalThis;
 
-self.addEventListener('install', (event) => {
+sw.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS_TO_CACHE))
   );
-  self.skipWaiting();
+  sw.skipWaiting();
 });
 
-self.addEventListener('activate', (event) => {
+sw.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(
-        keys.map((key) => {
-          if (key !== CACHE_NAME) return caches.delete(key);
-        })
+    caches
+      .keys()
+      .then((keys) =>
+        Promise.all(
+          keys.map((key) =>
+            key !== CACHE_NAME ? caches.delete(key) : Promise.resolve()
+          )
+        )
       )
-    )
   );
-  self.clients.claim();
+  sw.clients.claim();
 });
 
-self.addEventListener('fetch', (event) => {
+sw.addEventListener('fetch', (event) => {
   // Try network first, fallback to cache
   event.respondWith(
     fetch(event.request)
@@ -29,7 +32,7 @@ self.addEventListener('fetch', (event) => {
         // Optionally update cache for same-origin GET requests
         if (
           event.request.method === 'GET' &&
-          new URL(event.request.url).origin === self.location.origin
+          new URL(event.request.url).origin === sw.location.origin
         ) {
           const copy = res.clone();
           caches

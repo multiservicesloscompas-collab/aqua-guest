@@ -1,16 +1,16 @@
 import { useState } from 'react';
-import { PaymentMethod, PaymentMethodLabels } from '@/types';
+import { PaymentMethod } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { 
-  Banknote, 
-  Smartphone, 
-  CreditCard, 
+import {
+  Banknote,
+  Smartphone,
+  CreditCard,
   DollarSign,
   Filter,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
 } from 'lucide-react';
 
 interface PaymentFilterProps {
@@ -25,7 +25,10 @@ const paymentIcons: Record<PaymentMethod, any> = {
   divisa: DollarSign,
 };
 
-export function PaymentFilter({ selectedFilter, onFilterChange }: PaymentFilterProps) {
+export function PaymentFilter({
+  selectedFilter,
+  onFilterChange,
+}: PaymentFilterProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
   const filters: Array<{ value: PaymentMethod | 'todos'; label: string }> = [
@@ -37,7 +40,7 @@ export function PaymentFilter({ selectedFilter, onFilterChange }: PaymentFilterP
   ];
 
   const getFilterLabel = () => {
-    const filter = filters.find(f => f.value === selectedFilter);
+    const filter = filters.find((f) => f.value === selectedFilter);
     return filter ? filter.label : 'Todos';
   };
 
@@ -89,13 +92,15 @@ export function PaymentFilter({ selectedFilter, onFilterChange }: PaymentFilterP
             <Filter className="w-3.5 h-3.5" />
             <span>Seleccionar método de pago</span>
           </div>
-          
+
           <div className="grid grid-cols-2 gap-2">
             {filters.map((filter) => {
               const isActive = selectedFilter === filter.value;
               const isPaymentMethod = filter.value !== 'todos';
-              const Icon = isPaymentMethod ? paymentIcons[filter.value as PaymentMethod] : null;
-              
+              const Icon = isPaymentMethod
+                ? paymentIcons[filter.value as PaymentMethod]
+                : null;
+
               return (
                 <Button
                   key={filter.value}
@@ -107,8 +112,8 @@ export function PaymentFilter({ selectedFilter, onFilterChange }: PaymentFilterP
                   }}
                   className={cn(
                     'gap-2 transition-all duration-200 h-10',
-                    isActive 
-                      ? 'bg-primary text-primary-foreground shadow-sm border-primary' 
+                    isActive
+                      ? 'bg-primary text-primary-foreground shadow-sm border-primary'
                       : 'hover:bg-muted/50 hover:border-primary/50'
                   )}
                 >

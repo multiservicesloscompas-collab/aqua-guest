@@ -57,7 +57,12 @@ export function WashingMachineFormSheet({
 }: WashingMachineFormSheetProps) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="rounded-t-3xl">
+      <SheetContent
+        side="bottom"
+        tabletSide="right"
+        tabletClassName="sm:max-w-[440px]"
+        className="rounded-t-3xl sm:rounded-none"
+      >
         <SheetHeader className="pb-4">
           <SheetTitle className="flex items-center gap-2">
             <WashingMachineIcon className="w-5 h-5 text-primary" />

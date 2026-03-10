@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { useCustomerStore } from '@/store/useCustomerStore';
 import { useRentalStore } from '@/store/useRentalStore';
 import { useMachineStore } from '@/store/useMachineStore';
+import { useConfigStore } from '@/store/useConfigStore';
 import { getVenezuelaDate } from '@/services/DateService';
 import {
   calculatePickupTime,
@@ -21,6 +22,9 @@ import {
   RentalStatusLabels,
   WasherRental,
 } from '@/types';
+import type { PaymentSplit } from '@/types/paymentSplits';
+import { normalizeAndValidatePaymentSplits } from '@/services/payments/paymentSplitValidation';
+import { buildDualPaymentSplits } from '@/services/payments/paymentSplitWritePath';
 
 interface EditRentalSheetViewModelProps {
   rental: WasherRental | null;
@@ -52,6 +56,10 @@ export function useEditRentalSheetViewModel({
   onOpenChange,
 }: EditRentalSheetViewModelProps) {
   const { customers } = useCustomerStore();
+  const isMixedPaymentEnabled = useConfigStore((state) =>
+    state.isMixedPaymentEnabled('rentals')
+  );
+  const exchangeRate = useConfigStore((state) => state.config.exchangeRate);
   const { updateRental, rentals } = useRentalStore();
   const { washingMachines } = useMachineStore();
 
@@ -64,6 +72,9 @@ export function useEditRentalSheetViewModel({
   const [customerAddress, setCustomerAddress] = useState('');
   const [selectedCustomerId, setSelectedCustomerId] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('efectivo');
+  const [split2Method, setSplit2Method] = useState<PaymentMethod>('pago_movil');
+  const [split1Amount, setSplit1Amount] = useState('');
+  const [isMixedPayment, setIsMixedPayment] = useState(false);
   const [notes, setNotes] = useState('');
   const [status, setStatus] = useState<RentalStatus>('agendado');
   const [isPaid, setIsPaid] = useState(false);
@@ -82,6 +93,15 @@ export function useEditRentalSheetViewModel({
     setCustomerAddress(rental.customerAddress);
     setSelectedCustomerId(rental.customerId || '');
     setPaymentMethod(rental.paymentMethod || 'efectivo');
+    const splitMain = rental.paymentSplits?.find(
+      (split) => split.method === rental.paymentMethod
+    );
+    const splitSecondary = rental.paymentSplits?.find(
+      (split) => split.method !== rental.paymentMethod
+    );
+    setSplit1Amount(splitMain ? String(splitMain.amountBs) : '');
+    setSplit2Method(splitSecondary?.method ?? 'pago_movil');
+    setIsMixedPayment(Boolean(splitSecondary));
     setNotes(rental.notes || '');
     setStatus(rental.status);
     setIsPaid(rental.isPaid);
@@ -99,6 +119,39 @@ export function useEditRentalSheetViewModel({
   const totalUsd = useMemo(() => {
     return calculateRentalPrice(shift, paymentMethod, deliveryFee);
   }, [shift, paymentMethod, deliveryFee]);
+  const totalBs = useMemo(
+    () => totalUsd * exchangeRate,
+    [totalUsd, exchangeRate]
+  );
+
+  const hasMixedPaymentEnabled = isMixedPaymentEnabled && isMixedPayment;
+
+  const paymentSplits = useMemo<PaymentSplit[]>(() => {
+    return buildDualPaymentSplits({
+      enableMixedPayment: hasMixedPaymentEnabled,
+      primaryMethod: paymentMethod,
+      secondaryMethod: split2Method,
+      amountInput: split1Amount,
+      amountInputMode: 'primary',
+      totalBs,
+      totalUsd,
+      exchangeRate,
+    });
+  }, [
+    exchangeRate,
+    hasMixedPaymentEnabled,
+    paymentMethod,
+    split1Amount,
+    split2Method,
+    totalBs,
+    totalUsd,
+  ]);
+
+  useEffect(() => {
+    if (split2Method === paymentMethod) {
+      setSplit2Method(paymentMethod === 'efectivo' ? 'pago_movil' : 'efectivo');
+    }
+  }, [paymentMethod, split2Method]);
 
   const unavailableMachines = useMemo(() => {
     if (!rental) return [] as string[];
@@ -217,6 +270,17 @@ export function useEditRentalSheetViewModel({
 
     setIsLoading(true);
     try {
+      const splitValidation = normalizeAndValidatePaymentSplits({
+        splits: paymentSplits,
+        totalBs,
+        totalUsd,
+      });
+
+      if (!splitValidation.validation.ok) {
+        toast.error(splitValidation.validation.errors[0]);
+        return;
+      }
+
       const updates: Partial<WasherRental> = {
         machineId,
         shift,
@@ -226,6 +290,7 @@ export function useEditRentalSheetViewModel({
         deliveryFee,
         totalUsd,
         paymentMethod,
+        paymentSplits: splitValidation.splits,
         customerId: selectedCustomerId || undefined,
         customerName: customerName?.trim() || '',
         customerPhone: customerPhone?.trim() || '',
@@ -266,6 +331,11 @@ export function useEditRentalSheetViewModel({
     selectedMachineId: machineId,
     selectedShift: shift,
     selectedPaymentMethod: paymentMethod,
+    totalBs,
+    split2Method,
+    split1Amount,
+    isMixedPaymentEnabled,
+    isMixedPayment,
     deliveryTime,
     deliveryFee,
     customerName,
@@ -276,6 +346,17 @@ export function useEditRentalSheetViewModel({
     onSelectMachine: setMachineId,
     onSelectShift: setShift,
     onSelectPaymentMethod: setPaymentMethod,
+    onSelectSplit2Method: setSplit2Method,
+    onChangeSplit1Amount: setSplit1Amount,
+    onToggleMixedPayment: () => {
+      setIsMixedPayment((current) => {
+        const next = !current;
+        if (!next) {
+          setSplit1Amount('');
+        }
+        return next;
+      });
+    },
     onSelectDeliveryTime: setDeliveryTime,
     onSelectDeliveryFee: setDeliveryFee,
     onChangeCustomerName: setCustomerName,

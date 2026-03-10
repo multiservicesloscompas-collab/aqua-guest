@@ -19,6 +19,9 @@ const DEFAULT_FORM_DATA: PaymentBalanceFormData = {
   notes: '',
 };
 
+const confirmDeleteTransaction = () =>
+  window.confirm('¿Está seguro de eliminar esta transacción de equilibrio?');
+
 export function usePaymentBalancePageViewModel() {
   const {
     paymentBalanceTransactions,
@@ -156,9 +159,7 @@ export function usePaymentBalancePageViewModel() {
 
   const handleDeleteTransaction = useCallback(
     async (id: string) => {
-      if (
-        !confirm('¿Está seguro de eliminar esta transacción de equilibrio?')
-      ) {
+      if (!confirmDeleteTransaction()) {
         return;
       }
 
