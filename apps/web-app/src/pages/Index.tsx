@@ -1,37 +1,108 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 import { useMachineStore } from '@/store/useMachineStore';
+import { useNavStore } from '@/store/useNavStore';
+import { Header } from '@/components/layout/Header';
 import { BottomNav } from '@/components/layout/BottomNav';
 import { MenuSheet } from '@/components/layout/MenuSheet';
 import { TabletNavigationRail } from '@/components/layout/TabletNavigationRail';
+import { ModuleSubMenuSheet } from '@/components/layout/ModuleSubMenuSheet';
 import { DashboardPage } from '@/pages/DashboardPage';
 import { WaterSalesPage } from '@/pages/WaterSalesPage';
 import { RentalsPage } from '@/pages/RentalsPage';
 import { ExpensesPage } from '@/pages/ExpensesPage';
 import { ConfigPage } from '@/pages/ConfigPage';
-import CustomersPage from '@/pages/CustomersPage';
+import { ExchangeRateConfigPage } from '@/pages/ExchangeRateConfigPage';
+import { WaterPricingConfigPage } from '@/pages/WaterPricingConfigPage';
+import CustomersPage from '@/pages/CustomersPage/index';
 import WashingMachinesPage from '@/pages/WashingMachinesPage';
 import { FollowUpPage } from '@/pages/FollowUpPage';
 import { ExchangeHistoryPage } from '@/pages/ExchangeHistoryPage';
-import { PrePaysPage } from '@/pages/PrePaysPage';
+import { PrePaysPage } from '@/pages/PrePaysPage/index';
 import { DeliverysPage } from '@/pages/DeliverysPage';
-import { WaterMetricsPage } from '@/pages/WaterMetricsPage';
+import { WaterMetricsPage } from '@/pages/WaterMetricsPage/index';
 import { PaymentBalancePage } from '@/pages/PaymentBalancePage/index';
 import { TransactionsSummaryPage } from '@/pages/TransactionsSummaryPage';
 import { PaymentMethodDetailPage } from '@/pages/PaymentMethodDetailPage';
+import { LavadorasMetricsPage } from '@/pages/LavadorasMetricsPage/index';
+import { EntregasMetricsPage } from '@/pages/EntregasMetricsPage/index';
+import { ClientesMetricsPage } from '@/pages/ClientesMetricsPage/index';
+import { TopClientsPage } from '@/pages/TopClientsPage/index';
+import { EgresosMetricsPage } from '@/pages/EgresosMetricsPage/index';
 import { AppRoute, PaymentMethod } from '@/types';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { useViewportMode } from '@/hooks/responsive/useViewportMode';
 import { TABLET_SHELL_TOKENS } from '@/lib/responsive/layoutTokens';
+import { moduleSubItems } from '@/components/layout/navigationItems';
 import { cn } from '@/lib/utils';
 import { RefreshCw } from 'lucide-react';
 
+// Routes that render their own Header (dynamic titles / back navigation)
+const SELF_HEADER_ROUTES: AppRoute[] = [
+  'transacciones-hoy',
+  'detalle-pago',
+  'historial-tasas',
+];
+
+interface RouteHeader {
+  title: string;
+  subtitle?: string;
+}
+
+const routeHeaderMap: Record<AppRoute, RouteHeader> = {
+  dashboard: { title: 'AquaGest', subtitle: 'Panel de Control' },
+  ventas: { title: 'Venta de Agua', subtitle: 'Gestión de registros' },
+  alquiler: { title: 'Alquiler de Lavadoras' },
+  egresos: { title: 'Egresos', subtitle: 'Registro de gastos' },
+  clientes: { title: 'Clientes' },
+  lavadoras: { title: 'Lavadoras', subtitle: 'Gestión de máquinas' },
+  config: { title: 'Configuración', subtitle: 'Ajustes de la app' },
+  seguimiento: { title: 'Seguimiento', subtitle: 'Alquileres pendientes' },
+  prepagados: { title: 'Agua Prepagada' },
+  deliverys: { title: 'Entregas', subtitle: 'Historial de entregas' },
+  'metricas-agua': {
+    title: 'Métricas de Agua',
+    subtitle: 'Análisis de ventas',
+  },
+  'equilibrio-pagos': {
+    title: 'Equilibrio de Pagos',
+    subtitle: 'Transferencia entre métodos',
+  },
+  'lavadoras-metricas': {
+    title: 'Métricas Lavadoras',
+    subtitle: 'Resumen de alquileres',
+  },
+  'entregas-metricas': {
+    title: 'Métricas Entregas',
+    subtitle: 'Resumen de entregas',
+  },
+  'clientes-metricas': {
+    title: 'Métricas Clientes',
+    subtitle: 'Resumen de clientes',
+  },
+  'clientes-top': { title: 'Top Clientes', subtitle: 'Mayor facturación' },
+  'egresos-metricas': {
+    title: 'Métricas Finanzas',
+    subtitle: 'Resumen de egresos',
+  },
+  'config-precios-agua': {
+    title: 'Precios del Agua',
+    subtitle: 'Breakpoints por litro',
+  },
+  'config-tasa-cambio': { title: 'Tasa de Cambio', subtitle: 'Bs por USD' },
+  // Self-header routes — values here are fallbacks, never used by shell
+  'historial-tasas': { title: 'Historial de Tasas' },
+  'transacciones-hoy': { title: 'Transacciones' },
+  'detalle-pago': { title: 'Detalle de Pago' },
+};
+
 const Index = () => {
   const { loadFromSupabase } = useAppStore();
-  const [currentRoute, setCurrentRoute] = useState<AppRoute>('dashboard');
+  const { currentRoute, activeModuleRoute, setRoute } = useNavStore();
   const [selectedPaymentMethod, setSelectedPaymentMethod] =
     useState<PaymentMethod>('efectivo');
   const [menuOpen, setMenuOpen] = useState(false);
+  const [subMenuOpen, setSubMenuOpen] = useState(false);
   const [lastLoaded, setLastLoaded] = useState<number>(Date.now());
   const isFirstLoad = useRef(true);
   const { viewportMode, isMobileViewport, isTabletViewport } =
@@ -39,7 +110,7 @@ const Index = () => {
 
   const handlePaymentMethodClick = (method: PaymentMethod) => {
     setSelectedPaymentMethod(method);
-    setCurrentRoute('detalle-pago');
+    setRoute('detalle-pago');
   };
 
   const handleRefresh = async () => {
@@ -64,12 +135,19 @@ const Index = () => {
     }
   }, [loadFromSupabase, currentRoute, lastLoaded]);
 
+  const activeSubItems = activeModuleRoute
+    ? moduleSubItems[activeModuleRoute] ?? []
+    : [];
+
+  const hasSelfHeader = SELF_HEADER_ROUTES.includes(currentRoute);
+  const { title, subtitle } = routeHeaderMap[currentRoute];
+
   const renderPage = () => {
     switch (currentRoute) {
       case 'dashboard':
         return (
           <DashboardPage
-            onNavigate={setCurrentRoute}
+            onNavigate={setRoute}
             onPaymentMethodClick={handlePaymentMethodClick}
           />
         );
@@ -84,29 +162,43 @@ const Index = () => {
       case 'egresos':
         return <ExpensesPage />;
       case 'config':
-        return <ConfigPage onNavigate={setCurrentRoute} />;
+        return <ConfigPage onNavigate={setRoute} />;
       case 'seguimiento':
         return <FollowUpPage />;
       case 'historial-tasas':
-        return <ExchangeHistoryPage onNavigate={setCurrentRoute} />;
+        return <ExchangeHistoryPage onNavigate={setRoute} />;
       case 'prepagados':
         return <PrePaysPage />;
       case 'deliverys':
         return <DeliverysPage />;
       case 'metricas-agua':
-        return <WaterMetricsPage onNavigate={setCurrentRoute} />;
+        return <WaterMetricsPage onNavigate={setRoute} />;
       case 'equilibrio-pagos':
         return <PaymentBalancePage />;
       case 'transacciones-hoy':
-        return <TransactionsSummaryPage onNavigate={setCurrentRoute} />;
+        return <TransactionsSummaryPage onNavigate={setRoute} />;
       case 'detalle-pago':
         return (
           <PaymentMethodDetailPage
             paymentMethod={selectedPaymentMethod}
-            onNavigate={setCurrentRoute}
+            onNavigate={setRoute}
             onPaymentMethodChange={setSelectedPaymentMethod}
           />
         );
+      case 'lavadoras-metricas':
+        return <LavadorasMetricsPage onNavigate={setRoute} />;
+      case 'entregas-metricas':
+        return <EntregasMetricsPage onNavigate={setRoute} />;
+      case 'clientes-metricas':
+        return <ClientesMetricsPage onNavigate={setRoute} />;
+      case 'clientes-top':
+        return <TopClientsPage onNavigate={setRoute} />;
+      case 'egresos-metricas':
+        return <EgresosMetricsPage onNavigate={setRoute} />;
+      case 'config-precios-agua':
+        return <WaterPricingConfigPage />;
+      case 'config-tasa-cambio':
+        return <ExchangeRateConfigPage onNavigate={setRoute} />;
       default:
         return <DashboardPage />;
     }
@@ -128,9 +220,7 @@ const Index = () => {
               className={`w-5 h-5 text-primary transition-transform duration-200 ${
                 isRefreshing ? 'animate-spin' : ''
               }`}
-              style={{
-                transform: `rotate(${progress * 360}deg)`,
-              }}
+              style={{ transform: `rotate(${progress * 360}deg)` }}
             />
             <span className="text-sm text-muted-foreground">
               {isRefreshing ? 'Actualizando...' : 'Suelta para actualizar'}
@@ -150,28 +240,50 @@ const Index = () => {
       >
         <TabletNavigationRail
           currentRoute={currentRoute}
-          onNavigate={setCurrentRoute}
+          onNavigate={setRoute}
         />
 
         <div className={cn('min-w-0', isMobileViewport && 'pb-24')}>
+          {/* Global shell Header — hidden for pages that manage their own */}
+          {!hasSelfHeader && (
+            <Header
+              title={title}
+              subtitle={subtitle}
+              subItems={activeSubItems.length > 0 ? activeSubItems : undefined}
+              onSubMenuOpen={
+                activeSubItems.length > 0
+                  ? () => setSubMenuOpen(true)
+                  : undefined
+              }
+            />
+          )}
           {renderPage()}
         </div>
       </div>
 
-      {/* BottomNav and MenuSheet: mobile only */}
+      {/* BottomNav, MenuSheet, ModuleSubMenuSheet: mobile only */}
       {isMobileViewport && (
         <>
           <BottomNav
             currentRoute={currentRoute}
-            onNavigate={setCurrentRoute}
+            onNavigate={setRoute}
             onOpenMenu={() => setMenuOpen(true)}
           />
           <MenuSheet
             open={menuOpen}
             onOpenChange={setMenuOpen}
             currentRoute={currentRoute}
-            onNavigate={setCurrentRoute}
+            onNavigate={setRoute}
           />
+          {activeModuleRoute && activeSubItems.length > 0 && (
+            <ModuleSubMenuSheet
+              open={subMenuOpen}
+              onOpenChange={setSubMenuOpen}
+              moduleRoute={activeModuleRoute}
+              currentRoute={currentRoute}
+              onNavigate={setRoute}
+            />
+          )}
         </>
       )}
     </div>

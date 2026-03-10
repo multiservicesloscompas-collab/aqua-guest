@@ -1,16 +1,22 @@
 import {
+  BarChart2,
   ClipboardList,
+  CreditCard,
+  DollarSign,
   Droplets,
+  History,
   Home,
+  Scale,
   Settings,
   TrendingDown,
+  Trophy,
   Truck,
   Users,
   WashingMachine,
   type LucideIcon,
 } from 'lucide-react';
 
-import type { AppRoute } from '@/types';
+import type { AppRoute, ModuleRoute, ModuleSubItem } from '@/types';
 
 export interface NavigationItem {
   route: AppRoute;
@@ -30,22 +36,10 @@ export const primaryNavigationItems: NavigationItem[] = [
 
 export const secondaryNavigationItems: SecondaryNavigationItem[] = [
   {
-    route: 'seguimiento',
-    label: 'Seguimiento',
-    description: 'Alquileres pendientes y enviados',
-    icon: ClipboardList,
-  },
-  {
     route: 'deliverys',
     label: 'Entregas',
     description: 'Historial de entregas de lavadoras',
     icon: Truck,
-  },
-  {
-    route: 'lavadoras',
-    label: 'Lavadoras',
-    description: 'Gestiona tus lavadoras',
-    icon: WashingMachine,
   },
   {
     route: 'clientes',
@@ -60,33 +54,54 @@ export const secondaryNavigationItems: SecondaryNavigationItem[] = [
     icon: TrendingDown,
   },
   {
-    route: 'prepagados',
-    label: 'Prepagados',
-    description: 'Pedidos pagados por adelantado',
-    icon: ClipboardList,
-  },
-  {
-    route: 'metricas-agua',
-    label: 'Métricas de agua',
-    description: 'Resumen y tendencias de ventas de agua',
-    icon: Droplets,
-  },
-  {
     route: 'transacciones-hoy',
     label: 'Transacciones',
     description: 'Movimientos diarios por módulo',
     icon: TrendingDown,
   },
-  {
-    route: 'equilibrio-pagos',
-    label: 'Equilibrio de pagos',
-    description: 'Transferencias entre métodos de pago',
-    icon: Settings,
-  },
-  {
-    route: 'config',
-    label: 'Configuración',
-    description: 'Tasa de cambio y ajustes',
-    icon: Settings,
-  },
 ];
+
+export const moduleSubItems: Record<ModuleRoute, ModuleSubItem[]> = {
+  agua: [
+    { label: 'Métricas de Agua', route: 'metricas-agua', icon: BarChart2 },
+    { label: 'Agua Prepagada', route: 'prepagados', icon: CreditCard },
+    { label: 'Precios', route: 'config-precios-agua', icon: Settings },
+  ],
+  lavadoras: [
+    {
+      label: 'Métricas Lavadoras',
+      route: 'lavadoras-metricas',
+      icon: BarChart2,
+    },
+    { label: 'Seguimiento', route: 'seguimiento', icon: ClipboardList },
+    { label: 'Gestión de Máquinas', route: 'lavadoras', icon: WashingMachine },
+  ],
+  entregas: [
+    {
+      label: 'Métricas Entregas',
+      route: 'entregas-metricas',
+      icon: BarChart2,
+    },
+  ],
+  clientes: [
+    {
+      label: 'Métricas Clientes',
+      route: 'clientes-metricas',
+      icon: BarChart2,
+    },
+    { label: 'Top Clientes', route: 'clientes-top', icon: Trophy },
+  ],
+  finanzas: [
+    { label: 'Métricas Egresos', route: 'egresos-metricas', icon: BarChart2 },
+    {
+      label: 'Equilibrio de Pagos',
+      route: 'equilibrio-pagos',
+      icon: Scale,
+    },
+  ],
+  configuracion: [
+    { label: 'Tasa de Cambio', route: 'config-tasa-cambio', icon: DollarSign },
+    { label: 'Historial de Tasas', route: 'historial-tasas', icon: History },
+  ],
+  dashboard: [],
+};

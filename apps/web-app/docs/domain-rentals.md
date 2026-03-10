@@ -25,6 +25,7 @@ Manage the rental of washing machines by scheduling shifts (medio, completo, dob
 
 - **`RentalsPage` (`src/pages/RentalsPage.tsx`)**: Main list of rentals for a specific date. Shows KPIs (active rentals, earnings, paid amount).
 - **`RentalList` (`src/components/alquiler/RentalList.tsx`)**: Renders `RentalCard` components with status and payment toggles.
+- **Cards split-aware (registros):** `RentalList` + `RentalCardDetails` usan un read-model de presentación para mostrar `Pago mixto` con líneas por método y montos Bs/USD cuando existen `paymentSplits` válidos; si no, conservan el fallback legacy por `paymentMethod`.
 - **`RentalSheet` (`src/components/alquiler/RentalSheet.tsx`)**: Bottom sheet to create a new rental. Includes `CustomerSearch`, machine selection, shift, delivery fee, and auto-calculated pickup time.
 - **`EditRentalSheet` (`src/components/alquiler/EditRentalSheet.tsx`)**: Bottom sheet to modify an existing rental (status, payment, machine, delivery time).
 - **Activación de pago mixto (crear/editar):** cuando `isMixedPaymentEnabled('rentals')` está activo en configuración, ambos sheets muestran primero un botón CTA de "Pago mixto" (mismo tono y presentación de Agua) y solo revelan los campos de reparto al activarlo; al desactivar, se limpia el monto editable para evitar arrastre de input previo.

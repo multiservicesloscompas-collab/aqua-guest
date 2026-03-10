@@ -3,7 +3,6 @@ import { Pencil, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { AppPageContainer } from '@/components/layout/AppPageContainer';
-import { Header } from '@/components/layout/Header';
 import { TabletSplitLayout } from '@/components/layout/TabletSplitLayout';
 import {
   Sheet,
@@ -32,7 +31,11 @@ import { cn } from '@/lib/utils';
 
 type ExpensesViewMode = 'day' | 'week';
 
-export function ExpensesPage() {
+interface ExpensesPageProps {
+  autoOpenAdd?: boolean;
+}
+
+export function ExpensesPage({ autoOpenAdd }: ExpensesPageProps = {}) {
   const { isTabletViewport } = useViewportMode();
   const {
     getExpensesByDate,
@@ -91,6 +94,11 @@ export function ExpensesPage() {
     handleReset();
     setShowSheet(true);
   };
+
+  useEffect(() => {
+    if (autoOpenAdd) handleOpenNew();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoOpenAdd]);
 
   const handleEdit = (expense: Expense) => {
     setEditingExpense(expense);
@@ -155,8 +163,6 @@ export function ExpensesPage() {
 
   return (
     <div className="flex flex-col min-h-screen pb-24">
-      <Header title="Egresos" subtitle="Registro de gastos" />
-
       <AppPageContainer>
         {isTabletViewport ? (
           <TabletSplitLayout

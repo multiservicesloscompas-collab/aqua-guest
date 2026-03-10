@@ -33,6 +33,8 @@ Provide an at-a-glance financial and operational summary of the business. This i
 - **`DashboardPage` (`src/pages/DashboardPage.tsx`)**: The main aggregator view. Manages the currency toggle state (Bs/USD) and fetches the month's data.
 - **`KpiCard` (`src/components/ui/KpiCard.tsx`)**: Reusable UI component for metric blocks (e.g., "Ingresos del Día", "Neto Mes").
 - **`RecentSales` (`src/components/dashboard/RecentSales.tsx`)**: Displays the 3 most recent water sales of the day.
+- **`RecentSales` (`src/components/dashboard/RecentSales.tsx`)**: Displays the 3 most recent water sales of the day.
+- **Etiquetado de pago en recientes:** para ventas con split válido, el subtítulo usa `Pago mixto` y el ícono se deriva del método principal del split; mantiene fallback simple para registros legacy.
 - **`SalesChart` (`src/components/dashboard/SalesChart.tsx`)**: Recharts-based bar chart showing income over the last week.
 
 ## 🧭 Interactions & Navigation (Routing)

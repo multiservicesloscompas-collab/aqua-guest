@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { Header } from '@/components/layout/Header';
 import { AppPageContainer } from '@/components/layout/AppPageContainer';
 import { TabletControlsCard } from '@/components/layout/TabletControlsCard';
 import { DateSelector } from '@/components/ventas/DateSelector';
@@ -16,7 +15,11 @@ import { TABLET_PRIMARY_COLUMN_CLASS } from '@/lib/responsive/tabletLayoutPatter
 import { cn } from '@/lib/utils';
 import { PaymentMethod } from '@/types';
 
-export function WaterSalesPage() {
+interface WaterSalesPageProps {
+  autoOpenAdd?: boolean;
+}
+
+export function WaterSalesPage({ autoOpenAdd }: WaterSalesPageProps = {}) {
   const { isTabletViewport } = useViewportMode();
   const { selectedDate, setSelectedDate } = useAppStore();
   const { getSalesByDate, cart, loadSalesByDate } = useWaterSalesStore();
@@ -26,6 +29,10 @@ export function WaterSalesPage() {
     'todos'
   );
   const [loadingSales, setLoadingSales] = useState(false);
+
+  useEffect(() => {
+    if (autoOpenAdd) setShowAddProduct(true);
+  }, [autoOpenAdd]);
 
   useEffect(() => {
     if (!selectedDate) return;
@@ -52,8 +59,6 @@ export function WaterSalesPage() {
 
   return (
     <div className="flex flex-col min-h-screen pb-24">
-      <Header title="Venta de Agua" subtitle="Gestión de registros" />
-
       <AppPageContainer>
         {isTabletViewport ? (
           <div

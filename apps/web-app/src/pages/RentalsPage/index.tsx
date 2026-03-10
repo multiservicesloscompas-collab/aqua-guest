@@ -1,4 +1,4 @@
-import { Header } from '@/components/layout/Header';
+import { useEffect } from 'react';
 import { AppPageContainer } from '@/components/layout/AppPageContainer';
 import { TabletSplitLayout } from '@/components/layout/TabletSplitLayout';
 import { DateSelector } from '@/components/ventas/DateSelector';
@@ -19,7 +19,11 @@ import { RentalsLoadingState } from './components/RentalsLoadingState';
 import { useRentalsPageViewModel } from './hooks/useRentalsPageViewModel';
 import { useRentalListViewModel } from './hooks/useRentalListViewModel';
 
-export function RentalsPage() {
+interface RentalsPageProps {
+  autoOpenAdd?: boolean;
+}
+
+export function RentalsPage({ autoOpenAdd }: RentalsPageProps = {}) {
   const { isTabletViewport } = useViewportMode();
   const {
     selectedDate,
@@ -31,6 +35,10 @@ export function RentalsPage() {
     setSheetOpen,
     openSheet,
   } = useRentalsPageViewModel();
+
+  useEffect(() => {
+    if (autoOpenAdd) openSheet();
+  }, [autoOpenAdd, openSheet]);
 
   const {
     rentals: sortedRentals,
@@ -50,8 +58,6 @@ export function RentalsPage() {
 
   return (
     <div className="min-h-screen bg-background pb-36">
-      <Header title="Alquiler de Lavadoras" />
-
       <AppPageContainer>
         {isTabletViewport ? (
           <TabletSplitLayout

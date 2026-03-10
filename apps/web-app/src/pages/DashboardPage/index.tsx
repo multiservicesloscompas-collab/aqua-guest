@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { Header } from '@/components/layout/Header';
 import { AppPageContainer } from '@/components/layout/AppPageContainer';
 import { TabletSplitLayout } from '@/components/layout/TabletSplitLayout';
 import { TabletSectionGrid } from '@/components/layout/TabletSectionGrid';
@@ -74,8 +73,6 @@ export function DashboardPage({
 
   return (
     <div className="flex flex-col min-h-screen pb-20">
-      <Header title="AquaGest" subtitle="Panel de Control" />
-
       <AppPageContainer>
         <TabletSectionGrid>
           {/* Selector de fecha */}

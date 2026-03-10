@@ -21,6 +21,7 @@ import {
   includesMethodInRental,
   includesMethodInSale,
 } from '@/services/payments/paymentSplitAttribution';
+import { hasValidMixedPaymentSplits } from '@/services/payments/paymentSplitValidity';
 
 export interface PaymentMethodDetailTransactionItem {
   id: string;
@@ -35,6 +36,7 @@ export interface PaymentMethodDetailTransactionItem {
   description: string;
   amountBs: number;
   amountUsd?: number;
+  paymentMethodLabel?: string;
   icon: ComponentType<{ className?: string }>;
 }
 
@@ -99,15 +101,17 @@ export function buildPaymentMethodTransactions(
     ) {
       continue;
     }
+    const isMixed = hasValidMixedPaymentSplits(sale.paymentSplits);
     items.push({
       id: sale.id,
       type: 'sale',
-      typeLabel: 'Venta de Agua',
+      typeLabel: isMixed ? 'Venta de Agua · Pago mixto' : 'Venta de Agua',
       description: `${sale.items.length} producto${
         sale.items.length > 1 ? 's' : ''
-      }`,
+      }${isMixed ? ` · ${getMethodLabel(paymentMethod)}` : ''}`,
       amountBs: getSaleAmountForMethodBs(sale, paymentMethod),
       amountUsd: getSaleAmountForMethodUsd(sale, paymentMethod, exchangeRate),
+      paymentMethodLabel: isMixed ? getMethodLabel(paymentMethod) : undefined,
       icon: Droplets,
     });
   }
@@ -120,17 +124,23 @@ export function buildPaymentMethodTransactions(
     ) {
       continue;
     }
+    const isMixed = hasValidMixedPaymentSplits(rental.paymentSplits);
     items.push({
       id: rental.id,
       type: 'rental',
-      typeLabel: 'Alquiler de Lavadora',
-      description: `${rental.customerName} - ${rental.shift}`,
+      typeLabel: isMixed
+        ? 'Alquiler de Lavadora · Pago mixto'
+        : 'Alquiler de Lavadora',
+      description: `${rental.customerName} - ${rental.shift}${
+        isMixed ? ` · ${getMethodLabel(paymentMethod)}` : ''
+      }`,
       amountBs: getRentalAmountForMethodBs(rental, paymentMethod, exchangeRate),
       amountUsd: getRentalAmountForMethodUsd(
         rental,
         paymentMethod,
         exchangeRate
       ),
+      paymentMethodLabel: isMixed ? getMethodLabel(paymentMethod) : undefined,
       icon: WashingMachine,
     });
   }

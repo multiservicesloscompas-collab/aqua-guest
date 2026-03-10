@@ -10,7 +10,6 @@ import {
 } from 'date-fns';
 
 import { AppPageContainer } from '@/components/layout/AppPageContainer';
-import { Header } from '@/components/layout/Header';
 import { TabletSplitLayout } from '@/components/layout/TabletSplitLayout';
 import { useViewportMode } from '@/hooks/responsive/useViewportMode';
 import { useAppStore } from '@/store/useAppStore';
@@ -150,11 +149,6 @@ export function DeliverysPage() {
 
   return (
     <div className="pb-24">
-      <Header
-        title="Entregas"
-        subtitle="Historial de entregas con servicio de delivery"
-      />
-
       <AppPageContainer>
         {isTabletViewport ? (
           <>

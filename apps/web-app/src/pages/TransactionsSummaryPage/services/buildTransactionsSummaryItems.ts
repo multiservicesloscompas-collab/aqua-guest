@@ -8,6 +8,7 @@ import type {
   WasherRental,
 } from '@/types';
 import type { PaymentSplit } from '@/types/paymentSplits';
+import { hasValidMixedPaymentSplits } from '@/services/payments/paymentSplitValidity';
 
 export type TransactionType =
   | 'sale'
@@ -42,7 +43,7 @@ interface BuildTransactionsSummaryInput {
 function hasPaymentSplits(
   splits: PaymentSplit[] | undefined
 ): splits is PaymentSplit[] {
-  return Boolean(splits && splits.length > 0);
+  return hasValidMixedPaymentSplits(splits);
 }
 
 function toSplitItems(input: {
@@ -63,7 +64,9 @@ function toSplitItems(input: {
     amountBs: Number(split.amountBs || 0),
     amountUsd: split.amountUsd,
     isIncome: input.isIncome,
-    paymentMethod: PaymentMethodLabels[split.method as PaymentMethod],
+    paymentMethod: `Pago mixto · ${
+      PaymentMethodLabels[split.method as PaymentMethod]
+    }`,
     timestamp: input.timestamp,
     originalDate: input.originalDate,
   }));

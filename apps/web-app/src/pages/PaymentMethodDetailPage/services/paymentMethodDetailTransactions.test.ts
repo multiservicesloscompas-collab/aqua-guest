@@ -143,6 +143,28 @@ describe('paymentMethodDetailTransactions', () => {
       transactions.map((tx: PaymentMethodDetailTransactionItem) => tx.amountBs)
     ).toEqual([80, 30, 50, 25, 50]);
 
+    expect(
+      transactions
+        .filter(
+          (tx: PaymentMethodDetailTransactionItem) =>
+            tx.type === 'sale' || tx.type === 'rental'
+        )
+        .map((tx: PaymentMethodDetailTransactionItem) => tx.typeLabel)
+    ).toEqual([
+      'Venta de Agua · Pago mixto',
+      'Venta de Agua',
+      'Alquiler de Lavadora · Pago mixto',
+    ]);
+
+    expect(
+      transactions
+        .filter(
+          (tx: PaymentMethodDetailTransactionItem) =>
+            tx.type === 'sale' || tx.type === 'rental'
+        )
+        .map((tx: PaymentMethodDetailTransactionItem) => tx.paymentMethodLabel)
+    ).toEqual(['pago_movil', undefined, 'pago_movil']);
+
     expect(summarizePaymentMethodTransactions(transactions)).toEqual({
       income: 160,
       expenses: 0,

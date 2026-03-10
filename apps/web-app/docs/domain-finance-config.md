@@ -48,10 +48,14 @@ Manage the core financial parameters of the application, including the daily exc
   - columna principal: timeline de transacciones.
   - columna secundaria sticky: cards de totales (ingresos/egresos).
   - en mobile `<768px` continúa el flujo original (totales arriba + lista).
+- **Timeline split-aware en transacciones:** cuando ventas/alquileres tienen `paymentSplits` válidos (2+ métodos), la lista genera filas por split y etiqueta el badge como `Pago mixto · <Método>`, con fallback a fila única por `paymentMethod` legacy en registros simples/inválidos.
+- **Card de timeline robusta ante método ausente:** `TransactionsSummaryList` renderiza badge de método solo cuando `paymentMethod` está definido, evitando artefactos (`undefined`) en filas edge.
 - `PaymentMethodDetailPage` en tablet separa:
   - columna principal: lista de transacciones por método.
   - columna secundaria sticky: fecha + KPI total + resumen/switcher.
   - en mobile `<768px` se mantiene el flujo preexistente.
+- **Detalle por método split-aware (cards):** cuando una venta/alquiler pertenece a un pago mixto, la fila se rotula como `... · Pago mixto` y muestra badge del método atribuido (`Pago Móvil`, `Efectivo`, etc.) para evitar ambigüedad del componente del split en esa vista.
+- **Tests de regresión de cards de finanzas:** existen pruebas específicas para `TransactionsSummaryList` y `PaymentMethodTransactionsCard` validando etiqueta/badge split-aware y fallback seguro en casos sin método.
 
 ## 🛡️ Hardening + verify-ready responsive (Phase 5)
 

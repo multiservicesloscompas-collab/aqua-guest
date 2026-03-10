@@ -2,7 +2,6 @@ import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
 import { AppPageContainer } from '@/components/layout/AppPageContainer';
-import { Header } from '@/components/layout/Header';
 import { TabletSplitLayout } from '@/components/layout/TabletSplitLayout';
 import { ExtensionDialog } from '@/components/rentals/ExtensionDialog';
 import { useViewportMode } from '@/hooks/responsive/useViewportMode';
@@ -95,8 +94,6 @@ export function FollowUpPage() {
 
   return (
     <div className="flex flex-col min-h-screen pb-20">
-      <Header title="Seguimiento" subtitle="Alquileres pendientes" />
-
       <AppPageContainer className="space-y-6">
         {isTabletViewport ? (
           <TabletSplitLayout

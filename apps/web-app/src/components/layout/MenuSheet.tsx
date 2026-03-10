@@ -8,7 +8,6 @@ import { ChevronRight } from 'lucide-react';
 import { AppRoute } from '@/types';
 import { cn } from '@/lib/utils';
 import { useViewportMode } from '@/hooks/responsive/useViewportMode';
-
 import { secondaryNavigationItems } from './navigationItems';
 
 interface MenuSheetProps {

@@ -1,4 +1,10 @@
-import { Banknote, CreditCard, Smartphone, WashingMachine } from 'lucide-react';
+import {
+  Banknote,
+  CreditCard,
+  DollarSign,
+  Smartphone,
+  WashingMachine,
+} from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { RentalStatus, WasherRental } from '@/types';
@@ -9,6 +15,9 @@ import { RentalCardDialogs } from './RentalCardDialogs';
 import { RentalCardDetails } from './RentalCardDetails';
 import { RentalCardFooter } from './RentalCardFooter';
 import { RentalCardHeader } from './RentalCardHeader';
+import { buildRentalPaymentDisplayModel } from '@/services/payments/paymentDisplayModel';
+import { hasValidMixedPaymentSplits } from '@/services/payments/paymentSplitValidity';
+import { useConfigStore } from '@/store/useConfigStore';
 
 interface RentalListProps {
   rentals: WasherRental[];
@@ -97,6 +106,7 @@ const paymentIcons: Record<string, typeof Banknote> = {
   pago_movil: Smartphone,
   efectivo: Banknote,
   punto_venta: CreditCard,
+  divisa: DollarSign,
 };
 
 interface RentalListItemProps {
@@ -116,6 +126,7 @@ function RentalListItem({
   onDelete,
   onExtend,
 }: RentalListItemProps) {
+  const exchangeRate = useConfigStore((state) => state.config.exchangeRate);
   const {
     machine,
     shiftConfig,
@@ -145,8 +156,14 @@ function RentalListItem({
     onExtend,
   });
 
-  const PaymentIcon = rental.paymentMethod
-    ? paymentIcons[rental.paymentMethod] || Banknote
+  const paymentDisplay = buildRentalPaymentDisplayModel(rental, exchangeRate);
+
+  const paymentIconMethod = hasValidMixedPaymentSplits(rental.paymentSplits)
+    ? paymentDisplay.primaryMethod
+    : rental.paymentMethod;
+
+  const PaymentIcon = paymentIconMethod
+    ? paymentIcons[paymentIconMethod] || Banknote
     : Banknote;
 
   return (
@@ -168,7 +185,11 @@ function RentalListItem({
           onStatusClick={handleStatusClick}
         />
 
-        <RentalCardDetails rental={rental} paymentIcon={PaymentIcon} />
+        <RentalCardDetails
+          rental={rental}
+          paymentIcon={PaymentIcon}
+          paymentDisplay={paymentDisplay}
+        />
 
         <RentalCardFooter
           isPaid={rental.isPaid}

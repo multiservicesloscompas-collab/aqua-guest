@@ -1,16 +1,19 @@
 import { CalendarDays, Clock, MapPin } from 'lucide-react';
 import { format, parse } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { PaymentMethodLabels, WasherRental } from '@/types';
+import { WasherRental } from '@/types';
+import type { PaymentDisplayModel } from '@/services/payments/paymentDisplayModel';
 
 interface RentalCardDetailsProps {
   rental: WasherRental;
   paymentIcon: React.ComponentType<{ className?: string }>;
+  paymentDisplay: PaymentDisplayModel;
 }
 
 export function RentalCardDetails({
   rental,
   paymentIcon: PaymentIcon,
+  paymentDisplay,
 }: RentalCardDetailsProps) {
   return (
     <div className="space-y-2">
@@ -26,9 +29,25 @@ export function RentalCardDetails({
         </span>
       </div>
       {rental.paymentMethod && (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <PaymentIcon className="w-4 h-4" />
-          <span>{PaymentMethodLabels[rental.paymentMethod]}</span>
+        <div className="space-y-1 text-sm text-muted-foreground">
+          <div className="flex items-center gap-2">
+            <PaymentIcon className="w-4 h-4" />
+            <span>{paymentDisplay.label}</span>
+          </div>
+
+          {paymentDisplay.kind === 'mixed' && (
+            <div
+              className="ml-6 space-y-0.5"
+              data-testid={`rental-mixed-breakdown-${rental.id}`}
+            >
+              {paymentDisplay.lines.map((line) => (
+                <p key={`${rental.id}-${line.method}`} className="text-[11px]">
+                  {line.label}: Bs {line.amountBs.toFixed(2)} • $
+                  {line.amountUsd.toFixed(2)}
+                </p>
+              ))}
+            </div>
+          )}
         </div>
       )}
       {rental.isPaid && rental.datePaid && (

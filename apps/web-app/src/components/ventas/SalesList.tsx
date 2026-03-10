@@ -23,6 +23,9 @@ import {
 import { EditSaleSheet } from './EditSaleSheet';
 import { toast } from 'sonner';
 import { getSafeTimestampForSorting } from '@/lib/date-utils';
+import { buildSalePaymentDisplayModel } from '@/services/payments/paymentDisplayModel';
+import { hasValidMixedPaymentSplits } from '@/services/payments/paymentSplitValidity';
+import { SalePaymentBreakdown } from './SalePaymentBreakdown';
 
 interface SalesListProps {
   sales: Sale[];
@@ -46,7 +49,15 @@ export function SalesList({ sales, paymentFilter = 'todos' }: SalesListProps) {
   const filteredSales =
     paymentFilter === 'todos'
       ? sales
-      : sales.filter((sale) => sale.paymentMethod === paymentFilter);
+      : sales.filter((sale) => {
+          if (!hasValidMixedPaymentSplits(sale.paymentSplits)) {
+            return sale.paymentMethod === paymentFilter;
+          }
+
+          return sale.paymentSplits.some(
+            (split) => split.method === paymentFilter
+          );
+        });
 
   const handleDelete = () => {
     if (saleToDelete) {
@@ -105,7 +116,11 @@ export function SalesList({ sales, paymentFilter = 'todos' }: SalesListProps) {
 
         <div className="space-y-2">
           {filteredSales.map((sale) => {
-            const PaymentIcon = paymentIcons[sale.paymentMethod] || Banknote;
+            const paymentDisplay = buildSalePaymentDisplayModel(sale);
+            const iconMethod = hasValidMixedPaymentSplits(sale.paymentSplits)
+              ? paymentDisplay.primaryMethod
+              : sale.paymentMethod;
+            const PaymentIcon = paymentIcons[iconMethod] || Banknote;
             const timeMs = getSafeTimestampForSorting(sale.createdAt);
             const time = new Date(timeMs).toLocaleTimeString('es-VE', {
               hour: '2-digit',
@@ -124,29 +139,12 @@ export function SalesList({ sales, paymentFilter = 'todos' }: SalesListProps) {
                         #{sale.dailyNumber || '-'}
                       </span>
                     </div>
-                    <div className="p-2 bg-primary/10 rounded-full">
-                      <PaymentIcon className="w-4 h-4 text-primary" />
-                    </div>
-                    <div>
-                      <p
-                        className="text-sm font-bold text-foreground"
-                        data-testid={`sale-price-${sale.id}`}
-                      >
-                        Bs{' '}
-                        {(() => {
-                          const num = Number(sale.totalBs);
-                          return (isNaN(num) ? 0 : num).toFixed(2);
-                        })()}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {PaymentMethodLabels[sale.paymentMethod]} • $
-                        {(() => {
-                          const num = Number(sale.totalUsd);
-                          return (isNaN(num) ? 0 : num).toFixed(2);
-                        })()}{' '}
-                        • {time}
-                      </p>
-                    </div>
+                    <SalePaymentBreakdown
+                      sale={sale}
+                      paymentDisplay={paymentDisplay}
+                      timeLabel={time}
+                      paymentIcon={PaymentIcon}
+                    />
                   </div>
 
                   <div className="flex items-center gap-1">

@@ -24,6 +24,7 @@ interface TransactionViewItem {
   description: string;
   amountText: string;
   amountUsdText?: string;
+  paymentMethodLabel?: string;
   icon: ComponentType<{ className?: string }>;
   containerClass: string;
   iconWrapperClass: string;
@@ -177,6 +178,7 @@ export function usePaymentMethodDetailViewModel(
         amountUsdText: transaction.amountUsd
           ? `$${transaction.amountUsd.toFixed(2)}`
           : undefined,
+        paymentMethodLabel: transaction.paymentMethodLabel,
         icon: transaction.icon,
         containerClass: tone.containerClass,
         iconWrapperClass: tone.iconWrapperClass,

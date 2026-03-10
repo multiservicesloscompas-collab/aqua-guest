@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { Header } from '@/components/layout/Header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -93,8 +92,6 @@ export function ConfigPage({ onNavigate }: ConfigPageProps) {
 
   return (
     <div className="flex flex-col min-h-screen pb-20">
-      <Header title="Configuración" subtitle="Ajustes de la app" />
-
       <main className="flex-1 px-4 py-4 space-y-4 max-w-lg mx-auto w-full">
         {/* Tasa de cambio */}
         <div className="bg-card rounded-xl p-5 border shadow-card space-y-4">

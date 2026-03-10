@@ -26,6 +26,7 @@ Manage the sale of drinking water (refills by liters), new bottles, and caps. Su
 
 - **`WaterSalesPage` (`src/pages/WaterSalesPage.tsx`)**: Main list of sales for a specific date. Uses `DateSelector` and `PaymentFilter`.
 - **`SalesList` (`src/components/ventas/SalesList.tsx`)**: Renders individual sale cards with edit/delete actions.
+- **Visualización split-aware en cards (Fase de registros):** cuando una venta tiene `paymentSplits` válidos de 2+ métodos, la card muestra etiqueta `Pago mixto` + desglose por método con montos en Bs y USD; en ventas sin split (o split inválido) mantiene fallback a representación simple por `paymentMethod`.
 - **`AddProductSheet` (`src/components/ventas/AddProductSheet.tsx`)**: Bottom sheet to select a product, set quantity/liters, and add to cart.
 - **`CartSheet` (`src/components/ventas/CartSheet.tsx`)**: Bottom sheet showing cart items, total calculation (Bs and USD), payment method selection, and checkout button.
 - **UX pago mixto en CartSheet (actual):** siempre disponible sin depender de toggles en Config. Flujo: seleccionar método principal → activar CTA `Pago mixto` de alto énfasis (objetivo táctil amplio, icono coherente de billetera y texto de apoyo) → elegir método secundario + ingresar monto del split editable. El resumen inferior muestra ambos montos (`Monto método principal` y `Monto método secundario`) con la misma jerarquía visual/microcopy usada en Alquiler para mantener consistencia entre módulos.

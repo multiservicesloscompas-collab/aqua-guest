@@ -11,8 +11,8 @@ interface BottomNavProps {
 
 const navItems: { route: AppRoute; label: string; icon: typeof Home }[] = [
   { route: 'dashboard', label: 'Inicio', icon: Home },
-  { route: 'ventas', label: 'Ventas', icon: Droplets },
-  { route: 'alquiler', label: 'Alquiler', icon: WashingMachine },
+  { route: 'ventas', label: 'Agua', icon: Droplets },
+  { route: 'alquiler', label: 'Lavadoras', icon: WashingMachine },
 ];
 
 export function BottomNav({
@@ -26,14 +26,26 @@ export function BottomNav({
     return null;
   }
 
-  // Check if current route is a secondary menu item
+  // Check if current route belongs to the "Más" menu
   const isMenuActive = [
-    'clientes',
     'egresos',
+    'clientes',
     'config',
     'seguimiento',
     'lavadoras',
     'equilibrio-pagos',
+    'deliverys',
+    'prepagados',
+    'metricas-agua',
+    'transacciones-hoy',
+    'historial-tasas',
+    'lavadoras-metricas',
+    'entregas-metricas',
+    'clientes-metricas',
+    'clientes-top',
+    'egresos-metricas',
+    'config-precios-agua',
+    'config-tasa-cambio',
   ].includes(currentRoute);
 
   return (

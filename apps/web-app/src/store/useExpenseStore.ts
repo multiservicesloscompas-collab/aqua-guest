@@ -1,6 +1,12 @@
+/**
+ * useExpenseStore.ts
+ * Thin Zustand store barrel — imports type definitions from .core
+ * and helpers from .helpers. All consumers can import from this
+ * file and nothing breaks.
+ */
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { Expense, PaymentMethod } from '@/types';
+import { Expense } from '@/types';
 import supabase from '@/lib/supabaseClient';
 import { expensesDataService } from '@/services/ExpensesDataService';
 import {
@@ -9,53 +15,19 @@ import {
   enqueueOfflineExpenseUpdate,
 } from '@/offline/enqueue/expensesEnqueue';
 import { dedupExpensesByDateRange } from './useExpenseStore.helpers';
+import {
+  type ExpenseState,
+  type ExpenseInsertPayload,
+  type ExpenseUpdatePayload,
+  type ExpenseRow,
+} from './useExpenseStore.core';
 
-interface ExpenseState {
-  expenses: Expense[];
-
-  // Acciones de egresos
-  addExpense: (expense: Omit<Expense, 'id' | 'createdAt'>) => Promise<void>;
-  updateExpense: (id: string, updates: Partial<Expense>) => Promise<void>;
-  deleteExpense: (id: string) => Promise<void>;
-  getExpensesByDate: (date: string) => Expense[];
-  loadExpensesByDate: (date: string) => Promise<Expense[]>;
-  loadExpensesByDates: (dates: string[]) => Promise<void>;
-  loadExpensesByDateRange: (
-    startDate: string,
-    endDate: string
-  ) => Promise<void>;
-
-  // Inicialización o carga compartida
-  setExpensesData: (expenses: Expense[]) => void;
-}
-
-type ExpenseInsertPayload = {
-  date: string;
-  description: string;
-  amount: number;
-  category: Expense['category'];
-  payment_method: PaymentMethod;
-  notes?: string;
-};
-
-type ExpenseUpdatePayload = {
-  description?: string;
-  amount?: number;
-  category?: Expense['category'];
-  payment_method?: PaymentMethod;
-  notes?: string;
-  date?: string;
-};
-
-type ExpenseRow = {
-  id: string;
-  date: string;
-  description: string;
-  amount: number;
-  category: Expense['category'];
-  payment_method?: PaymentMethod;
-  notes?: string | null;
-  created_at?: string;
+// Re-export types so existing import paths continue to work
+export type {
+  ExpenseState,
+  ExpenseInsertPayload,
+  ExpenseUpdatePayload,
+  ExpenseRow,
 };
 
 const loadingExpenseRanges = new Set<string>();
@@ -65,11 +37,7 @@ export const useExpenseStore = create<ExpenseState>()(
     (set, get) => ({
       expenses: [],
 
-      setExpensesData: (expenses) => {
-        set({
-          expenses,
-        });
-      },
+      setExpensesData: (expenses) => set({ expenses }),
 
       addExpense: async (expense) => {
         try {
@@ -79,10 +47,7 @@ export const useExpenseStore = create<ExpenseState>()(
               expense,
               createdAt
             );
-
-            set((state) => ({
-              expenses: [...state.expenses, offlineExpense],
-            }));
+            set((state) => ({ expenses: [...state.expenses, offlineExpense] }));
             expensesDataService.invalidateCache(expense.date);
             return;
           }
@@ -112,9 +77,7 @@ export const useExpenseStore = create<ExpenseState>()(
             notes: row.notes ?? undefined,
             createdAt: row.created_at || new Date().toISOString(),
           };
-          set((state) => ({
-            expenses: [...state.expenses, newExpense],
-          }));
+          set((state) => ({ expenses: [...state.expenses, newExpense] }));
           expensesDataService.invalidateCache(row.date);
         } catch (err) {
           console.error('Failed to add expense to Supabase', err);
@@ -126,13 +89,11 @@ export const useExpenseStore = create<ExpenseState>()(
         try {
           if (!window.navigator.onLine) {
             enqueueOfflineExpenseUpdate(id, updates);
-
             set((state) => ({
               expenses: state.expenses.map((exp) =>
                 exp.id === id ? { ...exp, ...updates } : exp
               ),
             }));
-
             const updatedExpense = get().expenses.find((e) => e.id === id);
             if (updatedExpense) {
               expensesDataService.invalidateCache(updatedExpense.date);
@@ -219,9 +180,7 @@ export const useExpenseStore = create<ExpenseState>()(
             const existingExpenses = state.expenses.filter(
               (e) => e.date !== date
             );
-            return {
-              expenses: [...existingExpenses, ...expenses],
-            };
+            return { expenses: [...existingExpenses, ...expenses] };
           });
           return expenses;
         } catch (err) {
@@ -242,9 +201,7 @@ export const useExpenseStore = create<ExpenseState>()(
             const kept = state.expenses.filter(
               (e) => !loadedDatesSet.has(e.date)
             );
-            return {
-              expenses: [...kept, ...incoming],
-            };
+            return { expenses: [...kept, ...incoming] };
           });
         } catch (err) {
           console.error('Error loading expenses by dates:', err);
@@ -252,7 +209,7 @@ export const useExpenseStore = create<ExpenseState>()(
         }
       },
 
-      loadExpensesByDateRange: async (startDate: string, endDate: string) => {
+      loadExpensesByDateRange: async (startDate, endDate) => {
         const rangeKey = `loading_expenses_${startDate}_${endDate}`;
         if (loadingExpenseRanges.has(rangeKey)) return;
         loadingExpenseRanges.add(rangeKey);
@@ -281,7 +238,6 @@ export const useExpenseStore = create<ExpenseState>()(
           }
 
           const loadedDatesSet = new Set(dates);
-
           set((state) => ({
             expenses: dedupExpensesByDateRange(
               state.expenses,

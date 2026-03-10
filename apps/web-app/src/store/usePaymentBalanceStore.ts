@@ -1,10 +1,10 @@
+/**
+ * usePaymentBalanceStore.ts
+ * Thin Zustand store barrel — imports type definitions from .core.
+ * All consumers can import from this file and nothing breaks.
+ */
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import {
-  PaymentBalanceTransaction,
-  PaymentBalanceSummary,
-  PaymentMethod,
-} from '@/types';
 import { calculatePaymentBalanceSummary } from '@/services/payments/paymentBalanceSummary';
 import supabase from '@/lib/supabaseClient';
 import {
@@ -16,75 +16,30 @@ import { useConfigStore } from './useConfigStore';
 import { useRentalStore } from './useRentalStore';
 import { useWaterSalesStore } from './useWaterSalesStore';
 import { usePrepaidStore } from './usePrepaidStore';
+import {
+  type PaymentBalanceState,
+  type PaymentBalanceInsertPayload,
+  type PaymentBalanceUpdatePayload,
+  type PaymentBalanceRow,
+  rowToTransaction,
+} from './usePaymentBalanceStore.core';
 
-interface PaymentBalanceState {
-  paymentBalanceTransactions: PaymentBalanceTransaction[];
-
-  // Acciones de equilibrio de pagos
-  addPaymentBalanceTransaction: (
-    transaction: Omit<
-      PaymentBalanceTransaction,
-      'id' | 'createdAt' | 'updatedAt'
-    >
-  ) => Promise<void>;
-  updatePaymentBalanceTransaction: (
-    id: string,
-    updates: Partial<PaymentBalanceTransaction>
-  ) => Promise<void>;
-  deletePaymentBalanceTransaction: (id: string) => Promise<void>;
-  getPaymentBalanceSummary: (date: string) => PaymentBalanceSummary[];
-  loadPaymentBalanceTransactions: () => Promise<void>;
-
-  // Inicialización compartida
-  setPaymentBalanceData: (
-    paymentBalanceTransactions: PaymentBalanceTransaction[]
-  ) => void;
-}
-
-type PaymentBalanceInsertPayload = {
-  date: string;
-  from_method: PaymentMethod;
-  to_method: PaymentMethod;
-  amount: number;
-  amount_bs?: number;
-  amount_usd?: number;
-  notes?: string;
+// Re-export types so existing import paths continue to work
+export type {
+  PaymentBalanceState,
+  PaymentBalanceInsertPayload,
+  PaymentBalanceUpdatePayload,
+  PaymentBalanceRow,
 };
-
-type PaymentBalanceUpdatePayload = {
-  from_method?: PaymentMethod;
-  to_method?: PaymentMethod;
-  amount?: number;
-  amount_bs?: number;
-  amount_usd?: number;
-  notes?: string;
-  date?: string;
-  updated_at: string;
-};
-
-type PaymentBalanceRow = {
-  id: string;
-  date: string;
-  from_method: PaymentMethod;
-  to_method: PaymentMethod;
-  amount: number;
-  amount_bs?: number | null;
-  amount_usd?: number | null;
-  notes?: string | null;
-  created_at?: string | null;
-  updated_at?: string | null;
-};
+export { rowToTransaction };
 
 export const usePaymentBalanceStore = create<PaymentBalanceState>()(
   persist(
     (set, get) => ({
       paymentBalanceTransactions: [],
 
-      setPaymentBalanceData: (paymentBalanceTransactions) => {
-        set({
-          paymentBalanceTransactions,
-        });
-      },
+      setPaymentBalanceData: (paymentBalanceTransactions) =>
+        set({ paymentBalanceTransactions }),
 
       addPaymentBalanceTransaction: async (transaction) => {
         try {
@@ -92,12 +47,8 @@ export const usePaymentBalanceStore = create<PaymentBalanceState>()(
             const now = new Date().toISOString();
             const offlineTransaction = enqueueOfflinePaymentBalanceCreate(
               transaction,
-              {
-                createdAt: now,
-                updatedAt: now,
-              }
+              { createdAt: now, updatedAt: now }
             );
-
             set((state) => ({
               paymentBalanceTransactions: [
                 ...state.paymentBalanceTransactions,
@@ -123,26 +74,7 @@ export const usePaymentBalanceStore = create<PaymentBalanceState>()(
             .single();
           if (error) throw error;
 
-          const row = data as PaymentBalanceRow;
-          const newTransaction: PaymentBalanceTransaction = {
-            id: row.id,
-            date: row.date,
-            fromMethod: row.from_method,
-            toMethod: row.to_method,
-            amount: Number(row.amount),
-            amountBs:
-              row.amount_bs !== null && row.amount_bs !== undefined
-                ? Number(row.amount_bs)
-                : Number(row.amount),
-            amountUsd:
-              row.amount_usd !== null && row.amount_usd !== undefined
-                ? Number(row.amount_usd)
-                : undefined,
-            notes: row.notes || undefined,
-            createdAt: row.created_at || new Date().toISOString(),
-            updatedAt: row.updated_at || new Date().toISOString(),
-          };
-
+          const newTransaction = rowToTransaction(data as PaymentBalanceRow);
           set((state) => ({
             paymentBalanceTransactions: [
               ...state.paymentBalanceTransactions,
@@ -164,17 +96,9 @@ export const usePaymentBalanceStore = create<PaymentBalanceState>()(
 
           if (!window.navigator.onLine) {
             enqueueOfflinePaymentBalanceUpdate(id, updates, updatedAt);
-
             set((state) => ({
               paymentBalanceTransactions: state.paymentBalanceTransactions.map(
-                (transaction) =>
-                  transaction.id === id
-                    ? {
-                        ...transaction,
-                        ...updates,
-                        updatedAt,
-                      }
-                    : transaction
+                (t) => (t.id === id ? { ...t, ...updates, updatedAt } : t)
               ),
             }));
             return;
@@ -203,14 +127,7 @@ export const usePaymentBalanceStore = create<PaymentBalanceState>()(
 
           set((state) => ({
             paymentBalanceTransactions: state.paymentBalanceTransactions.map(
-              (transaction) =>
-                transaction.id === id
-                  ? {
-                      ...transaction,
-                      ...updates,
-                      updatedAt,
-                    }
-                  : transaction
+              (t) => (t.id === id ? { ...t, ...updates, updatedAt } : t)
             ),
           }));
         } catch (err) {
@@ -228,9 +145,7 @@ export const usePaymentBalanceStore = create<PaymentBalanceState>()(
             enqueueOfflinePaymentBalanceDelete(id);
             set((state) => ({
               paymentBalanceTransactions:
-                state.paymentBalanceTransactions.filter(
-                  (transaction) => transaction.id !== id
-                ),
+                state.paymentBalanceTransactions.filter((t) => t.id !== id),
             }));
             return;
           }
@@ -242,7 +157,7 @@ export const usePaymentBalanceStore = create<PaymentBalanceState>()(
           if (error) throw error;
           set((state) => ({
             paymentBalanceTransactions: state.paymentBalanceTransactions.filter(
-              (transaction) => transaction.id !== id
+              (t) => t.id !== id
             ),
           }));
         } catch (err) {
@@ -279,29 +194,10 @@ export const usePaymentBalanceStore = create<PaymentBalanceState>()(
 
           if (error) throw error;
 
-          const rows = (data || []) as PaymentBalanceRow[];
-          const transactions = rows.map((row) => ({
-            id: row.id,
-            date: row.date,
-            fromMethod: row.from_method,
-            toMethod: row.to_method,
-            amount: Number(row.amount),
-            amountBs:
-              row.amount_bs !== null && row.amount_bs !== undefined
-                ? Number(row.amount_bs)
-                : Number(row.amount),
-            amountUsd:
-              row.amount_usd !== null && row.amount_usd !== undefined
-                ? Number(row.amount_usd)
-                : undefined,
-            notes: row.notes || undefined,
-            createdAt: row.created_at || new Date().toISOString(),
-            updatedAt: row.updated_at || new Date().toISOString(),
-          }));
-
-          set((state) => ({
-            paymentBalanceTransactions: transactions,
-          }));
+          const transactions = ((data || []) as PaymentBalanceRow[]).map(
+            rowToTransaction
+          );
+          set(() => ({ paymentBalanceTransactions: transactions }));
         } catch (err) {
           console.error(
             'Error loading payment balance transactions from Supabase',

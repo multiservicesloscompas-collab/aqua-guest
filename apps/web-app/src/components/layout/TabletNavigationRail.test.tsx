@@ -82,7 +82,7 @@ describe('TabletNavigationRail', () => {
     expect(onNavigate).toHaveBeenCalledWith('dashboard');
   });
 
-  it('navigates to ventas when Ventas button is clicked', () => {
+  it('navigates to ventas when Agua button is clicked', () => {
     viewportState.viewportMode = 'tablet-landscape';
     viewportState.isMobileViewport = false;
     viewportState.isTabletViewport = true;
@@ -93,7 +93,7 @@ describe('TabletNavigationRail', () => {
       <TabletNavigationRail currentRoute="dashboard" onNavigate={onNavigate} />
     );
 
-    fireEvent.click(screen.getByRole('button', { name: 'Ventas' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Agua' }));
     expect(onNavigate).toHaveBeenCalledWith('ventas');
   });
 
@@ -109,14 +109,14 @@ describe('TabletNavigationRail', () => {
       />
     );
 
-    const activeButton = screen.getByRole('button', { name: 'Alquiler' });
+    const activeButton = screen.getByRole('button', { name: 'Lavadoras' });
     expect(activeButton).toHaveAttribute('aria-current', 'page');
 
     const inactiveButton = screen.getByRole('button', { name: 'Inicio' });
     expect(inactiveButton).not.toHaveAttribute('aria-current');
   });
 
-  it('renders all primary module buttons (Inicio, Ventas, Alquiler)', () => {
+  it('renders all primary module buttons (Inicio, Agua, Lavadoras)', () => {
     viewportState.viewportMode = 'tablet-landscape';
     viewportState.isMobileViewport = false;
     viewportState.isTabletViewport = true;
@@ -129,13 +129,13 @@ describe('TabletNavigationRail', () => {
     );
 
     expect(screen.getByRole('button', { name: 'Inicio' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Ventas' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Agua' })).toBeInTheDocument();
     expect(
-      screen.getByRole('button', { name: 'Alquiler' })
+      screen.getByRole('button', { name: 'Lavadoras' })
     ).toBeInTheDocument();
   });
 
-  it('renders all operations module buttons (Seguimiento, Entregas, Prepagados)', () => {
+  it('renders remaining module buttons (Entregas, Clientes, Finanzas)', () => {
     viewportState.viewportMode = 'tablet-landscape';
     viewportState.isMobileViewport = false;
     viewportState.isTabletViewport = true;
@@ -147,39 +147,18 @@ describe('TabletNavigationRail', () => {
       />
     );
 
-    expect(
-      screen.getByRole('button', { name: 'Seguimiento' })
-    ).toBeInTheDocument();
     expect(
       screen.getByRole('button', { name: 'Entregas' })
     ).toBeInTheDocument();
     expect(
-      screen.getByRole('button', { name: 'Prepagados' })
-    ).toBeInTheDocument();
-  });
-
-  it('renders all finance module buttons (Egresos, Equilibrio, Clientes)', () => {
-    viewportState.viewportMode = 'tablet-landscape';
-    viewportState.isMobileViewport = false;
-    viewportState.isTabletViewport = true;
-
-    render(
-      <TabletNavigationRail
-        currentRoute="dashboard"
-        onNavigate={() => undefined}
-      />
-    );
-
-    expect(screen.getByRole('button', { name: 'Egresos' })).toBeInTheDocument();
-    expect(
-      screen.getByRole('button', { name: 'Equilibrio' })
-    ).toBeInTheDocument();
-    expect(
       screen.getByRole('button', { name: 'Clientes' })
     ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Finanzas' })
+    ).toBeInTheDocument();
   });
 
-  it('renders the settings (Configuración) button', () => {
+  it('renders exactly six navigation module buttons', () => {
     viewportState.viewportMode = 'tablet-landscape';
     viewportState.isMobileViewport = false;
     viewportState.isTabletViewport = true;
@@ -191,9 +170,22 @@ describe('TabletNavigationRail', () => {
       />
     );
 
-    expect(
-      screen.getByRole('button', { name: 'Configuración' })
-    ).toBeInTheDocument();
+    expect(screen.getAllByRole('button')).toHaveLength(6);
+  });
+
+  it('does not render a settings (Configuración) button', () => {
+    viewportState.viewportMode = 'tablet-landscape';
+    viewportState.isMobileViewport = false;
+    viewportState.isTabletViewport = true;
+
+    render(
+      <TabletNavigationRail
+        currentRoute="dashboard"
+        onNavigate={() => undefined}
+      />
+    );
+
+    expect(screen.queryByRole('button', { name: 'Configuración' })).toBeNull();
   });
 
   it('does NOT render a "Abrir más opciones" button (no 3-dot menu)', () => {

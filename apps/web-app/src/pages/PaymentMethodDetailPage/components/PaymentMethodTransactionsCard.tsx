@@ -1,6 +1,7 @@
 import { ComponentType } from 'react';
 import { Receipt } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 
 interface TransactionViewItem {
   key: string;
@@ -8,6 +9,7 @@ interface TransactionViewItem {
   description: string;
   amountText: string;
   amountUsdText?: string;
+  paymentMethodLabel?: string;
   icon: ComponentType<{ className?: string }>;
   containerClass: string;
   iconWrapperClass: string;
@@ -60,9 +62,19 @@ export function PaymentMethodTransactionsCard({
                       />
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-foreground">
-                        {transaction.typeLabel}
-                      </p>
+                      <div className="flex items-center gap-1.5">
+                        <p className="text-sm font-medium text-foreground">
+                          {transaction.typeLabel}
+                        </p>
+                        {transaction.paymentMethodLabel ? (
+                          <Badge
+                            variant="outline"
+                            className="text-[10px] px-1.5 py-0 h-5"
+                          >
+                            {transaction.paymentMethodLabel}
+                          </Badge>
+                        ) : null}
+                      </div>
                       <p className="text-xs text-muted-foreground">
                         {transaction.description}
                       </p>

@@ -1,6 +1,5 @@
 import { Plus } from 'lucide-react';
 import { AppPageContainer } from '@/components/layout/AppPageContainer';
-import { Header } from '@/components/layout/Header';
 import { TabletControlsCard } from '@/components/layout/TabletControlsCard';
 import { TabletSplitLayout } from '@/components/layout/TabletSplitLayout';
 import { Button } from '@/components/ui/button';
@@ -45,11 +44,6 @@ export function PaymentBalancePage() {
 
   return (
     <div className="flex flex-col min-h-screen pb-20">
-      <Header
-        title="Equilibrio de Pagos"
-        subtitle="Transferencia entre métodos de pago"
-      />
-
       <AppPageContainer>
         {isTabletViewport ? (
           <TabletSplitLayout

@@ -1,9 +1,7 @@
 import {
-  ClipboardList,
   Droplets,
   Home,
   Settings,
-  Scale,
   Truck,
   Users,
   WashingMachine,
@@ -13,6 +11,7 @@ import {
 import { useViewportMode } from '@/hooks/responsive/useViewportMode';
 import { cn } from '@/lib/utils';
 import type { AppRoute } from '@/types';
+import { routeToModule } from '@/types/navigation';
 
 interface TabletNavigationRailProps {
   currentRoute: AppRoute;
@@ -26,101 +25,16 @@ interface SidebarItem {
   icon: React.ComponentType<{ className?: string }>;
 }
 
-const mainItems: SidebarItem[] = [
+/** 7 first-class modules — flat list, no section separators */
+const moduleItems: SidebarItem[] = [
   { route: 'dashboard', label: 'Inicio', icon: Home },
-  { route: 'ventas', label: 'Ventas', icon: Droplets },
-  { route: 'alquiler', label: 'Alquiler', icon: WashingMachine },
-];
-
-const operationsItems: SidebarItem[] = [
-  { route: 'seguimiento', label: 'Seguimiento', icon: ClipboardList },
+  { route: 'ventas', label: 'Agua', icon: Droplets },
+  { route: 'alquiler', label: 'Lavadoras', icon: WashingMachine },
   { route: 'deliverys', label: 'Entregas', icon: Truck },
-  { route: 'prepagados', label: 'Prepagados', icon: ClipboardList },
-];
-
-const financeItems: SidebarItem[] = [
-  { route: 'egresos', label: 'Egresos', icon: TrendingDown },
-  { route: 'equilibrio-pagos', label: 'Equilibrio', icon: Scale },
   { route: 'clientes', label: 'Clientes', icon: Users },
+  { route: 'egresos', label: 'Finanzas', icon: TrendingDown },
+  { route: 'config-tasa-cambio', label: 'Configuración', icon: Settings },
 ];
-
-const settingsItems: SidebarItem[] = [
-  { route: 'config', label: 'Configuración', icon: Settings },
-];
-
-interface SidebarSectionProps {
-  items: SidebarItem[];
-  currentRoute: AppRoute;
-  onNavigate: (route: AppRoute) => void;
-  collapsed: boolean;
-  label?: string;
-}
-
-function SidebarSection({
-  items,
-  currentRoute,
-  onNavigate,
-  collapsed,
-  label,
-}: SidebarSectionProps) {
-  return (
-    <div className="flex flex-col gap-1">
-      {!collapsed && label && (
-        <p className="px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60">
-          {label}
-        </p>
-      )}
-      {items.map(({ route, label: itemLabel, icon: Icon }) => {
-        const isActive = currentRoute === route;
-        return (
-          <button
-            key={route}
-            onClick={() => onNavigate(route)}
-            aria-label={itemLabel}
-            aria-current={isActive ? 'page' : undefined}
-            className={cn(
-              'group relative flex w-full items-center rounded-xl transition-all duration-150',
-              collapsed ? 'h-11 justify-center px-0' : 'h-11 gap-3 px-3',
-              isActive
-                ? 'bg-primary text-primary-foreground shadow-sm'
-                : 'text-muted-foreground hover:bg-accent hover:text-foreground'
-            )}
-          >
-            {/* Active indicator bar */}
-            {isActive && !collapsed && (
-              <span className="absolute left-0 top-2 bottom-2 w-1 rounded-r-full bg-primary-foreground/40" />
-            )}
-            <Icon
-              className={cn(
-                'h-[18px] w-[18px] shrink-0 transition-transform duration-150',
-                isActive
-                  ? 'text-primary-foreground'
-                  : 'text-muted-foreground group-hover:text-foreground',
-                isActive && 'scale-110'
-              )}
-            />
-            {!collapsed && (
-              <span
-                className={cn(
-                  'truncate text-sm font-medium',
-                  isActive ? 'text-primary-foreground' : ''
-                )}
-              >
-                {itemLabel}
-              </span>
-            )}
-            {/* Tooltip for collapsed mode */}
-            {collapsed && (
-              <span className="pointer-events-none absolute left-full ml-3 z-50 hidden rounded-lg bg-popover px-2.5 py-1.5 text-xs font-medium text-popover-foreground shadow-md ring-1 ring-border group-hover:block whitespace-nowrap">
-                {itemLabel}
-              </span>
-            )}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
 
 export function TabletNavigationRail({
   currentRoute,
@@ -162,53 +76,65 @@ export function TabletNavigationRail({
         )}
       </div>
 
-      {/* Navigation items */}
+      {/* Navigation items — 6 modules flat */}
       <nav
         className={cn(
-          'flex flex-1 flex-col overflow-y-auto px-2 py-4',
-          collapsed ? 'justify-center gap-4' : 'justify-between'
+          'flex flex-1 flex-col overflow-y-auto px-2 py-4 gap-1',
+          collapsed && 'items-center'
         )}
+        aria-label="Módulos"
       >
-        <div className="flex flex-col gap-4">
-          <SidebarSection
-            items={mainItems}
-            currentRoute={currentRoute}
-            onNavigate={onNavigate}
-            collapsed={collapsed}
-            label="Principal"
-          />
-
-          <div className="mx-2 h-px bg-border/60" />
-
-          <SidebarSection
-            items={operationsItems}
-            currentRoute={currentRoute}
-            onNavigate={onNavigate}
-            collapsed={collapsed}
-            label="Operaciones"
-          />
-
-          <div className="mx-2 h-px bg-border/60" />
-
-          <SidebarSection
-            items={financeItems}
-            currentRoute={currentRoute}
-            onNavigate={onNavigate}
-            collapsed={collapsed}
-            label="Finanzas"
-          />
-        </div>
-
-        {/* Settings pinned at bottom (or centered with icon stack on collapsed tablet) */}
-        <div className={cn(!collapsed && 'pt-4')}>
-          <div className="mx-2 h-px bg-border/60 mb-4" />
-          <SidebarSection
-            items={settingsItems}
-            currentRoute={currentRoute}
-            onNavigate={onNavigate}
-            collapsed={collapsed}
-          />
-        </div>
+        {moduleItems.map(({ route, label, icon: Icon }) => {
+          // For module-level items, highlight if current route belongs to the same module
+          const currentModule = routeToModule[currentRoute];
+          const itemModule = routeToModule[route] ?? route;
+          const isActive =
+            currentRoute === route ||
+            (currentModule !== undefined && currentModule === itemModule);
+          return (
+            <button
+              key={route}
+              onClick={() => onNavigate(route)}
+              aria-label={label}
+              aria-current={isActive ? 'page' : undefined}
+              className={cn(
+                'group relative flex w-full items-center rounded-xl transition-all duration-150',
+                collapsed ? 'h-11 justify-center px-0' : 'h-11 gap-3 px-3',
+                isActive
+                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+              )}
+            >
+              {isActive && !collapsed && (
+                <span className="absolute left-0 top-2 bottom-2 w-1 rounded-r-full bg-primary-foreground/40" />
+              )}
+              <Icon
+                className={cn(
+                  'h-[18px] w-[18px] shrink-0 transition-transform duration-150',
+                  isActive
+                    ? 'text-primary-foreground scale-110'
+                    : 'text-muted-foreground group-hover:text-foreground'
+                )}
+              />
+              {!collapsed && (
+                <span
+                  className={cn(
+                    'truncate text-sm font-medium',
+                    isActive ? 'text-primary-foreground' : ''
+                  )}
+                >
+                  {label}
+                </span>
+              )}
+              {/* Tooltip for collapsed mode */}
+              {collapsed && (
+                <span className="pointer-events-none absolute left-full ml-3 z-50 hidden rounded-lg bg-popover px-2.5 py-1.5 text-xs font-medium text-popover-foreground shadow-md ring-1 ring-border group-hover:block whitespace-nowrap">
+                  {label}
+                </span>
+              )}
+            </button>
+          );
+        })}
       </nav>
     </aside>
   );

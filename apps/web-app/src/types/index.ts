@@ -295,21 +295,6 @@ export interface PaymentBalanceSummary {
   adjustments: number; // Ajustes netos (+/-)
   finalTotal: number; // Total después de ajustes
 }
-
-// Navegación
-export type AppRoute =
-  | 'dashboard'
-  | 'ventas'
-  | 'alquiler'
-  | 'egresos'
-  | 'clientes'
-  | 'lavadoras'
-  | 'config'
-  | 'seguimiento'
-  | 'historial-tasas'
-  | 'prepagados'
-  | 'deliverys'
-  | 'metricas-agua'
-  | 'equilibrio-pagos'
-  | 'transacciones-hoy'
-  | 'detalle-pago';
+// Navegación — tipos centralizados en navigation.ts
+export type { AppRoute, ModuleRoute, ModuleSubItem } from './navigation';
+export { routeToModule } from './navigation';
