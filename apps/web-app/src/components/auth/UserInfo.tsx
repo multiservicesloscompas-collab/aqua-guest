@@ -1,5 +1,5 @@
 import { useAuth } from '@/hooks/useAuth';
-import { UserRoleLabels } from '@/types/auth';
+import { USER_ROLE_LABELS } from '@/types/auth';
 import { Badge } from '@/components/ui/badge';
 import { User } from 'lucide-react';
 
@@ -39,7 +39,7 @@ export const UserInfo = ({
       </div>
       {showRole && (
         <Badge variant="outline" className={roleColors[user.role]}>
-          {UserRoleLabels[user.role]}
+          {USER_ROLE_LABELS[user.role]}
         </Badge>
       )}
     </div>

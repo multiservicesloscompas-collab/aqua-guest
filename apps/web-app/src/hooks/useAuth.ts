@@ -1,7 +1,7 @@
-import { useAuthStore } from '@/store/useAuthStore';
+import { useAppStore } from '@/store/useAppStore';
 
 export const useAuth = () => {
-  const { user, session, isLoading, isAuthenticated } = useAuthStore();
+  const { user, session, isLoading, isAuthenticated } = useAppStore();
 
   return {
     user,

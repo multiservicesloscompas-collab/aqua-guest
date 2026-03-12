@@ -4,6 +4,8 @@ import supabase from '@/lib/supabaseClient';
 import { defaultProducts } from '@/data/products';
 import { getVenezuelaDate } from '@/services/DateService';
 import { ExchangeRateHistory } from '@/types';
+import { AuthState, UserProfile } from '@/types/auth';
+import { Session } from '@supabase/supabase-js';
 
 import { useCustomerStore } from './useCustomerStore';
 import { useConfigStore } from './useConfigStore';
@@ -12,13 +14,22 @@ import { usePaymentBalanceStore } from './usePaymentBalanceStore';
 import { useWaterSalesStore } from './useWaterSalesStore';
 import { usePrepaidStore } from './usePrepaidStore';
 
-interface AppState {
+interface AppState extends AuthState {
   // Estado UI
   selectedDate: string;
 
   // Utilidades
   setSelectedDate: (date: string) => void;
   loadFromSupabase: () => Promise<void>;
+
+  // Auth
+  setUser: (user: UserProfile | null) => void;
+  setSession: (session: Session | null) => void;
+  setLoading: (isLoading: boolean) => void;
+  signIn: (email: string, password: string) => Promise<void>;
+  signInWithGoogle: () => Promise<void>;
+  signOut: () => Promise<void>;
+  checkSession: () => Promise<void>;
 }
 
 const today = getVenezuelaDate();
@@ -26,9 +37,203 @@ const today = getVenezuelaDate();
 export const useAppStore = create<AppState>()(
   persist(
     (set) => ({
+      // Estado UI
       selectedDate: today,
 
+      // Estado Auth
+      user: null,
+      session: null,
+      isLoading: false,
+      isAuthenticated: false,
+
       setSelectedDate: (date) => set({ selectedDate: date }),
+
+      // Auth methods
+      setUser: (user) => {
+        console.log('useAppStore - setUser called', { user, isAuthenticated: !!user });
+        set({ user, isAuthenticated: !!user });
+      },
+      setSession: (session) => {
+        console.log('useAppStore - setSession called', { session });
+        set({ session });
+      },
+      setLoading: (isLoading) => {
+        console.log('useAppStore - setLoading called', { isLoading });
+        set({ isLoading });
+      },
+
+      signIn: async (email, password) => {
+        try {
+          set({ isLoading: true });
+
+          const { data, error } = await supabase.auth.signInWithPassword({
+            email,
+            password,
+          });
+
+          if (error) throw error;
+
+          if (data.user) {
+            const { data: profileData, error: profileError } = await supabase
+              .from('user_profiles_with_company')
+              .select('*')
+              .eq('id', data.user.id)
+              .single();
+
+            if (profileError) throw profileError;
+
+            const userProfile: UserProfile = {
+              id: profileData.id,
+              email: profileData.email,
+              role: profileData.role,
+              fullName: profileData.full_name,
+              companyId: profileData.company_id,
+              company: profileData.company_id ? {
+                id: profileData.company_id,
+                name: profileData.company_name,
+                rif: profileData.company_rif,
+                address: profileData.address,
+                phone: profileData.phone,
+                isActive: profileData.company_is_active,
+                createdAt: profileData.created_at,
+                updatedAt: profileData.updated_at,
+              } : undefined,
+              createdBy: profileData.created_by,
+              createdAt: profileData.created_at,
+              updatedAt: profileData.updated_at,
+            };
+
+            set({
+              user: userProfile,
+              session: data.session,
+              isAuthenticated: true,
+              isLoading: false,
+            });
+          }
+        } catch (error) {
+          set({ isLoading: false });
+          throw error;
+        }
+      },
+
+      signInWithGoogle: async () => {
+        try {
+          set({ isLoading: true });
+
+          const { error } = await supabase.auth.signInWithOAuth({
+            provider: 'google',
+            options: {
+              redirectTo: `${window.location.origin}/login`,
+              queryParams: {
+                access_type: 'offline',
+                prompt: 'consent',
+              },
+            },
+          });
+
+          if (error) throw error;
+
+          // La redirección se maneja automáticamente por Supabase
+          // El perfil se cargará cuando regrese de Google OAuth
+        } catch (error) {
+          set({ isLoading: false });
+          throw error;
+        }
+      },
+
+      signOut: async () => {
+        try {
+          const { error } = await supabase.auth.signOut();
+          if (error) throw error;
+
+          set({
+            user: null,
+            session: null,
+            isAuthenticated: false,
+            isLoading: false,
+          });
+        } catch (error) {
+          console.error('Error signing out:', error);
+          throw error;
+        }
+      },
+
+      checkSession: async () => {
+        try {
+          set({ isLoading: true });
+
+          const {
+            data: { session },
+            error,
+          } = await supabase.auth.getSession();
+
+          console.log('useAppStore - checkSession result', { session, error });
+
+          if (error) throw error;
+
+          if (session?.user) {
+            console.log('useAppStore - Session found, loading profile for user:', session.user.id);
+            const { data: profileData, error: profileError } = await supabase
+              .from('user_profiles_with_company')
+              .select('*')
+              .eq('id', session.user.id)
+              .single();
+
+            if (profileError) {
+              set({
+                user: null,
+                session: null,
+                isAuthenticated: false,
+                isLoading: false,
+              });
+              return;
+            }
+
+            const userProfile: UserProfile = {
+              id: profileData.id,
+              email: profileData.email,
+              role: profileData.role,
+              fullName: profileData.full_name,
+              companyId: profileData.company_id,
+              company: profileData.company_id ? {
+                id: profileData.company_id,
+                name: profileData.company_name,
+                rif: profileData.company_rif,
+                address: profileData.address,
+                phone: profileData.phone,
+                isActive: profileData.company_is_active,
+                createdAt: profileData.created_at,
+                updatedAt: profileData.updated_at,
+              } : undefined,
+              createdBy: profileData.created_by,
+              createdAt: profileData.created_at,
+              updatedAt: profileData.updated_at,
+            };
+
+            set({
+              user: userProfile,
+              session,
+              isAuthenticated: true,
+              isLoading: false,
+            });
+          } else {
+            set({
+              user: null,
+              session: null,
+              isAuthenticated: false,
+              isLoading: false,
+            });
+          }
+        } catch (error) {
+          console.error('Error checking session:', error);
+          set({
+            user: null,
+            session: null,
+            isAuthenticated: false,
+            isLoading: false,
+          });
+        }
+      },
 
       // Load data from Supabase - Optimizado para cargar solo datos necesarios
       loadFromSupabase: async () => {
@@ -165,9 +370,16 @@ export const useAppStore = create<AppState>()(
     }),
     {
       name: 'aquagest-core-storage',
+      partialize: (state) => ({
+        selectedDate: state.selectedDate,
+        user: state.user,
+        session: state.session,
+        isAuthenticated: state.isAuthenticated,
+      }),
       onRehydrateStorage: () => (state) => {
         if (state) {
           state.selectedDate = getVenezuelaDate();
+          state.isLoading = false;
         }
       },
     }

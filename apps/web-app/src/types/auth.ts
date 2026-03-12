@@ -1,6 +1,8 @@
+import { Session } from '@supabase/supabase-js';
+
 export type UserRole = 'admin' | 'client' | 'employee';
 
-export const UserRoleLabels: Record<UserRole, string> = {
+export const USER_ROLE_LABELS: Record<UserRole, string> = {
   admin: 'Administrador', // Super Admin del sistema
   client: 'Cliente', // Admin de compañía
   employee: 'Empleado', // Empleado de compañía
@@ -31,7 +33,7 @@ export interface UserProfile {
 
 export interface AuthState {
   user: UserProfile | null;
-  session: any | null;
+  session: Session | null;
   isLoading: boolean;
   isAuthenticated: boolean;
 }

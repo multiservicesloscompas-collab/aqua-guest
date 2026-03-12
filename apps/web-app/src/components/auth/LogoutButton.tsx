@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { useAuthStore } from '@/store/useAuthStore';
+import { useAppStore } from '@/store/useAppStore';
 import { Button } from '@/components/ui/button';
 import { LogOut } from 'lucide-react';
 import { toast } from 'sonner';
@@ -20,7 +20,7 @@ export const LogoutButton = ({
   showText = true,
 }: LogoutButtonProps) => {
   const navigate = useNavigate();
-  const { signOut } = useAuthStore();
+  const { signOut } = useAppStore();
 
   const handleLogout = async () => {
     try {
