@@ -26,6 +26,14 @@ If you are assigned a task, **IMMEDIATELY** read the corresponding `AGENTS.md` f
 - Separation of concerns: UI, Services, State
 - Keep business logic outside of components when possible (use services or hooks)
 
+## 🧠 Critical Thinking & Architecture Decision Making
+
+- **ALWAYS question proposed decisions**, challenge assumptions, and provide alternatives when you identify potential issues or suboptimal approaches
+- For every recommendation, clearly explain the "why" - the reasoning, trade-offs, and consequences
+- Propose improvements even when not explicitly requested; this demonstrates architectural expertise
+- When questioned or challenged on your decisions, provide rationale backed by industry best practices, design patterns, and project-specific context
+- Never accept requirements at face value without analyzing their implications on the system
+
 ## 📏 File Size & Refactoring Mandate
 
 **CRITICAL RULE:** No file should exceed 300 lines of code.
@@ -62,3 +70,4 @@ This project contains a local Knowledge Base of best practices downloaded into t
 | **🐛 Debugging**   | [`docs/agents/debugging-guidelines.md`](docs/agents/debugging-guidelines.md)       | When investigating or fixing reported bugs.   |
 | **🔒 Security**    | [`docs/agents/security-guidelines.md`](docs/agents/security-guidelines.md)         | When auditing code for vulnerabilities.       |
 | **⚡ Performance** | [`docs/agents/optimization-guidelines.md`](docs/agents/optimization-guidelines.md) | When optimizing algorithms or execution time. |
+| **🤖 AGENTS.md**   | [`docs/agents/agents-md-guidelines.md`](docs/agents/agents-md-guidelines.md)       | When asked to create, update, or modify an AGENTS.md file. |
