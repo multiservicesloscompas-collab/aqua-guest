@@ -138,7 +138,10 @@ export function ExchangeHistoryPage({ onNavigate }: ExchangeHistoryPageProps) {
         {/* Info */}
         <div className="bg-muted/50 rounded-xl p-4 border text-sm text-muted-foreground">
           <p>
-            💡 La tasa de cada día se hereda automáticamente del día anterior, a
+            <span role="img" aria-label="idea">
+              💡
+            </span>{' '}
+            La tasa de cada día se hereda automáticamente del día anterior, a
             menos que se cambie explícitamente en Configuración.
           </p>
         </div>

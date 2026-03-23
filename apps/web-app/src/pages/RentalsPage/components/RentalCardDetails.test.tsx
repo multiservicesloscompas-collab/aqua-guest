@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { Banknote } from 'lucide-react';
 
@@ -6,6 +6,12 @@ import type { PaymentDisplayModel } from '@/services/payments/paymentDisplayMode
 import type { WasherRental } from '@/types';
 
 import { RentalCardDetails } from './RentalCardDetails';
+
+vi.mock('@/store/useConfigStore', () => ({
+  useConfigStore: (
+    selector: (state: { config: { exchangeRate: number } }) => unknown
+  ) => selector({ config: { exchangeRate: 50 } }),
+}));
 
 const baseRental: WasherRental = {
   id: 'rental-1',
@@ -19,7 +25,7 @@ const baseRental: WasherRental = {
   pickupTime: '13:00',
   pickupDate: '2026-03-10',
   deliveryFee: 0,
-  totalUsd: 4,
+  totalUsd: 5,
   paymentMethod: 'efectivo',
   status: 'agendado',
   isPaid: false,
@@ -65,6 +71,9 @@ describe('RentalCardDetails', () => {
     expect(screen.getByText('Efectivo: Bs 150.00 • $3.00')).toBeInTheDocument();
     expect(
       screen.getByText('Pago Móvil: Bs 50.00 • $1.00')
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('Subtotal $4.00 + Propina Bs 50.00')
     ).toBeInTheDocument();
   });
 });

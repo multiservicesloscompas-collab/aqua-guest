@@ -27,6 +27,21 @@ Identify the domain of your task and read **ONLY** the linked file to get the sp
 - **📦 Prepaid Orders (Prepagados):** Read `apps/web-app/docs/domain-prepaid.md`
   - _Keywords:_ Paid in advance, pending/delivered status, `PrepaidOrder`, `PrePaysPage`.
 
+## 🧾 Definiciones de Modulos Comerciales (Regla de Dominio)
+
+- Cuando el usuario mencione "modulos comerciales", se refiere explicitamente a:
+  - Modulo de "Alquiler de lavadoras"
+  - Modulo de "Ventas de agua"
+- Cualquier record nuevo o modificacion de records en estos modulos puede afectar multiples submodulos o partes de la app, incluyendo:
+  - Dashboard en metricas generales
+  - Resumen de pagos por tipo de pago
+  - Transacciones generales
+  - Transacciones por tipo de pago
+- Reglas especiales para pagos y propinas:
+  - Si el pago es mixto, distribuir y reflejar los montos correctamente por tipo de pago
+  - Las propinas impactan el modulo de Propinas
+  - Las propinas impactan el modulo de Egresos solo cuando la propina esta pagada
+
 ---
 
 ## 🛠️ Global Tech Stack & Tools

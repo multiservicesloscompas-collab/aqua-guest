@@ -7,6 +7,7 @@ interface TransactionViewItem {
   key: string;
   typeLabel: string;
   description: string;
+  linkedReference: string;
   amountText: string;
   amountUsdText?: string;
   paymentMethodLabel?: string;
@@ -77,6 +78,9 @@ export function PaymentMethodTransactionsCard({
                       </div>
                       <p className="text-xs text-muted-foreground">
                         {transaction.description}
+                      </p>
+                      <p className="text-xs text-muted-foreground/90">
+                        {transaction.linkedReference}
                       </p>
                     </div>
                   </div>

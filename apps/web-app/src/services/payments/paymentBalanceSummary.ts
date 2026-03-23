@@ -12,6 +12,7 @@ import {
   createEmptyMethodTotals,
   getPaymentMethods,
 } from '@/services/payments/paymentSplitReadModel';
+import { resolvePaymentBalanceTransferLegs } from '@/services/payments/paymentBalanceTransferSemantics';
 
 interface PaymentBalanceSummaryInput {
   date: string;
@@ -20,21 +21,6 @@ interface PaymentBalanceSummaryInput {
   prepaidOrders: readonly PrepaidOrder[];
   rentals: readonly WasherRental[];
   paymentBalanceTransactions: readonly PaymentBalanceTransaction[];
-}
-
-function getBalanceTransactionAmountBs(
-  transaction: PaymentBalanceTransaction,
-  exchangeRate: number
-): number {
-  if (transaction.amountBs !== undefined) {
-    return Number(transaction.amountBs);
-  }
-
-  if (transaction.amountUsd !== undefined) {
-    return Number(transaction.amountUsd) * exchangeRate;
-  }
-
-  return Number(transaction.amount);
 }
 
 export function calculatePaymentBalanceSummary(
@@ -84,9 +70,12 @@ export function calculatePaymentBalanceSummary(
   );
 
   for (const transaction of balanceTransactionsOfDay) {
-    const amountBs = getBalanceTransactionAmountBs(transaction, exchangeRate);
-    adjustments[transaction.fromMethod] -= amountBs;
-    adjustments[transaction.toMethod] += amountBs;
+    const { amountOutBs, amountInBs } = resolvePaymentBalanceTransferLegs(
+      transaction,
+      exchangeRate
+    );
+    adjustments[transaction.fromMethod] -= amountOutBs;
+    adjustments[transaction.toMethod] += amountInBs;
   }
 
   return methods.map((method: PaymentMethod) => ({

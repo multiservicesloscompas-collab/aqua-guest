@@ -7,6 +7,7 @@ const DEFAULT_FLAGS: MixedPaymentFeatureFlags = {
   enabled: true,
   water: true,
   rentals: true,
+  expenses: true,
 };
 
 export function createDefaultMixedPaymentFlags(): MixedPaymentFeatureFlags {
@@ -14,8 +15,10 @@ export function createDefaultMixedPaymentFlags(): MixedPaymentFeatureFlags {
 }
 
 export function isMixedPaymentEnabledForModule(
-  _flags: MixedPaymentFeatureFlags | undefined,
-  _module: PaymentSplitModule
+  flags: MixedPaymentFeatureFlags | undefined,
+  module: PaymentSplitModule
 ): boolean {
-  return true;
+  if (!flags) return true;
+  if (!flags.enabled) return false;
+  return flags[module];
 }

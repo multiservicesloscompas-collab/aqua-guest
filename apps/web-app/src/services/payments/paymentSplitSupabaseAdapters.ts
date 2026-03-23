@@ -5,6 +5,7 @@ import type {
   PaymentSplitRow,
   RentalPaymentSplitInsertRow,
   SalePaymentSplitInsertRow,
+  ExpensePaymentSplitInsertRow,
 } from './paymentSplitSchemaContract';
 
 function toSaleInsertRows(
@@ -26,6 +27,19 @@ function toRentalInsertRows(
 ): RentalPaymentSplitInsertRow[] {
   return splits.map((split) => ({
     rental_id: rentalId,
+    payment_method: split.method,
+    amount_bs: split.amountBs,
+    amount_usd: split.amountUsd,
+    exchange_rate_used: split.exchangeRateUsed,
+  }));
+}
+
+function toExpenseInsertRows(
+  expenseId: string,
+  splits: readonly PaymentSplit[]
+): ExpensePaymentSplitInsertRow[] {
+  return splits.map((split) => ({
+    expense_id: expenseId,
     payment_method: split.method,
     amount_bs: split.amountBs,
     amount_usd: split.amountUsd,
@@ -57,5 +71,11 @@ export const salePaymentSplitAdapter: PaymentSplitAdapter<SalePaymentSplitInsert
 export const rentalPaymentSplitAdapter: PaymentSplitAdapter<RentalPaymentSplitInsertRow> =
   {
     toInsertRows: (rentalId, splits) => toRentalInsertRows(rentalId, splits),
+    fromRows,
+  };
+
+export const expensePaymentSplitAdapter: PaymentSplitAdapter<ExpensePaymentSplitInsertRow> =
+  {
+    toInsertRows: (expenseId, splits) => toExpenseInsertRows(expenseId, splits),
     fromRows,
   };

@@ -168,4 +168,96 @@ describe('buildTransactionsSummaryItems', () => {
         .sort((a: number, b: number) => a - b)
     ).toEqual([10, 20, 50]);
   });
+
+  it('builds avance transfer row with differentiated in/out amounts and difference', () => {
+    const transactions: PaymentBalanceTransaction[] = [
+      {
+        id: 'tx-avance',
+        date: '2026-03-07',
+        operationType: 'avance',
+        fromMethod: 'pago_movil',
+        toMethod: 'efectivo',
+        amount: 0,
+        amountOutBs: 80,
+        amountInBs: 75,
+        differenceBs: -5,
+        createdAt: '2026-03-07T13:00:00.000Z',
+        updatedAt: '2026-03-07T13:00:00.000Z',
+      },
+    ];
+
+    const items = buildTransactionsSummaryItems({
+      selectedDate: '2026-03-07',
+      exchangeRate: 50,
+      sales: [],
+      rentals: [],
+      expenses: EMPTY_EXPENSES,
+      prepaidOrders: EMPTY_PREPAID,
+      paymentBalanceTransactions: transactions,
+    });
+
+    expect(items).toHaveLength(1);
+    expect(items[0]).toMatchObject({
+      type: 'balance_transfer',
+      title: 'Avance entre Métodos',
+      amountBs: 75,
+      paymentMethod: 'Transferencia · Avance',
+      isIncome: true,
+    });
+    expect(items[0].subtitle).toContain('Salida Bs 80,00');
+    expect(items[0].subtitle).toContain('Entrada Bs 75,00');
+    expect(items[0].subtitle).toContain('Dif Bs -5,00');
+  });
+
+  it('adds tip payout rows once per payout id and marks them as expense', () => {
+    const items = buildTransactionsSummaryItems({
+      selectedDate: '2026-03-07',
+      exchangeRate: 50,
+      sales: [],
+      rentals: [],
+      expenses: EMPTY_EXPENSES,
+      prepaidOrders: EMPTY_PREPAID,
+      paymentBalanceTransactions: [],
+      tipPayouts: [
+        {
+          id: 'tip-payout-1',
+          tipDate: '2026-03-07',
+          paidAt: '2026-03-07T15:00:00.000Z',
+          paymentMethod: 'efectivo',
+          amountBs: 40,
+          originType: 'sale',
+          originId: 'sale-1',
+        },
+        {
+          id: 'tip-payout-1',
+          tipDate: '2026-03-07',
+          paidAt: '2026-03-07T15:01:00.000Z',
+          paymentMethod: 'efectivo',
+          amountBs: 40,
+          originType: 'rental',
+          originId: 'rental-1',
+        },
+        {
+          id: 'tip-payout-2',
+          tipDate: '2026-03-07',
+          paidAt: '2026-03-07T16:00:00.000Z',
+          paymentMethod: 'pago_movil',
+          amountBs: 25,
+          originType: 'rental',
+          originId: 'rental-2',
+        },
+      ],
+    });
+
+    const tipRows = items.filter(
+      (item: TransactionItem) => item.type === 'tip_payout'
+    );
+    expect(tipRows).toHaveLength(2);
+    expect(tipRows.every((item: TransactionItem) => !item.isIncome)).toBe(true);
+    expect(
+      tipRows
+        .map((item: TransactionItem) => item.amountBs)
+        .sort((a: number, b: number) => a - b)
+    ).toEqual([25, 40]);
+  });
 });

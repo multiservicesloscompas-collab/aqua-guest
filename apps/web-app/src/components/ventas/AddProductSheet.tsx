@@ -1,17 +1,20 @@
 import { useState, useEffect } from 'react';
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet';
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerClose,
+} from '@/components/ui/drawer';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { cn } from '@/lib/utils';
 import { useWaterSalesStore } from '@/store/useWaterSalesStore';
 import { useConfigStore } from '@/store/useConfigStore';
 import { Product } from '@/types';
-import { Plus, Minus, Droplet } from 'lucide-react';
+import { Plus, Minus, Droplet, X } from 'lucide-react';
 
 import { toast } from 'sonner';
 
@@ -94,24 +97,31 @@ export function AddProductSheet({ open, onOpenChange }: AddProductSheetProps) {
   const subtotal = quantity * unitPrice;
 
   return (
-    <Sheet
+    <Drawer
       open={open}
       onOpenChange={(o) => {
         if (!o) handleReset();
         onOpenChange(o);
       }}
     >
-      <SheetContent
-        side="bottom"
-        tabletSide="right"
-        tabletClassName="sm:max-w-[440px]"
-        className="h-[90vh] rounded-t-2xl px-4 pb-8 sm:flex sm:h-full sm:flex-col sm:rounded-none"
+      <DrawerContent
+        className={cn(
+          'h-[90vh] rounded-t-2xl px-4 pb-8 sm:flex sm:h-full sm:flex-col sm:rounded-none'
+        )}
       >
-        <SheetHeader className="pb-4">
-          <SheetTitle className="text-lg font-bold">
+        <DrawerClose className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-secondary">
+          <X className="h-4 w-4" />
+          <span className="sr-only">Cerrar</span>
+        </DrawerClose>
+        <DrawerHeader className="pb-4">
+          <DrawerTitle className="text-lg font-bold">
             Agregar Producto
-          </SheetTitle>
-        </SheetHeader>
+          </DrawerTitle>
+          <DrawerDescription>
+            Selecciona un producto, ajusta cantidad o litros y agregalo al
+            carrito.
+          </DrawerDescription>
+        </DrawerHeader>
 
         {!selectedProduct ? (
           /* Selector de producto */
@@ -138,9 +148,9 @@ export function AddProductSheet({ open, onOpenChange }: AddProductSheetProps) {
           </div>
         ) : (
           /* Formulario de producto */
-          <div className="flex flex-col h-full space-y-5">
+          <div className="flex flex-col h-full space-y-5 overflow-y-auto pt-2 pb-6 px-1">
             {/* Producto seleccionado */}
-            <div className="flex items-center gap-3 p-4 bg-primary/10 rounded-xl">
+            <div className="flex items-center gap-3 p-4 bg-primary/10 rounded-xl shrink-0">
               <span className="text-4xl">{selectedProduct.icon || '📦'}</span>
               <div>
                 <p className="text-lg font-bold text-foreground">
@@ -236,7 +246,7 @@ export function AddProductSheet({ open, onOpenChange }: AddProductSheetProps) {
             </div>
 
             {/* Subtotal y botón */}
-            <div className="mt-auto space-y-3 pt-4 border-t">
+            <div className="mt-auto space-y-3 pt-4 border-t shrink-0">
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Subtotal</span>
                 <span className="text-2xl font-extrabold text-foreground">
@@ -255,7 +265,7 @@ export function AddProductSheet({ open, onOpenChange }: AddProductSheetProps) {
             </div>
           </div>
         )}
-      </SheetContent>
-    </Sheet>
+      </DrawerContent>
+    </Drawer>
   );
 }

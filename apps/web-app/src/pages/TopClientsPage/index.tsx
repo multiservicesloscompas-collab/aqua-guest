@@ -2,7 +2,6 @@ import { useMemo } from 'react';
 import { Trophy, DollarSign } from 'lucide-react';
 import { useRentalStore } from '@/store/useRentalStore';
 import { useCustomerStore } from '@/store/useCustomerStore';
-import { useConfigStore } from '@/store/useConfigStore';
 import type { AppRoute } from '@/types';
 
 interface TopClientsPageProps {
@@ -12,7 +11,6 @@ interface TopClientsPageProps {
 export function TopClientsPage({ onNavigate }: TopClientsPageProps = {}) {
   const { rentals } = useRentalStore();
   const { customers } = useCustomerStore();
-  const { config } = useConfigStore();
 
   const topClients = useMemo(() => {
     const totals: Record<
@@ -40,7 +38,7 @@ export function TopClientsPage({ onNavigate }: TopClientsPageProps = {}) {
       .map(([id, data]) => ({ id, ...data }))
       .sort((a, b) => b.totalUsd - a.totalUsd)
       .slice(0, 20);
-  }, [rentals, customers, config.exchangeRate]);
+  }, [rentals, customers]);
 
   return (
     <div className="flex flex-col min-h-screen pb-24">

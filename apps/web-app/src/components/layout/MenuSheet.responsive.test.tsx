@@ -18,33 +18,25 @@ vi.mock('@/hooks/responsive/useViewportMode', () => ({
   useViewportMode: () => viewportState,
 }));
 
-vi.mock('@/components/ui/sheet', () => ({
-  Sheet: ({ children }: { children: ReactNode }) => <div>{children}</div>,
-  SheetContent: ({
-    side,
-    tabletSide,
+vi.mock('@/components/ui/drawer', () => ({
+  Drawer: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+  DrawerContent: ({
     className,
-    tabletClassName,
     children,
   }: {
-    side?: string;
-    tabletSide?: string;
     className?: string;
-    tabletClassName?: string;
     children: ReactNode;
   }) => (
     <div
-      data-testid="sheet-content"
-      data-side={side}
-      data-tablet-side={tabletSide}
-      data-tablet-class={tabletClassName}
+      data-testid="drawer-content"
       className={className}
     >
       {children}
     </div>
   ),
-  SheetHeader: ({ children }: { children: ReactNode }) => <div>{children}</div>,
-  SheetTitle: ({ children }: { children: ReactNode }) => <h2>{children}</h2>,
+  DrawerHeader: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+  DrawerTitle: ({ children }: { children: ReactNode }) => <h2>{children}</h2>,
+  DrawerClose: ({ children }: { children: ReactNode }) => <div>{children}</div>,
 }));
 
 describe('MenuSheet responsive behavior', () => {
@@ -62,13 +54,13 @@ describe('MenuSheet responsive behavior', () => {
       />
     );
 
-    const content = screen.getByTestId('sheet-content');
+    const content = screen.getByTestId('drawer-content');
 
-    expect(content).toHaveAttribute('data-side', 'bottom');
     expect(content).toHaveClass('rounded-t-3xl');
+    expect(content).not.toHaveClass('h-full');
   });
 
-  it('uses right side panel in tablet mode', () => {
+  it('uses side panel styles in tablet mode', () => {
     viewportState.viewportMode = 'tablet-portrait';
     viewportState.isMobileViewport = false;
     viewportState.isTabletViewport = true;
@@ -82,14 +74,11 @@ describe('MenuSheet responsive behavior', () => {
       />
     );
 
-    const content = screen.getByTestId('sheet-content');
+    const content = screen.getByTestId('drawer-content');
 
-    expect(content).toHaveAttribute('data-side', 'right');
-    expect(content).toHaveAttribute('data-tablet-side', 'right');
-    expect(content).toHaveAttribute(
-      'data-tablet-class',
-      expect.stringContaining('rounded-none')
-    );
+    expect(content).toHaveClass('rounded-none');
+    expect(content).toHaveClass('h-full');
+    expect(content).toHaveClass('border-l');
   });
 
   it('shows key modules and navigates when a menu item is pressed', () => {
@@ -110,21 +99,27 @@ describe('MenuSheet responsive behavior', () => {
     );
 
     expect(
-      screen.getByRole('button', { name: 'Ir a Prepagados' })
+      screen.getByRole('button', { name: 'Ir a Entregas' })
     ).toBeInTheDocument();
     expect(
-      screen.getByRole('button', { name: 'Ir a Métricas de agua' })
+      screen.getByRole('button', { name: 'Ir a Clientes' })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Ir a Propinas' })
     ).toBeInTheDocument();
     expect(
       screen.getByRole('button', { name: 'Ir a Transacciones' })
     ).toBeInTheDocument();
     expect(
-      screen.getByRole('button', { name: 'Ir a Equilibrio de pagos' })
+      screen.getByRole('button', { name: 'Ir a Egresos' })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Ir a Configuración Global' })
     ).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Ir a Prepagados' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Ir a Propinas' }));
 
-    expect(onNavigate).toHaveBeenCalledWith('prepagados');
+    expect(onNavigate).toHaveBeenCalledWith('propinas');
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 });

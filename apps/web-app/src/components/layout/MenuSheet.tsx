@@ -1,10 +1,11 @@
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet';
-import { ChevronRight } from 'lucide-react';
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerClose,
+} from '@/components/ui/drawer';
+import { ChevronRight, X } from 'lucide-react';
 import { AppRoute } from '@/types';
 import { cn } from '@/lib/utils';
 import { useViewportMode } from '@/hooks/responsive/useViewportMode';
@@ -32,24 +33,31 @@ export function MenuSheet({
   };
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent
-        side={isTabletViewport ? 'right' : 'bottom'}
-        tabletSide="right"
-        tabletClassName={cn(
-          'h-full rounded-none border-l px-5 py-5',
-          isTabletLandscape ? 'sm:max-w-[28rem]' : 'sm:max-w-[26rem]'
+    <Drawer open={open} onOpenChange={onOpenChange}>
+      <DrawerContent
+        className={cn(
+          'flex flex-col',
+          isTabletViewport 
+            ? cn(
+                'h-full rounded-none border-l w-full right-0 left-auto top-0',
+                isTabletLandscape ? 'sm:max-w-[28rem]' : 'sm:max-w-[26rem]'
+              )
+            : 'h-auto max-h-[85vh] rounded-t-3xl'
         )}
-        className={cn(!isTabletViewport && 'h-auto max-h-[80vh] rounded-t-3xl')}
       >
-        <SheetHeader className="pb-4">
-          <SheetTitle className="text-lg">Más opciones</SheetTitle>
-        </SheetHeader>
+        <DrawerClose className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-secondary z-10">
+          <X className="h-4 w-4" />
+          <span className="sr-only">Cerrar</span>
+        </DrawerClose>
+
+        <DrawerHeader className="pb-4 shrink-0">
+          <DrawerTitle className="text-lg">Más opciones</DrawerTitle>
+        </DrawerHeader>
 
         <div
           className={cn(
-            'space-y-2 overflow-y-auto pb-6',
-            isTabletViewport ? 'max-h-[calc(100vh-7rem)]' : 'max-h-[60vh]'
+            'space-y-2 overflow-y-auto px-4 pb-8',
+            isTabletViewport ? 'flex-1' : 'max-h-[60vh]'
           )}
         >
           {secondaryNavigationItems.map(
@@ -87,7 +95,7 @@ export function MenuSheet({
                     >
                       {label}
                     </span>
-                    <span className="text-sm text-muted-foreground">
+                    <span className="text-sm text-muted-foreground line-clamp-1">
                       {description}
                     </span>
                   </div>
@@ -102,7 +110,7 @@ export function MenuSheet({
             }
           )}
         </div>
-      </SheetContent>
-    </Sheet>
+      </DrawerContent>
+    </Drawer>
   );
 }

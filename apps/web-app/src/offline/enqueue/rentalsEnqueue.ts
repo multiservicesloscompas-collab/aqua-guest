@@ -1,4 +1,5 @@
 import type { WasherRental } from '@/types';
+import type { PaymentMethod } from '@/types';
 import type { PaymentSplit } from '@/types/paymentSplits';
 import { PAYMENT_SPLIT_SCHEMA } from '@/services/payments/paymentSplitSchemaContract';
 import { rentalPaymentSplitAdapter } from '@/services/payments/paymentSplitSupabaseAdapters';
@@ -158,5 +159,63 @@ export const enqueueOfflineRentalPaymentSplitsDelete = (
     },
     enqueueSource: actionSource,
     businessKey: `rental-splits:${rentalId}`,
+  });
+};
+
+export const enqueueOfflineRentalTipDelete = (
+  rentalId: string,
+  actionSource = 'rentals/deleteRental'
+) => {
+  useSyncStore.getState().addToQueue({
+    type: 'DELETE',
+    table: 'tips',
+    payload: {
+      id: `rental_tip:${rentalId}`,
+      parentId: rentalId,
+      parentColumn: 'origin_id',
+      parentScopeColumn: 'origin_type',
+      parentScopeValue: 'rental',
+      __op: 'delete_by_parent_id',
+    },
+    enqueueSource: actionSource,
+    businessKey: `tip-origin-rental:${rentalId}`,
+  });
+};
+
+interface EnqueueOfflineRentalTipUpsertInput {
+  rentalId: string;
+  tipDate: string;
+  amountBs: number;
+  amountUsd?: number;
+  exchangeRateUsed?: number;
+  capturePaymentMethod: PaymentMethod;
+  notes?: string;
+  actionSource?: string;
+}
+
+export const enqueueOfflineRentalTipUpsert = (
+  input: EnqueueOfflineRentalTipUpsertInput
+) => {
+  const businessKey = `tip-origin-rental:${input.rentalId}`;
+
+  useSyncStore.getState().addToQueue({
+    type: 'INSERT',
+    table: 'tips',
+    payload: {
+      origin_type: 'rental',
+      origin_id: input.rentalId,
+      tip_date: input.tipDate,
+      amount_bs: input.amountBs,
+      amount_usd: input.amountUsd,
+      exchange_rate_used: input.exchangeRateUsed,
+      capture_payment_method: input.capturePaymentMethod,
+      notes: input.notes,
+      __op: 'upsert_on_origin',
+    },
+    enqueueSource: input.actionSource ?? 'rentals/updateRental',
+    businessKey,
+    dependencyKeys: input.rentalId.startsWith('temp-')
+      ? [`rental:${input.rentalId}`]
+      : undefined,
   });
 };

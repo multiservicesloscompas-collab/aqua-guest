@@ -4,6 +4,7 @@ interface DashboardDataLoaders {
   loadSalesByDateRange: (start: string, end: string) => Promise<void>;
   loadExpensesByDateRange: (start: string, end: string) => Promise<void>;
   loadRentalsByDateRange: (start: string, end: string) => Promise<void>;
+  loadTipsByDateRange?: (start: string, end: string) => Promise<void>;
 }
 
 interface DashboardDataResult {
@@ -43,6 +44,9 @@ export function useDashboardData(
           loaders.loadSalesByDateRange(range.start, range.end),
           loaders.loadExpensesByDateRange(range.start, range.end),
           loaders.loadRentalsByDateRange(range.start, range.end),
+          loaders.loadTipsByDateRange
+            ? loaders.loadTipsByDateRange(range.start, range.end)
+            : Promise.resolve(),
         ]);
       } catch (err) {
         console.error('Error loading month data for dashboard', err);

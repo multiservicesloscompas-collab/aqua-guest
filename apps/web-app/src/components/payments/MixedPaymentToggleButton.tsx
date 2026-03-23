@@ -1,5 +1,4 @@
 import { WalletCards } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 interface MixedPaymentToggleButtonProps {
@@ -12,34 +11,51 @@ export function MixedPaymentToggleButton({
   onToggle,
 }: MixedPaymentToggleButtonProps) {
   return (
-    <Button
+    <button
       type="button"
-      variant="outline"
       data-testid="mixed-payment-toggle"
       aria-label="Pago mixto"
       aria-pressed={isMixedPayment}
       onClick={onToggle}
       className={cn(
-        'w-full min-h-16 justify-between rounded-xl border px-4 py-3 text-left shadow-sm touch-manipulation',
+        'w-full flex items-center justify-between p-4 rounded-[24px] transition-all duration-300',
+        'bg-card border shadow-sm active:scale-[0.98] focus:outline-none text-left',
         isMixedPayment
-          ? 'border-primary bg-primary/10 text-primary hover:bg-primary/15'
-          : 'text-foreground hover:border-primary/40 hover:bg-muted/50'
+          ? 'border-indigo-500/30'
+          : 'border-border hover:border-primary/50'
       )}
     >
-      <span className="inline-flex items-start gap-3">
-        <WalletCards className="mt-0.5 h-5 w-5 shrink-0" />
-        <span className="flex flex-col leading-tight">
-          <span className="text-sm font-semibold">
-            {isMixedPayment ? 'Pago mixto activado' : 'Activar pago mixto'}
+      <div className="flex items-center gap-4">
+        <div
+          className={cn(
+            'flex items-center justify-center w-12 h-12 rounded-2xl shrink-0 transition-colors',
+            isMixedPayment
+              ? 'bg-indigo-500/10 text-indigo-600'
+              : 'bg-muted text-muted-foreground'
+          )}
+        >
+          <WalletCards className="w-6 h-6" />
+        </div>
+        <div className="flex flex-col items-start min-w-0">
+          <span className="text-[16px] font-bold text-foreground">
+            Pago Mixto
           </span>
-          <span className="text-xs font-normal text-muted-foreground">
-            Divide el cobro entre dos métodos
+          <span className="text-[13px] font-medium text-muted-foreground truncate">
+            {isMixedPayment ? 'Dividir cobro en dos métodos' : 'Activar cobro dividido'}
           </span>
-        </span>
-      </span>
-      <span className="text-xs font-semibold shrink-0">
-        {isMixedPayment ? 'Activo' : 'Activar'}
-      </span>
-    </Button>
+        </div>
+      </div>
+
+      <div
+        className={cn(
+          'px-4 py-1.5 rounded-full text-[13px] font-bold whitespace-nowrap transition-colors',
+          isMixedPayment
+            ? 'bg-muted text-muted-foreground'
+            : 'bg-indigo-500/10 text-indigo-600'
+        )}
+      >
+        {isMixedPayment ? 'Quitar' : 'Activar'}
+      </div>
+    </button>
   );
 }

@@ -1,58 +1,37 @@
 import { useEffect, useMemo, useState } from 'react';
-import { format, parse } from 'date-fns';
-import { es } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { useCustomerStore } from '@/store/useCustomerStore';
 import { useRentalStore } from '@/store/useRentalStore';
 import { useMachineStore } from '@/store/useMachineStore';
 import { useConfigStore } from '@/store/useConfigStore';
 import { getVenezuelaDate } from '@/services/DateService';
+import { generateTimeSlots } from '@/utils/rentalSchedule';
+import { RentalStatus, RentalStatusLabels, WasherRental } from '@/types';
+import { useEditRentalFormState } from './useEditRentalFormState';
 import {
-  calculatePickupTime,
-  formatPickupInfo,
-  generateTimeSlots,
-} from '@/utils/rentalSchedule';
-import { calculateRentalPrice } from '@/utils/rentalPricing';
+  getEditRentalValidationError,
+  notifyEditRentalValidationError,
+  submitEditRental,
+} from './editRentalSheetViewModel.submit';
 import {
-  PaymentMethod,
-  PaymentMethodLabels,
-  RentalShift,
-  RentalShiftConfig,
-  RentalStatus,
-  RentalStatusLabels,
-  WasherRental,
-} from '@/types';
-import type { PaymentSplit } from '@/types/paymentSplits';
-import { normalizeAndValidatePaymentSplits } from '@/services/payments/paymentSplitValidation';
-import { buildDualPaymentSplits } from '@/services/payments/paymentSplitWritePath';
+  DELIVERY_FEE_OPTIONS,
+  PAYMENT_METHOD_OPTIONS,
+  getPaidDateLabel,
+  mapMachineItems,
+  mapShiftOptions,
+} from './editRentalSheetViewModel.helpers';
+import { useEditRentalSheetComputed } from './useEditRentalSheetComputed';
+import { useEditRentalTipHydration } from './useEditRentalTipHydration';
 
 interface EditRentalSheetViewModelProps {
   rental: WasherRental | null;
+  open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-interface MachineItem {
-  id: string;
-  name: string;
-  detail: string;
-  isUnavailable: boolean;
-}
-
-interface ShiftOption {
-  value: RentalShift;
-  label: string;
-  priceText: string;
-}
-
-interface PaymentMethodOption {
-  value: PaymentMethod;
-  label: string;
-}
-
-const DELIVERY_FEE_OPTIONS = [0, 1, 2, 3, 4, 5];
-
 export function useEditRentalSheetViewModel({
   rental,
+  open,
   onOpenChange,
 }: EditRentalSheetViewModelProps) {
   const { customers } = useCustomerStore();
@@ -62,186 +41,108 @@ export function useEditRentalSheetViewModel({
   const exchangeRate = useConfigStore((state) => state.config.exchangeRate);
   const { updateRental, rentals } = useRentalStore();
   const { washingMachines } = useMachineStore();
+  const form = useEditRentalFormState({ rental, exchangeRate });
 
-  const [machineId, setMachineId] = useState('');
-  const [shift, setShift] = useState<RentalShift>('completo');
-  const [deliveryTime, setDeliveryTime] = useState('09:00');
-  const [deliveryFee, setDeliveryFee] = useState(0);
-  const [customerName, setCustomerName] = useState('');
-  const [customerPhone, setCustomerPhone] = useState('');
-  const [customerAddress, setCustomerAddress] = useState('');
-  const [selectedCustomerId, setSelectedCustomerId] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('efectivo');
-  const [split2Method, setSplit2Method] = useState<PaymentMethod>('pago_movil');
-  const [split1Amount, setSplit1Amount] = useState('');
-  const [isMixedPayment, setIsMixedPayment] = useState(false);
-  const [notes, setNotes] = useState('');
-  const [status, setStatus] = useState<RentalStatus>('agendado');
-  const [isPaid, setIsPaid] = useState(false);
-  const [datePaid, setDatePaid] = useState('');
+  const {
+    machineId,
+    shift,
+    deliveryTime,
+    deliveryFee,
+    customerName,
+    setCustomerName,
+    customerPhone,
+    setCustomerPhone,
+    customerAddress,
+    setCustomerAddress,
+    selectedCustomerId,
+    setSelectedCustomerId,
+    paymentMethod,
+    split2Method,
+    setSplit2Method,
+    split1Amount,
+    setSplit1Amount,
+    isMixedPayment,
+    setIsMixedPayment,
+    notes,
+    status,
+    isPaid,
+    setIsPaid,
+    datePaid,
+    setDatePaid,
+    tipCapture,
+  } = form;
+
   const [isLoading, setIsLoading] = useState(false);
-  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
 
-  useEffect(() => {
-    if (!rental) return;
-    setMachineId(rental.machineId);
-    setShift(rental.shift);
-    setDeliveryTime(rental.deliveryTime.substring(0, 5));
-    setDeliveryFee(rental.deliveryFee);
-    setCustomerName(rental.customerName);
-    setCustomerPhone(rental.customerPhone);
-    setCustomerAddress(rental.customerAddress);
-    setSelectedCustomerId(rental.customerId || '');
-    setPaymentMethod(rental.paymentMethod || 'efectivo');
-    const splitMain = rental.paymentSplits?.find(
-      (split) => split.method === rental.paymentMethod
-    );
-    const splitSecondary = rental.paymentSplits?.find(
-      (split) => split.method !== rental.paymentMethod
-    );
-    setSplit1Amount(splitMain ? String(splitMain.amountBs) : '');
-    setSplit2Method(splitSecondary?.method ?? 'pago_movil');
-    setIsMixedPayment(Boolean(splitSecondary));
-    setNotes(rental.notes || '');
-    setStatus(rental.status);
-    setIsPaid(rental.isPaid);
-    setDatePaid(rental.datePaid || '');
-  }, [rental]);
+  useEditRentalTipHydration({
+    open,
+    rental,
+    tipCapture,
+  });
 
   const timeSlots = useMemo(() => generateTimeSlots(), []);
 
-  const pickupInfo = useMemo(() => {
-    if (!rental) return { pickupDate: '', pickupTime: '' };
-    const date = parse(rental.date, 'yyyy-MM-dd', new Date());
-    return calculatePickupTime(date, deliveryTime, shift);
-  }, [rental, deliveryTime, shift]);
-
-  const totalUsd = useMemo(() => {
-    return calculateRentalPrice(shift, paymentMethod, deliveryFee);
-  }, [shift, paymentMethod, deliveryFee]);
-  const totalBs = useMemo(
-    () => totalUsd * exchangeRate,
-    [totalUsd, exchangeRate]
+  const tipAmountBsNumeric = useMemo(
+    () => (tipCapture.tipEnabled ? Number(tipCapture.tipAmount) || 0 : 0),
+    [tipCapture.tipAmount, tipCapture.tipEnabled]
   );
 
   const hasMixedPaymentEnabled = isMixedPaymentEnabled && isMixedPayment;
-
-  const paymentSplits = useMemo<PaymentSplit[]>(() => {
-    return buildDualPaymentSplits({
-      enableMixedPayment: hasMixedPaymentEnabled,
-      primaryMethod: paymentMethod,
-      secondaryMethod: split2Method,
-      amountInput: split1Amount,
-      amountInputMode: 'primary',
-      totalBs,
-      totalUsd,
-      exchangeRate,
-    });
-  }, [
-    exchangeRate,
-    hasMixedPaymentEnabled,
-    paymentMethod,
-    split1Amount,
-    split2Method,
-    totalBs,
+  const {
+    pickupInfo,
+    pickupLabel,
+    subtotalUsd,
+    subtotalBs,
     totalUsd,
-  ]);
+    totalBs,
+    paymentSplits,
+    unavailableMachines,
+  } = useEditRentalSheetComputed({
+    rental,
+    shift,
+    paymentMethod,
+    deliveryFee,
+    deliveryTime,
+    split2Method,
+    split1Amount,
+    hasMixedPaymentEnabled,
+    tipAmountBs: tipAmountBsNumeric,
+    exchangeRate,
+    rentals,
+  });
 
   useEffect(() => {
     if (split2Method === paymentMethod) {
       setSplit2Method(paymentMethod === 'efectivo' ? 'pago_movil' : 'efectivo');
     }
-  }, [paymentMethod, split2Method]);
+  }, [paymentMethod, setSplit2Method, split2Method]);
 
-  const unavailableMachines = useMemo(() => {
-    if (!rental) return [] as string[];
-    const requestedStart = new Date(`${rental.date}T${deliveryTime}`);
-    const requestedEnd = new Date(
-      `${pickupInfo.pickupDate}T${pickupInfo.pickupTime}`
-    );
-
-    return rentals
-      .filter((r: WasherRental) => {
-        if (r.id === rental.id) return false;
-        if (r.status === 'finalizado') return false;
-        const rentalStart = new Date(
-          `${r.date}T${r.deliveryTime.substring(0, 5)}`
-        );
-        const rentalEnd = new Date(
-          `${r.pickupDate}T${r.pickupTime.substring(0, 5)}`
-        );
-        return rentalStart < requestedEnd && rentalEnd > requestedStart;
-      })
-      .map((r: WasherRental) => r.machineId);
-  }, [
-    rentals,
-    rental,
-    deliveryTime,
-    pickupInfo.pickupDate,
-    pickupInfo.pickupTime,
-  ]);
-
-  const machineItems = useMemo<MachineItem[]>(
+  const machineItems = useMemo(
     () =>
-      [...washingMachines]
-        .sort((a, b) => b.kg - a.kg)
-        .map((machine) => ({
-          id: machine.id,
-          name: `${machine.kg}KG`,
-          detail: `${machine.name} - ${machine.brand}`,
-          isUnavailable: unavailableMachines.includes(machine.id),
-        })),
+      mapMachineItems({
+        washingMachines,
+        unavailableMachineIds: unavailableMachines,
+      }),
     [washingMachines, unavailableMachines]
   );
 
-  const shiftOptions = useMemo<ShiftOption[]>(
-    () =>
-      (Object.keys(RentalShiftConfig) as RentalShift[]).map((key) => {
-        const config = RentalShiftConfig[key];
-        const price =
-          key === 'completo' && paymentMethod === 'efectivo'
-            ? 5
-            : config.priceUsd;
-        return {
-          value: key,
-          label: config.label,
-          priceText: `$${price}`,
-        };
-      }),
+  const shiftOptions = useMemo(
+    () => mapShiftOptions(paymentMethod),
     [paymentMethod]
   );
 
-  const paymentMethodOptions = useMemo<PaymentMethodOption[]>(
-    () => [
-      { value: 'pago_movil', label: PaymentMethodLabels.pago_movil },
-      { value: 'efectivo', label: PaymentMethodLabels.efectivo },
-      { value: 'punto_venta', label: PaymentMethodLabels.punto_venta },
-      { value: 'divisa', label: PaymentMethodLabels.divisa },
-    ],
-    []
-  );
+  const paymentMethodOptions = useMemo(() => PAYMENT_METHOD_OPTIONS, []);
 
-  const pickupLabel = useMemo(() => {
-    if (!rental) return '';
-    return formatPickupInfo(
-      pickupInfo.pickupDate,
-      pickupInfo.pickupTime,
-      rental.date
-    );
-  }, [pickupInfo.pickupDate, pickupInfo.pickupTime, rental]);
+  const paidDateLabel = useMemo(() => getPaidDateLabel(datePaid), [datePaid]);
 
-  const paidDateLabel = useMemo(() => {
-    if (!datePaid) return 'Seleccionar fecha';
-    return format(
-      parse(datePaid, 'yyyy-MM-dd', new Date()),
-      "d 'de' MMMM, yyyy",
-      {
-        locale: es,
-      }
-    );
-  }, [datePaid]);
-
-  const handleCustomerSelect = (customerId: string) => {
+  const handleCustomerSelect = (customerId: string | null) => {
+    if (!customerId) {
+      setSelectedCustomerId('');
+      setCustomerName('');
+      setCustomerPhone('');
+      setCustomerAddress('');
+      return;
+    }
     const customer = customers.find((c) => c.id === customerId);
     if (!customer) return;
     setSelectedCustomerId(customerId);
@@ -253,66 +154,62 @@ export function useEditRentalSheetViewModel({
   const handleSubmit = async () => {
     if (!rental) return;
 
-    if (!machineId) {
-      toast.error('Selecciona una lavadora');
-      return;
-    }
-
-    if (!customerName?.trim() || !customerAddress?.trim()) {
-      toast.error('Completa nombre y dirección del cliente');
-      return;
-    }
-
-    if (unavailableMachines.includes(machineId)) {
-      toast.error('Esta lavadora no está disponible');
+    const validationError = getEditRentalValidationError({
+      machineId,
+      customerName,
+      customerAddress,
+      unavailableMachines,
+    });
+    if (validationError) {
+      notifyEditRentalValidationError(validationError);
       return;
     }
 
     setIsLoading(true);
     try {
-      const splitValidation = normalizeAndValidatePaymentSplits({
-        splits: paymentSplits,
-        totalBs,
-        totalUsd,
+      const tipInput = tipCapture.buildTipInput();
+      
+      // We pass the Principal Splits and Subtotal to submitEditRental.
+      // The store (updateRentalAction) will handle merging the tip.
+      await submitEditRental({
+        rentalId: rental.id,
+        paymentSplits: paymentSplits, // Principal splits
+        totalBs: subtotalBs,          // Subtotal Bs (principal)
+        totalUsd: subtotalUsd,        // Subtotal Usd (principal)
+        updates: {
+          machineId,
+          shift,
+          deliveryTime,
+          pickupTime: pickupInfo.pickupTime,
+          pickupDate: pickupInfo.pickupDate,
+          deliveryFee,
+          totalUsd: subtotalUsd,      // Principal Usd
+          paymentMethod,
+          paymentSplits: paymentSplits,
+          selectedCustomerId,
+          customerName,
+          customerPhone,
+          customerAddress,
+          notes,
+          status,
+          isPaid,
+          datePaid,
+        },
+        tipInput: tipCapture.tipEnabled ? tipInput : null,
+        updateRental,
+        onSuccess: () => onOpenChange(false),
       });
-
-      if (!splitValidation.validation.ok) {
-        toast.error(splitValidation.validation.errors[0]);
-        return;
-      }
-
-      const updates: Partial<WasherRental> = {
-        machineId,
-        shift,
-        deliveryTime,
-        pickupTime: pickupInfo.pickupTime,
-        pickupDate: pickupInfo.pickupDate,
-        deliveryFee,
-        totalUsd,
-        paymentMethod,
-        paymentSplits: splitValidation.splits,
-        customerId: selectedCustomerId || undefined,
-        customerName: customerName?.trim() || '',
-        customerPhone: customerPhone?.trim() || '',
-        customerAddress: customerAddress?.trim() || '',
-        notes: notes?.trim() || undefined,
-        status,
-        isPaid,
-        datePaid: isPaid ? datePaid || getVenezuelaDate() : (null as any),
-      };
-
-      await updateRental(rental.id, updates);
-      toast.success('Alquiler actualizado');
-      onOpenChange(false);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error al actualizar el alquiler:', error);
-      toast.error(error.message || 'Error al actualizar el alquiler');
+      const message = error instanceof Error ? error.message : undefined;
+      toast.error(message || 'Error al actualizar el alquiler');
     } finally {
       setIsLoading(false);
     }
   };
 
   return {
+    ...form,
     customers,
     machineItems,
     shiftOptions,
@@ -320,13 +217,10 @@ export function useEditRentalSheetViewModel({
     timeSlots,
     deliveryFeeOptions: DELIVERY_FEE_OPTIONS,
     pickupLabel,
-    totalUsdText: totalUsd.toFixed(2),
-    status,
-    isPaid,
-    datePaid,
     paidDateLabel,
-    isCalendarOpen,
-    setIsCalendarOpen,
+    subtotalUsdText: subtotalUsd.toFixed(2),
+    tipAmountBs: tipAmountBsNumeric,
+    totalUsdText: totalUsd.toFixed(2),
     isLoading,
     selectedMachineId: machineId,
     selectedShift: shift,
@@ -341,38 +235,41 @@ export function useEditRentalSheetViewModel({
     customerName,
     customerPhone,
     customerAddress,
-    selectedCustomerId,
+    selectedCustomerId: selectedCustomerId || null,
     notes,
-    onSelectMachine: setMachineId,
-    onSelectShift: setShift,
-    onSelectPaymentMethod: setPaymentMethod,
+    tipEnabled: tipCapture.tipEnabled,
+    tipAmount: tipCapture.tipAmount,
+    tipPaymentMethod: tipCapture.tipPaymentMethod,
+    tipNotes: tipCapture.tipNotes,
+    onSelectMachine: form.setMachineId,
+    onSelectShift: form.setShift,
+    onSelectPaymentMethod: form.setPaymentMethod,
     onSelectSplit2Method: setSplit2Method,
     onChangeSplit1Amount: setSplit1Amount,
-    onToggleMixedPayment: () => {
-      setIsMixedPayment((current) => {
-        const next = !current;
-        if (!next) {
-          setSplit1Amount('');
-        }
-        return next;
-      });
-    },
-    onSelectDeliveryTime: setDeliveryTime,
-    onSelectDeliveryFee: setDeliveryFee,
+    onSelectDeliveryTime: form.setDeliveryTime,
+    onSelectDeliveryFee: form.setDeliveryFee,
     onChangeCustomerName: setCustomerName,
     onChangeCustomerPhone: setCustomerPhone,
     onChangeCustomerAddress: setCustomerAddress,
+    onChangeNotes: form.setNotes,
+    onChangeStatus: form.setStatus,
+    onChangeDatePaid: setDatePaid,
     onSelectCustomer: handleCustomerSelect,
-    onChangeNotes: setNotes,
-    onChangeStatus: setStatus,
+    onToggleTip: () => tipCapture.onToggleTip(paymentMethod),
+    onChangeTipAmount: tipCapture.onChangeTipAmount,
+    onChangeTipPaymentMethod: tipCapture.onChangeTipPaymentMethod,
+    onChangeTipNotes: tipCapture.onChangeTipNotes,
+    onToggleMixedPayment: () =>
+      setIsMixedPayment((current) => {
+        const next = !current;
+        if (!next) setSplit1Amount('');
+        return next;
+      }),
     onChangePaymentStatus: (value: 'paid' | 'pending') => {
       const paid = value === 'paid';
       setIsPaid(paid);
-      if (paid && !datePaid) {
-        setDatePaid(getVenezuelaDate());
-      }
+      if (paid && !datePaid) setDatePaid(getVenezuelaDate());
     },
-    onChangeDatePaid: (value: string) => setDatePaid(value),
     onSubmit: handleSubmit,
     statusOptions: Object.entries(RentalStatusLabels).map(([key, label]) => ({
       value: key as RentalStatus,

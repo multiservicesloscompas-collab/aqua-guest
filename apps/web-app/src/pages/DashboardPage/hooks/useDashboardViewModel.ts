@@ -6,6 +6,7 @@ import {
   PaymentMethod,
   PrepaidOrder,
   Sale,
+  TipPayout,
   WasherRental,
 } from '@/types';
 import { calculateDashboardMetrics } from '@/services/DashboardMetricsService';
@@ -20,6 +21,7 @@ interface DashboardViewModelInput {
   expenses: Expense[];
   prepaidOrders: PrepaidOrder[];
   paymentBalanceTransactions: PaymentBalanceTransaction[];
+  tipPayouts?: TipPayout[];
   currency: 'Bs' | 'USD';
 }
 
@@ -43,6 +45,7 @@ export function useDashboardViewModel({
   expenses,
   prepaidOrders,
   paymentBalanceTransactions,
+  tipPayouts = [],
   currency,
 }: DashboardViewModelInput) {
   const metrics = useMemo(
@@ -55,6 +58,7 @@ export function useDashboardViewModel({
         expenses,
         prepaidOrders,
         paymentBalanceTransactions,
+        tipPayouts,
       }),
     [
       selectedDate,
@@ -64,6 +68,7 @@ export function useDashboardViewModel({
       expenses,
       prepaidOrders,
       paymentBalanceTransactions,
+      tipPayouts,
     ]
   );
 

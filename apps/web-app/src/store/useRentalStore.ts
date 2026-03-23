@@ -8,6 +8,8 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { WasherRental } from '@/types';
 import { rentalsDataService } from '@/services/RentalsDataService';
+import { tipsDataService } from '@/services/tips/TipDataService';
+import { createCurrencyConverter } from '@/services/CurrencyService';
 
 import {
   type RentalState,
@@ -27,6 +29,11 @@ import {
   updateRentalAction,
   deleteRentalAction,
 } from './useRentalStore.actions';
+import { useConfigStore } from './useConfigStore';
+import {
+  enqueueOfflineRentalTipDelete,
+  enqueueOfflineRentalTipUpsert,
+} from '@/offline/enqueue/rentalsEnqueue';
 
 // Re-export everything so existing import paths continue to work
 export type {
@@ -49,9 +56,79 @@ export const useRentalStore = create<RentalState>()(
       rentals: [],
       loadingRentalsByRange: {},
 
-      addRental: (rental) => addRentalAction(rental, set, get),
-      updateRental: (id, updates) => updateRentalAction(id, updates, set, get),
-      deleteRental: (id) => deleteRentalAction(id, set, get),
+      addRental: async (rental, tipInput) => {
+        const createdRental = await addRentalAction(rental, tipInput, set, get);
+
+        if (tipInput && tipInput.amountBs > 0) {
+          const exchangeRateUsed =
+            useConfigStore.getState().config.exchangeRate;
+          const amountUsd = createCurrencyConverter(exchangeRateUsed).toUsd(
+            tipInput.amountBs
+          );
+          await tipsDataService.upsertTipForOrigin({
+            originType: 'rental',
+            originId: createdRental.id,
+            tipDate: createdRental.date,
+            amountBs: tipInput.amountBs,
+            amountUsd,
+            exchangeRateUsed,
+            capturePaymentMethod: tipInput.capturePaymentMethod,
+            notes: tipInput.notes,
+          });
+        }
+
+        return createdRental;
+      },
+      updateRental: async (id, updates, tipInput) => {
+        await updateRentalAction(id, updates, tipInput, set, get);
+
+        if (tipInput === null) {
+          if (!window.navigator.onLine) {
+            enqueueOfflineRentalTipDelete(id);
+            return;
+          }
+
+          await tipsDataService.deleteTipByOrigin('rental', id);
+          return;
+        }
+
+        if (tipInput && tipInput.amountBs > 0) {
+          const rental = get().rentals.find((item) => item.id === id);
+          const exchangeRateUsed =
+            useConfigStore.getState().config.exchangeRate;
+          const amountUsd = createCurrencyConverter(exchangeRateUsed).toUsd(
+            tipInput.amountBs
+          );
+
+          if (!window.navigator.onLine) {
+            enqueueOfflineRentalTipUpsert({
+              rentalId: id,
+              tipDate: rental?.date ?? updates.date ?? '',
+              amountBs: tipInput.amountBs,
+              amountUsd,
+              exchangeRateUsed,
+              capturePaymentMethod: tipInput.capturePaymentMethod,
+              notes: tipInput.notes,
+            });
+            return;
+          }
+
+          await tipsDataService.upsertTipForOrigin({
+            originType: 'rental',
+            originId: id,
+            tipDate: rental?.date ?? updates.date ?? '',
+            amountBs: tipInput.amountBs,
+            amountUsd,
+            exchangeRateUsed,
+            capturePaymentMethod: tipInput.capturePaymentMethod,
+            notes: tipInput.notes,
+          });
+        }
+      },
+      deleteRental: (id) =>
+        deleteRentalAction(id, set, get, (originType, originId) =>
+          tipsDataService.deleteTipByOrigin(originType, originId)
+        ),
 
       getRentalsByDate: (date) =>
         get().rentals.filter((rental) => rental.date === date),

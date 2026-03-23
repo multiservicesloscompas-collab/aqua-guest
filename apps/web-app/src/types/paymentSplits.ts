@@ -20,10 +20,11 @@ export type SplitAware<T extends SplitPaymentCompatible> = T & {
   paymentSplits?: PaymentSplit[];
 };
 
-export type PaymentSplitModule = 'water' | 'rentals';
+export type PaymentSplitModule = 'water' | 'rentals' | 'expenses';
 
 export interface MixedPaymentFeatureFlags {
   enabled: boolean;
   water: boolean;
   rentals: boolean;
+  expenses: boolean;
 }

@@ -10,6 +10,21 @@ If you are assigned a task, **IMMEDIATELY** read the corresponding `AGENTS.md` f
 
 - **▶️ Frontend Application (React/Vite/Zustand):** Go to [`apps/web-app/AGENTS.md`](apps/web-app/AGENTS.md). This is where all the business logic, UI components, and Supabase integrations live. It contains the **Domain Context Map** to route you to the specific feature (Sales, Rentals, Prepaid, etc.).
 
+## 🧾 Definiciones de Modulos Comerciales (Regla de Dominio)
+
+- Cuando el usuario mencione "modulos comerciales", se refiere explicitamente a:
+  - Modulo de "Alquiler de lavadoras"
+  - Modulo de "Ventas de agua"
+- Cualquier record nuevo o modificacion de records en estos modulos puede afectar multiples submodulos o partes de la app, incluyendo:
+  - Dashboard en metricas generales
+  - Resumen de pagos por tipo de pago
+  - Transacciones generales
+  - Transacciones por tipo de pago
+- Reglas especiales para pagos y propinas:
+  - Si el pago es mixto, distribuir y reflejar los montos correctamente por tipo de pago
+  - Las propinas impactan el modulo de Propinas
+  - Las propinas impactan el modulo de Egresos solo cuando la propina esta pagada
+
 ---
 
 ## Global Build, Lint, and Test Commands
@@ -63,11 +78,11 @@ This project contains a local Knowledge Base of best practices downloaded into t
 
 **CRITICAL:** You MUST read the corresponding guideline file before starting any of the following tasks:
 
-| 🛠️ Task / Area     | 📄 Guideline File                                                                  | 🎯 Activation Condition                       |
-| :----------------- | :--------------------------------------------------------------------------------- | :-------------------------------------------- |
-| **🧪 Testing**     | [`docs/agents/testing-guidelines.md`](docs/agents/testing-guidelines.md)           | When asked to create, update, or run tests.   |
-| **🛠️ Refactoring** | [`docs/agents/refactoring-guidelines.md`](docs/agents/refactoring-guidelines.md)   | When refactoring existing code or logic.      |
-| **🐛 Debugging**   | [`docs/agents/debugging-guidelines.md`](docs/agents/debugging-guidelines.md)       | When investigating or fixing reported bugs.   |
-| **🔒 Security**    | [`docs/agents/security-guidelines.md`](docs/agents/security-guidelines.md)         | When auditing code for vulnerabilities.       |
-| **⚡ Performance** | [`docs/agents/optimization-guidelines.md`](docs/agents/optimization-guidelines.md) | When optimizing algorithms or execution time. |
+| 🛠️ Task / Area     | 📄 Guideline File                                                                  | 🎯 Activation Condition                                    |
+| :----------------- | :--------------------------------------------------------------------------------- | :--------------------------------------------------------- |
+| **🧪 Testing**     | [`docs/agents/testing-guidelines.md`](docs/agents/testing-guidelines.md)           | When asked to create, update, or run tests.                |
+| **🛠️ Refactoring** | [`docs/agents/refactoring-guidelines.md`](docs/agents/refactoring-guidelines.md)   | When refactoring existing code or logic.                   |
+| **🐛 Debugging**   | [`docs/agents/debugging-guidelines.md`](docs/agents/debugging-guidelines.md)       | When investigating or fixing reported bugs.                |
+| **🔒 Security**    | [`docs/agents/security-guidelines.md`](docs/agents/security-guidelines.md)         | When auditing code for vulnerabilities.                    |
+| **⚡ Performance** | [`docs/agents/optimization-guidelines.md`](docs/agents/optimization-guidelines.md) | When optimizing algorithms or execution time.              |
 | **🤖 AGENTS.md**   | [`docs/agents/agents-md-guidelines.md`](docs/agents/agents-md-guidelines.md)       | When asked to create, update, or modify an AGENTS.md file. |

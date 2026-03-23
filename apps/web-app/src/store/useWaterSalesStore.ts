@@ -13,6 +13,8 @@ import {
   SalesFilterService,
 } from '@/services/SalesFilterService';
 import { salesDataService } from '@/services/SalesDataService';
+import { tipsDataService } from '@/services/tips/TipDataService';
+import { createCurrencyConverter } from '@/services/CurrencyService';
 
 import {
   type WaterSalesState,
@@ -26,6 +28,11 @@ import {
   updateSaleAction,
   deleteSaleAction,
 } from './useWaterSalesStore.actions';
+import { useConfigStore } from './useConfigStore';
+import {
+  enqueueOfflineSaleTipDelete,
+  enqueueOfflineSaleTipUpsert,
+} from '@/offline/enqueue/salesEnqueue';
 
 // Re-export everything so existing import paths continue to work
 export type { WaterSalesState, SalesRow, SaleInsert, SaleUpdate };
@@ -71,19 +78,95 @@ export const useWaterSalesStore = create<WaterSalesState>()(
 
       // ── Sales ─────────────────────────────────────────────────────────────
 
-      completeSale: (paymentMethod, selectedDate, notes, paymentSplits) =>
-        completeSaleAction(
+      completeSale: async (
+        paymentMethod,
+        selectedDate,
+        notes,
+        paymentSplits,
+        tipInput
+      ) => {
+        const sale = await completeSaleAction(
           paymentMethod,
           selectedDate,
           notes,
           paymentSplits,
+          tipInput,
           set,
           get
+        );
+
+        if (tipInput && tipInput.amountBs > 0) {
+          const exchangeRateUsed =
+            useConfigStore.getState().config.exchangeRate;
+          const amountUsd = createCurrencyConverter(exchangeRateUsed).toUsd(
+            tipInput.amountBs
+          );
+          await tipsDataService.upsertTipForOrigin({
+            originType: 'sale',
+            originId: sale.id,
+            tipDate: sale.date,
+            amountBs: tipInput.amountBs,
+            amountUsd,
+            exchangeRateUsed,
+            capturePaymentMethod: tipInput.capturePaymentMethod,
+            notes: tipInput.notes,
+          });
+        }
+
+        return sale;
+      },
+
+      updateSale: async (id, updates, tipInput) => {
+        await updateSaleAction(id, updates, tipInput, set, get);
+
+        if (tipInput === null) {
+          if (!window.navigator.onLine) {
+            enqueueOfflineSaleTipDelete(id);
+            return;
+          }
+
+          await tipsDataService.deleteTipByOrigin('sale', id);
+          return;
+        }
+
+        if (tipInput && tipInput.amountBs > 0) {
+          const sale = get().sales.find((item) => item.id === id);
+          const exchangeRateUsed =
+            useConfigStore.getState().config.exchangeRate;
+          const amountUsd = createCurrencyConverter(exchangeRateUsed).toUsd(
+            tipInput.amountBs
+          );
+
+          if (!window.navigator.onLine) {
+            enqueueOfflineSaleTipUpsert({
+              saleId: id,
+              tipDate: sale?.date ?? updates.date ?? '',
+              amountBs: tipInput.amountBs,
+              amountUsd,
+              exchangeRateUsed,
+              capturePaymentMethod: tipInput.capturePaymentMethod,
+              notes: tipInput.notes,
+            });
+            return;
+          }
+
+          await tipsDataService.upsertTipForOrigin({
+            originType: 'sale',
+            originId: id,
+            tipDate: sale?.date ?? updates.date ?? '',
+            amountBs: tipInput.amountBs,
+            amountUsd,
+            exchangeRateUsed,
+            capturePaymentMethod: tipInput.capturePaymentMethod,
+            notes: tipInput.notes,
+          });
+        }
+      },
+
+      deleteSale: (id) =>
+        deleteSaleAction(id, set, get, (originType, originId) =>
+          tipsDataService.deleteTipByOrigin(originType, originId)
         ),
-
-      updateSale: (id, updates) => updateSaleAction(id, updates, set, get),
-
-      deleteSale: (id) => deleteSaleAction(id, set, get),
 
       // ── Query helpers ─────────────────────────────────────────────────────
 

@@ -4,6 +4,7 @@ import {
   preparePaymentWritePayload,
 } from './paymentSplitWritePath';
 import type { PaymentSplit } from '@/types/paymentSplits';
+import type { PaymentMethod } from '@/types';
 
 describe('buildDualPaymentSplits', () => {
   it('returns single split when mixed payments are disabled', () => {
@@ -143,7 +144,7 @@ describe('preparePaymentWritePayload', () => {
         paymentMethod: 'efectivo',
         paymentSplits: [
           {
-            method: 'otro' as any,
+            method: 'otro' as unknown as PaymentMethod,
             amountBs: 70,
             amountUsd: 1.4,
             exchangeRateUsed: 50,

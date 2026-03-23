@@ -27,12 +27,14 @@ interface SalesRow {
   updated_at?: string | null;
   updatedAt?: string | null;
   sale_payment_splits?: PaymentSplitRow[] | null;
+  payment_splits?: PaymentSplitRow[] | null;
+  splits?: PaymentSplitRow[] | null;
 }
 
 const toSale = (row: SalesRow, dateOverride?: string): Sale => {
-  const splits = salePaymentSplitAdapter.fromRows(
-    row.sale_payment_splits ?? []
-  );
+  const rawSplits =
+    row.sale_payment_splits ?? row.payment_splits ?? row.splits ?? [];
+  const splits = salePaymentSplitAdapter.fromRows(rawSplits);
 
   return {
     id: row.id,

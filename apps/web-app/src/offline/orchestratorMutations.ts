@@ -38,6 +38,7 @@ const resolveInsertPayload = (
       const nextRow = { ...(row as Record<string, unknown>) };
       if ('sale_id' in nextRow) nextRow.sale_id = resolvedParentId;
       if ('rental_id' in nextRow) nextRow.rental_id = resolvedParentId;
+      if ('expense_id' in nextRow) nextRow.expense_id = resolvedParentId;
 
       return nextRow;
     }),
@@ -105,6 +106,14 @@ export const buildSupabaseMutation = (
       );
     }
 
+    if (operationHint === 'upsert_on_origin') {
+      return Promise.resolve(
+        tableClient
+          .upsert(sanitizedPayload, { onConflict: 'origin_type,origin_id' })
+          .then((response) => ({ error: response.error }))
+      );
+    }
+
     return Promise.resolve(
       tableClient
         .insert(sanitizedPayload)
@@ -147,6 +156,11 @@ export const buildSupabaseMutation = (
         action.payload.parentId,
         tempIdToRealId
       );
+      const parentScopeColumn =
+        typeof action.payload.parentScopeColumn === 'string'
+          ? action.payload.parentScopeColumn
+          : null;
+      const parentScopeValue = action.payload.parentScopeValue;
 
       if (!parentColumn || !parentId) {
         return Promise.resolve({
@@ -154,11 +168,23 @@ export const buildSupabaseMutation = (
         });
       }
 
+      if (parentScopeColumn && typeof parentScopeValue !== 'string') {
+        return Promise.resolve({
+          error: {
+            status: 400,
+            message: 'Missing parent scope metadata',
+          },
+        });
+      }
+
+      const deleteBuilder = tableClient.delete().eq(parentColumn, parentId);
+      const scopedDeleteBuilder =
+        parentScopeColumn && typeof parentScopeValue === 'string'
+          ? deleteBuilder.eq(parentScopeColumn, parentScopeValue)
+          : deleteBuilder;
+
       return Promise.resolve(
-        tableClient
-          .delete()
-          .eq(parentColumn, parentId)
-          .then((response) => ({ error: response.error }))
+        scopedDeleteBuilder.then((response) => ({ error: response.error }))
       );
     }
 

@@ -38,6 +38,9 @@ vi.mock('@/store/useConfigStore', () => ({
 vi.mock('@/store/useRentalStore', () => ({
   useRentalStore: () => ({ rentals: [] }),
 }));
+vi.mock('@/store/useTipStore', () => ({
+  useTipStore: () => ({ tipPayouts: [] }),
+}));
 
 vi.mock(
   './TransactionsSummaryPage/services/buildTransactionsSummaryItems',

@@ -1,6 +1,9 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { useSyncStore } from '@/store/useSyncStore';
-import { enqueueOfflineRental } from './rentalsEnqueue';
+import {
+  enqueueOfflineRental,
+  enqueueOfflineRentalTipDelete,
+} from './rentalsEnqueue';
 
 describe('enqueueOfflineRental', () => {
   beforeEach(() => {
@@ -95,5 +98,18 @@ describe('enqueueOfflineRental', () => {
     };
     expect(splitPayload.parentId).toBe(rental.id);
     expect(splitPayload.splits?.[0]?.rental_id).toBe(rental.id);
+  });
+
+  it('enqueues scoped tip deletion by rental origin', () => {
+    enqueueOfflineRentalTipDelete('rental-1');
+
+    const queue = useSyncStore.getState().queue;
+    expect(queue).toHaveLength(1);
+    expect(queue[0].table).toBe('tips');
+    expect(queue[0].type).toBe('DELETE');
+    expect(queue[0].payload.__op).toBe('delete_by_parent_id');
+    expect(queue[0].payload.parentColumn).toBe('origin_id');
+    expect(queue[0].payload.parentScopeColumn).toBe('origin_type');
+    expect(queue[0].payload.parentScopeValue).toBe('rental');
   });
 });

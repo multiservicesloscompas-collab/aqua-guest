@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useSyncStore } from '@/store/useSyncStore';
 import { useNetworkState } from '@/hooks/useNetworkState';
 import { supabase } from '@/lib/supabaseClient';
@@ -19,53 +19,29 @@ export const SyncManager: React.FC = () => {
   const [isSyncing, setIsSyncing] = useState(false);
   const inFlightActionIdsRef = useRef<Set<string>>(new Set());
   const wasOnlineRef = useRef(false);
+  const queueRef = useRef(queue);
   const flags = getOfflineFeatureFlags();
   const processorMode = resolveOfflineSyncProcessorMode(flags);
 
   useEffect(() => {
-    if (
-      isOnline &&
-      queue.length > 0 &&
-      !isSyncing &&
-      processorMode !== 'disabled'
-    ) {
-      processQueue();
-    }
-  }, [isOnline, queue.length, processorMode]);
+    queueRef.current = queue;
+  }, [queue]);
 
-  useEffect(() => {
-    const wasOnline = wasOnlineRef.current;
-    wasOnlineRef.current = isOnline;
-
-    if (!isOnline || wasOnline) {
-      return;
-    }
-
-    const refreshReadSyncRoots = async () => {
-      try {
-        await Promise.all([
-          supabase.from('companies').select('*'),
-          supabase.from('user_profiles').select('*'),
-        ]);
-      } catch (error) {
-        console.error('[offline-sync] reconnect read-sync failed', error);
-      }
-    };
-
-    void refreshReadSyncRoots();
-  }, [isOnline]);
-
-  const processQueue = async () => {
+  const processQueue = useCallback(async () => {
     setIsSyncing(true);
 
-    console.log(`Iniciando sincronización de ${queue.length} elementos...`);
+    const currentQueue = queueRef.current;
+
+    console.log(
+      `Iniciando sincronización de ${currentQueue.length} elementos...`
+    );
 
     if (processorMode === 'global') {
-      const preSnapshot = buildQueueObservabilitySnapshot(queue);
+      const preSnapshot = buildQueueObservabilitySnapshot(currentQueue);
       console.info('[offline-sync] pre-process snapshot', preSnapshot);
 
       const result = await processGlobalOfflineQueue({
-        queue,
+        queue: currentQueue,
         inFlightActionIds: inFlightActionIdsRef.current,
       });
       const runSummary = summarizeProcessResults(result.results);
@@ -99,7 +75,7 @@ export const SyncManager: React.FC = () => {
     }
 
     // Path legado para rollout backward-safe cuando GLOBAL_OFFLINE_ORCHESTRATOR = false
-    const pendingActions = [...queue]
+    const pendingActions = [...currentQueue]
       .filter((action) => !inFlightActionIdsRef.current.has(action.id))
       .sort((a, b) => a.enqueuedAt - b.enqueuedAt);
 
@@ -166,12 +142,45 @@ export const SyncManager: React.FC = () => {
 
     inFlightActionIdsRef.current = new Set();
     setIsSyncing(false);
-    if (queue.length === 0) {
+    if (queueRef.current.length === 0) {
       toast.success('Sincronización completada con éxito.');
       // Refrescar datos globales para asegurar consistencia
       // useWaterSalesStore.getState().loadSalesByDate(today);
     }
-  };
+  }, [processorMode, removeFromQueue, replaceQueue]);
+
+  useEffect(() => {
+    if (
+      isOnline &&
+      queue.length > 0 &&
+      !isSyncing &&
+      processorMode !== 'disabled'
+    ) {
+      void processQueue();
+    }
+  }, [isOnline, isSyncing, processorMode, processQueue, queue.length]);
+
+  useEffect(() => {
+    const wasOnline = wasOnlineRef.current;
+    wasOnlineRef.current = isOnline;
+
+    if (!isOnline || wasOnline) {
+      return;
+    }
+
+    const refreshReadSyncRoots = async () => {
+      try {
+        await Promise.all([
+          supabase.from('companies').select('*'),
+          supabase.from('user_profiles').select('*'),
+        ]);
+      } catch (error) {
+        console.error('[offline-sync] reconnect read-sync failed', error);
+      }
+    };
+
+    void refreshReadSyncRoots();
+  }, [isOnline]);
 
   return null; // Componente lógico, no renderiza nada
 };

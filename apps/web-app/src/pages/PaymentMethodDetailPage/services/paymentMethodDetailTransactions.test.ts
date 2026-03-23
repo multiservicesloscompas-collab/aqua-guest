@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
   buildPaymentMethodTransactions,
-  type PaymentMethodDetailTransactionItem,
   summarizePaymentMethodTransactions,
 } from './paymentMethodDetailTransactions';
 import type {
@@ -135,21 +134,20 @@ describe('paymentMethodDetailTransactions', () => {
       getMethodLabel,
     });
 
-    expect(
-      transactions.map((tx: PaymentMethodDetailTransactionItem) => tx.type)
-    ).toEqual(['sale', 'sale', 'rental', 'balance_out', 'balance_in']);
+    expect(transactions.map((tx) => tx.type)).toEqual([
+      'sale',
+      'sale',
+      'rental',
+      'balance_out',
+      'balance_in',
+    ]);
 
-    expect(
-      transactions.map((tx: PaymentMethodDetailTransactionItem) => tx.amountBs)
-    ).toEqual([80, 30, 50, 25, 50]);
+    expect(transactions.map((tx) => tx.amountBs)).toEqual([80, 30, 50, 25, 50]);
 
     expect(
       transactions
-        .filter(
-          (tx: PaymentMethodDetailTransactionItem) =>
-            tx.type === 'sale' || tx.type === 'rental'
-        )
-        .map((tx: PaymentMethodDetailTransactionItem) => tx.typeLabel)
+        .filter((tx) => tx.type === 'sale' || tx.type === 'rental')
+        .map((tx) => tx.typeLabel)
     ).toEqual([
       'Venta de Agua · Pago mixto',
       'Venta de Agua',
@@ -158,12 +156,17 @@ describe('paymentMethodDetailTransactions', () => {
 
     expect(
       transactions
-        .filter(
-          (tx: PaymentMethodDetailTransactionItem) =>
-            tx.type === 'sale' || tx.type === 'rental'
-        )
-        .map((tx: PaymentMethodDetailTransactionItem) => tx.paymentMethodLabel)
+        .filter((tx) => tx.type === 'sale' || tx.type === 'rental')
+        .map((tx) => tx.paymentMethodLabel)
     ).toEqual(['pago_movil', undefined, 'pago_movil']);
+
+    expect(transactions.map((tx) => tx.linkedReference)).toEqual([
+      'Venta #1',
+      'Venta #2',
+      'Alquiler #rental-1',
+      'Equilibrio #tx-1',
+      'Equilibrio #tx-2',
+    ]);
 
     expect(summarizePaymentMethodTransactions(transactions)).toEqual({
       income: 160,
@@ -171,6 +174,85 @@ describe('paymentMethodDetailTransactions', () => {
       balanceIn: 50,
       balanceOut: 25,
       net: 185,
+    });
+  });
+
+  it('uses avance semantics with out/in legs and difference text in method detail', () => {
+    const transactions = buildPaymentMethodTransactions({
+      paymentMethod: 'pago_movil',
+      selectedDate: '2026-03-07',
+      exchangeRate: 50,
+      sales: [],
+      rentals: [],
+      expenses: EMPTY_EXPENSES,
+      prepaidOrders: EMPTY_PREPAID,
+      paymentBalanceTransactions: [
+        {
+          id: 'tx-avance',
+          date: '2026-03-07',
+          operationType: 'avance',
+          fromMethod: 'pago_movil',
+          toMethod: 'efectivo',
+          amount: 0,
+          amountOutBs: 80,
+          amountInBs: 75,
+          differenceBs: -5,
+          createdAt: '2026-03-07T14:00:00.000Z',
+          updatedAt: '2026-03-07T14:00:00.000Z',
+        },
+      ],
+      getMethodLabel,
+    });
+
+    expect(transactions).toHaveLength(1);
+    expect(transactions[0]).toMatchObject({
+      type: 'balance_out',
+      typeLabel: 'Avance (Salida)',
+      amountBs: 80,
+      linkedReference: 'Avance #tx-avanc',
+    });
+    expect(transactions[0].description).toContain('Dif Bs -5,00');
+
+    expect(summarizePaymentMethodTransactions(transactions)).toEqual({
+      income: 0,
+      expenses: 0,
+      balanceIn: 0,
+      balanceOut: 80,
+      net: -80,
+    });
+
+    const destinationTransactions = buildPaymentMethodTransactions({
+      paymentMethod: 'efectivo',
+      selectedDate: '2026-03-07',
+      exchangeRate: 50,
+      sales: [],
+      rentals: [],
+      expenses: EMPTY_EXPENSES,
+      prepaidOrders: EMPTY_PREPAID,
+      paymentBalanceTransactions: [
+        {
+          id: 'tx-avance',
+          date: '2026-03-07',
+          operationType: 'avance',
+          fromMethod: 'pago_movil',
+          toMethod: 'efectivo',
+          amount: 0,
+          amountOutBs: 80,
+          amountInBs: 75,
+          differenceBs: -5,
+          createdAt: '2026-03-07T14:00:00.000Z',
+          updatedAt: '2026-03-07T14:00:00.000Z',
+        },
+      ],
+      getMethodLabel,
+    });
+
+    expect(destinationTransactions).toHaveLength(1);
+    expect(destinationTransactions[0]).toMatchObject({
+      type: 'balance_in',
+      typeLabel: 'Avance (Entrada)',
+      amountBs: 75,
+      linkedReference: 'Avance #tx-avanc',
     });
   });
 });

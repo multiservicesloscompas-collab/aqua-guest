@@ -1,7 +1,6 @@
 import { Calendar, CalendarDays } from 'lucide-react';
 
 import { DateSelector } from '@/components/ventas/DateSelector';
-import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 type ExpensesViewMode = 'day' | 'week';
@@ -21,33 +20,61 @@ export function ExpensesMobileHeaderControls({
   onDateChange,
   onToggleViewMode,
 }: ExpensesMobileHeaderControlsProps) {
+  const isDayView = viewMode === 'day';
+  const title = isDayView ? 'Ver historial completo' : 'Volver a vista diaria';
+  const subtitle = isDayView
+    ? 'Todos los egresos en el tiempo'
+    : 'Mostrar solo hoy';
+  const sideLabel = isDayView ? 'Ver todo' : 'Hoy';
+
   return (
-    <div className="flex items-center gap-2">
-      <div className="flex-1">
-        <DateSelector
-          selectedDate={selectedDate}
-          onDateChange={onDateChange}
-          loading={loadingExpenses}
-        />
-      </div>
-      <Button
-        variant="outline"
-        size="icon"
+    <div className="space-y-3">
+      <DateSelector
+        selectedDate={selectedDate}
+        onDateChange={onDateChange}
+        loading={loadingExpenses}
+      />
+
+      <button
         onClick={onToggleViewMode}
+        title={isDayView ? 'Cambiar a vista semanal' : 'Volver a vista diaria'}
         className={cn(
-          'h-12 w-12 shrink-0 rounded-xl border transition-colors',
-          viewMode === 'week'
-            ? 'bg-primary/10 border-primary/30 text-primary'
-            : 'text-muted-foreground'
+          'w-full flex items-center justify-between p-4 rounded-[20px] transition-all duration-300',
+          'bg-card border border-border/40 shadow-sm hover:shadow-md hover:border-primary/20 active:scale-[0.98]'
         )}
-        title={viewMode === 'day' ? 'Vista semanal' : 'Vista diaria'}
       >
-        {viewMode === 'day' ? (
-          <CalendarDays className="w-5 h-5" />
-        ) : (
-          <Calendar className="w-5 h-5" />
-        )}
-      </Button>
+        <div className="flex items-center gap-4">
+          <div
+            className={cn(
+              'flex items-center justify-center w-11 h-11 rounded-2xl shrink-0',
+              isDayView 
+                ? 'bg-blue-500/10 text-blue-600' 
+                : 'bg-emerald-500/10 text-emerald-600'
+            )}
+          >
+            {isDayView ? <CalendarDays className="w-5 h-5" /> : <Calendar className="w-5 h-5" />}
+          </div>
+          <div className="flex flex-col items-start gap-0.5 min-w-0">
+            <span className="text-[15px] font-bold text-foreground truncate select-none">
+              {title}
+            </span>
+            <span className="text-[13px] font-medium text-muted-foreground truncate select-none">
+              {subtitle}
+            </span>
+          </div>
+        </div>
+        
+        <div
+          className={cn(
+            'px-4 py-1.5 rounded-full text-[13px] font-bold whitespace-nowrap select-none',
+            isDayView
+              ? 'bg-blue-500/10 text-blue-600'
+              : 'bg-emerald-500/10 text-emerald-600'
+          )}
+        >
+          {sideLabel}
+        </div>
+      </button>
     </div>
   );
 }

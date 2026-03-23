@@ -4,11 +4,14 @@ import type { PaymentSplit } from '@/types/paymentSplits';
 export const PAYMENT_SPLIT_SCHEMA = {
   salesTable: 'sales',
   rentalsTable: 'washer_rentals',
+  expensesTable: 'expenses',
   salesSplitsTable: 'sale_payment_splits',
   rentalsSplitsTable: 'rental_payment_splits',
+  expensesSplitsTable: 'expense_payment_splits',
   columns: {
     parentId: 'sale_id',
     rentalParentId: 'rental_id',
+    expenseParentId: 'expense_id',
     method: 'payment_method',
     amountBs: 'amount_bs',
     amountUsd: 'amount_usd',
@@ -41,6 +44,10 @@ export interface SalePaymentSplitInsertRow extends PaymentSplitInsertRow {
 
 export interface RentalPaymentSplitInsertRow extends PaymentSplitInsertRow {
   rental_id: string;
+}
+
+export interface ExpensePaymentSplitInsertRow extends PaymentSplitInsertRow {
+  expense_id: string;
 }
 
 export interface PaymentSplitAdapter<TInsertRow> {

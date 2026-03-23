@@ -1,6 +1,45 @@
 import { supabase } from '@/lib/supabaseClient';
 import { Expense } from '@/types';
 import { getSafeTimestamp, normalizeTimestamp } from '@/lib/date-utils';
+import { expensePaymentSplitAdapter } from '@/services/payments/paymentSplitSupabaseAdapters';
+import type { PaymentSplitRow } from '@/services/payments/paymentSplitSchemaContract';
+
+type ExpenseDbRow = {
+  id: string;
+  date: string;
+  description: string;
+  amount: number | string;
+  category: Expense['category'];
+  payment_method?: Expense['paymentMethod'];
+  notes?: string;
+  created_at?: string;
+  createdAt?: string;
+  expense_payment_splits?: PaymentSplitRow[];
+  payment_splits?: PaymentSplitRow[];
+};
+
+const mapExpenseRow = (row: ExpenseDbRow): Expense => {
+  const rawSplits =
+    row.expense_payment_splits ?? row.payment_splits ?? [];
+
+  return {
+    id: row.id,
+    date: row.date,
+    description: row.description,
+    amount: Number(row.amount),
+    category: row.category,
+    paymentMethod: row.payment_method || 'efectivo',
+    paymentSplits:
+      rawSplits.length > 0
+        ? expensePaymentSplitAdapter.fromRows(rawSplits)
+        : undefined,
+    notes: row.notes,
+    createdAt: normalizeTimestamp(
+      row.created_at ?? row.createdAt,
+      getSafeTimestamp()
+    ),
+  };
+};
 
 export interface IExpensesDataService {
   loadExpensesByDate(date: string): Promise<Expense[]>;
@@ -63,7 +102,7 @@ export class ExpensesDataService implements IExpensesDataService {
 
     const { data, error } = await supabase
       .from('expenses')
-      .select('*')
+      .select('*, expense_payment_splits(*)')
       .eq('date', date)
       .order('created_at', { ascending: true });
 
@@ -72,19 +111,7 @@ export class ExpensesDataService implements IExpensesDataService {
       throw error;
     }
 
-    const expenses: Expense[] = (data || []).map((e: any) => ({
-      id: e.id,
-      date: e.date,
-      description: e.description,
-      amount: Number(e.amount),
-      category: e.category,
-      paymentMethod: e.payment_method || 'efectivo',
-      notes: e.notes,
-      createdAt: normalizeTimestamp(
-        e.created_at ?? e.createdAt,
-        getSafeTimestamp()
-      ),
-    }));
+    const expenses = ((data || []) as ExpenseDbRow[]).map(mapExpenseRow);
 
     this.expensesCache.set(date, expenses);
 
@@ -124,7 +151,7 @@ export class ExpensesDataService implements IExpensesDataService {
     const promises = datesToLoad.map(async (date) => {
       const { data, error } = await supabase
         .from('expenses')
-        .select('*')
+        .select('*, expense_payment_splits(*)')
         .eq('date', date)
         .order('created_at', { ascending: true });
 
@@ -133,19 +160,7 @@ export class ExpensesDataService implements IExpensesDataService {
         return { date, expenses: [] };
       }
 
-      const expenses: Expense[] = (data || []).map((e: any) => ({
-        id: e.id,
-        date: e.date,
-        description: e.description,
-        amount: Number(e.amount),
-        category: e.category,
-        paymentMethod: e.payment_method || 'efectivo',
-        notes: e.notes,
-        createdAt: normalizeTimestamp(
-          e.created_at ?? e.createdAt,
-          getSafeTimestamp()
-        ),
-      }));
+      const expenses = ((data || []) as ExpenseDbRow[]).map(mapExpenseRow);
 
       this.expensesCache.set(date, expenses);
 
@@ -193,7 +208,7 @@ export class ExpensesDataService implements IExpensesDataService {
 
     const { data, error } = await supabase
       .from('expenses')
-      .select('*')
+      .select('*, expense_payment_splits(*)')
       .gte('date', startDate)
       .lte('date', endDate)
       .order('created_at', { ascending: true });
@@ -211,23 +226,11 @@ export class ExpensesDataService implements IExpensesDataService {
       grouped[date] = [];
     }
 
-    (data || []).forEach((e: any) => {
+    ((data || []) as ExpenseDbRow[]).forEach((e) => {
       const dateKey = e.date.substring(0, 10);
 
       if (grouped[dateKey]) {
-        grouped[dateKey].push({
-          id: e.id,
-          date: dateKey,
-          description: e.description,
-          amount: Number(e.amount),
-          category: e.category,
-          paymentMethod: e.payment_method || 'efectivo',
-          notes: e.notes,
-          createdAt: normalizeTimestamp(
-            e.created_at ?? e.createdAt,
-            getSafeTimestamp()
-          ),
-        });
+        grouped[dateKey].push(mapExpenseRow(e));
       }
     });
 

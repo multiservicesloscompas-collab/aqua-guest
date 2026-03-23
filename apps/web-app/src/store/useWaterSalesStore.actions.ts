@@ -20,16 +20,20 @@ import {
   enqueueOfflineSale,
   enqueueOfflineSaleDelete,
   enqueueOfflineSalePaymentSplitsDelete,
-  enqueueOfflineSalePaymentSplitsReplace,
-  enqueueOfflineSaleUpdate,
+  enqueueOfflineSaleTipDelete,
 } from '@/offline/enqueue/salesEnqueue';
 import { useConfigStore } from './useConfigStore';
 import {
   type WaterSalesState,
   type SaleInsert,
-  type SaleUpdate,
   type SalesRow,
 } from './useWaterSalesStore.core';
+import type { TipCaptureInput } from '@/types/tips';
+import {
+  calculateFinalSaleTotals,
+  mergeTipIntoPaymentSplits,
+} from '@/services/transactions/transactionTotals';
+export { updateSaleAction } from './useWaterSalesStore.actions.update';
 
 type SetFn = (
   partial:
@@ -43,6 +47,7 @@ export async function completeSaleAction(
   selectedDate: string,
   notes: string | undefined,
   paymentSplits: PaymentSplit[] | undefined,
+  tipInput: TipCaptureInput | undefined,
   set: SetFn,
   get: GetFn
 ): Promise<Sale> {
@@ -50,20 +55,33 @@ export async function completeSaleAction(
   const configState = useConfigStore.getState();
   const exchangeRate = configState.config.exchangeRate;
 
-  const totalBs = state.cart.reduce((sum, item) => sum + item.subtotal, 0);
+  const principalBs = state.cart.reduce((sum, item) => sum + item.subtotal, 0);
   const normalizedDate = dateService.normalizeSaleDate(selectedDate);
   const salesOfDay = state.sales.filter((s) => s.date === normalizedDate);
   const dailyNumber = salesOfDay.length + 1;
 
   const safeCreatedAt = getSafeTimestamp();
   const safeUpdatedAt = getSafeTimestamp();
-  const totalUsd = totalBs / exchangeRate;
+  const finalTotals = calculateFinalSaleTotals({
+    principalBs,
+    tipAmountBs: tipInput?.amountBs,
+    exchangeRate,
+  });
+
+  const mergedSplits = mergeTipIntoPaymentSplits({
+    paymentSplits,
+    fallbackMethod: paymentMethod,
+    tipAmountBs: tipInput?.amountBs ?? 0,
+    tipPaymentMethod: tipInput?.capturePaymentMethod ?? paymentMethod,
+    exchangeRate,
+    principalBs, // Pass principal amount
+  });
 
   const splitWrite = preparePaymentWritePayload({
     paymentMethod,
-    paymentSplits,
-    totalBs,
-    totalUsd,
+    paymentSplits: mergedSplits,
+    totalBs: finalTotals.totalBs,
+    totalUsd: finalTotals.totalUsd,
     exchangeRate,
   });
 
@@ -72,8 +90,8 @@ export async function completeSaleAction(
     date: normalizedDate,
     items: state.cart,
     payment_method: splitWrite.paymentMethod,
-    total_bs: totalBs,
-    total_usd: totalUsd,
+    total_bs: finalTotals.totalBs,
+    total_usd: finalTotals.totalUsd,
     exchange_rate: exchangeRate,
     notes: notes || undefined,
   };
@@ -87,8 +105,8 @@ export async function completeSaleAction(
         date: normalizedDate,
         items: state.cart,
         paymentMethod: splitWrite.paymentMethod,
-        totalBs,
-        totalUsd,
+        totalBs: finalTotals.totalBs,
+        totalUsd: finalTotals.totalUsd,
         exchangeRate,
         notes: notes || undefined,
         createdAt: safeCreatedAt,
@@ -166,130 +184,25 @@ export async function completeSaleAction(
   }
 }
 
-export async function updateSaleAction(
-  id: string,
-  updates: Partial<Sale>,
-  set: SetFn,
-  get: GetFn
-): Promise<void> {
-  try {
-    const payload: SaleUpdate = {};
-    const nowIso = new Date().toISOString();
-
-    const currentSale = get().sales.find((s) => s.id === id);
-    const finalTotalBs = updates.totalBs ?? currentSale?.totalBs;
-    const finalTotalUsd = updates.totalUsd ?? currentSale?.totalUsd;
-    const finalExchangeRate =
-      currentSale?.exchangeRate ??
-      useConfigStore.getState().config.exchangeRate;
-
-    let splitWrite: ReturnType<typeof preparePaymentWritePayload> | undefined;
-
-    if (
-      updates.paymentMethod !== undefined ||
-      updates.paymentSplits !== undefined ||
-      updates.totalBs !== undefined ||
-      updates.totalUsd !== undefined
-    ) {
-      if (finalTotalBs === undefined || finalTotalUsd === undefined) {
-        throw new Error(
-          'No se pudo resolver el total para validar métodos de pago'
-        );
-      }
-      splitWrite = preparePaymentWritePayload({
-        paymentMethod:
-          updates.paymentMethod ?? currentSale?.paymentMethod ?? 'efectivo',
-        paymentSplits: updates.paymentSplits ?? currentSale?.paymentSplits,
-        totalBs: finalTotalBs,
-        totalUsd: finalTotalUsd,
-        exchangeRate: finalExchangeRate,
-      });
-    }
-
-    if (updates.paymentMethod !== undefined)
-      payload.payment_method =
-        splitWrite?.paymentMethod ?? updates.paymentMethod;
-    if (updates.totalBs !== undefined) payload.total_bs = updates.totalBs;
-    if (updates.totalUsd !== undefined) payload.total_usd = updates.totalUsd;
-    if (updates.notes !== undefined) payload.notes = updates.notes;
-    if (updates.items !== undefined) payload.items = updates.items;
-    payload.updated_at = nowIso;
-
-    const applyLocal = () => {
-      set((state) => ({
-        sales: state.sales.map((sale) =>
-          sale.id === id
-            ? {
-                ...sale,
-                ...updates,
-                paymentMethod:
-                  splitWrite?.paymentMethod ??
-                  updates.paymentMethod ??
-                  sale.paymentMethod,
-                paymentSplits:
-                  splitWrite?.paymentSplits ??
-                  updates.paymentSplits ??
-                  sale.paymentSplits,
-                updatedAt: nowIso,
-              }
-            : sale
-        ),
-      }));
-    };
-
-    if (!window.navigator.onLine) {
-      enqueueOfflineSaleUpdate({ id, payload });
-      if (splitWrite) {
-        enqueueOfflineSalePaymentSplitsReplace(id, splitWrite.paymentSplits);
-      }
-      applyLocal();
-      const updatedSale = get().sales.find((s) => s.id === id);
-      if (updatedSale) salesDataService.invalidateCache(updatedSale.date);
-      return;
-    }
-
-    const { error } = await supabase.from('sales').update(payload).eq('id', id);
-    if (error) throw error;
-
-    if (splitWrite) {
-      const { error: deleteSplitsError } = await supabase
-        .from(PAYMENT_SPLIT_SCHEMA.salesSplitsTable)
-        .delete()
-        .eq(PAYMENT_SPLIT_SCHEMA.columns.parentId, id);
-      if (deleteSplitsError) throw deleteSplitsError;
-
-      const splitRows = salePaymentSplitAdapter.toInsertRows(
-        id,
-        splitWrite.paymentSplits
-      );
-      const { error: splitInsertError } = await supabase
-        .from(PAYMENT_SPLIT_SCHEMA.salesSplitsTable)
-        .insert(splitRows);
-      if (splitInsertError) throw splitInsertError;
-    }
-
-    applyLocal();
-    const updatedSale = get().sales.find((s) => s.id === id);
-    if (updatedSale) salesDataService.invalidateCache(updatedSale.date);
-  } catch (err) {
-    console.error('Failed to update sale in Supabase', err);
-    throw err;
-  }
-}
-
 export async function deleteSaleAction(
   id: string,
   set: SetFn,
-  get: GetFn
+  get: GetFn,
+  deleteTipByOrigin?: (originType: 'sale', originId: string) => Promise<void>
 ): Promise<void> {
   const saleToDelete = get().sales.find((s) => s.id === id);
   try {
     if (!window.navigator.onLine) {
       enqueueOfflineSaleDelete({ id });
       enqueueOfflineSalePaymentSplitsDelete(id);
+      enqueueOfflineSaleTipDelete(id);
       set((state) => ({ sales: state.sales.filter((sale) => sale.id !== id) }));
       if (saleToDelete) salesDataService.invalidateCache(saleToDelete.date);
       return;
+    }
+
+    if (deleteTipByOrigin) {
+      await deleteTipByOrigin('sale', id);
     }
 
     const { error } = await supabase.from('sales').delete().eq('id', id);

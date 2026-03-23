@@ -20,6 +20,7 @@ import {
   TABLET_SECONDARY_COMPLEMENTARY_CLASS,
   TABLET_SPLIT_LAYOUT_CLASS,
 } from '@/lib/responsive/tabletLayoutPatterns';
+import { DateSelector } from '@/components/ventas/DateSelector';
 
 import {
   DeliveryFiltersCard,
@@ -35,15 +36,10 @@ export function DeliverysPage() {
   const { rentals } = useRentalStore();
   const { washingMachines } = useMachineStore();
   const [timeFilter, setTimeFilter] = useState<TimeFilter>('dia');
-  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
 
   const selectedDate = useMemo(() => {
     return parseISO(selectedDateStr);
   }, [selectedDateStr]);
-
-  const setSelectedDate = (date: Date) => {
-    setSelectedDateStr(format(date, 'yyyy-MM-dd'));
-  };
 
   useEffect(() => {
     const load = async () => {
@@ -156,16 +152,16 @@ export function DeliverysPage() {
               className={TABLET_SPLIT_LAYOUT_CLASS}
               primary={
                 <div
-                  className={TABLET_PRIMARY_COLUMN_COMPACT_CLASS}
+                  className={`${TABLET_PRIMARY_COLUMN_COMPACT_CLASS} space-y-4`}
                   data-testid="delivery-primary-column"
                 >
+                  <DateSelector
+                    selectedDate={selectedDateStr}
+                    onDateChange={setSelectedDateStr}
+                  />
                   <DeliveryFiltersCard
                     timeFilter={timeFilter}
-                    selectedDate={selectedDate}
-                    isCalendarOpen={isCalendarOpen}
                     onTimeFilterChange={setTimeFilter}
-                    onCalendarOpenChange={setIsCalendarOpen}
-                    onDateChange={setSelectedDate}
                   />
                 </div>
               }
@@ -188,14 +184,14 @@ export function DeliverysPage() {
             />
           </>
         ) : (
-          <>
+          <div className="space-y-4">
+            <DateSelector
+              selectedDate={selectedDateStr}
+              onDateChange={setSelectedDateStr}
+            />
             <DeliveryFiltersCard
               timeFilter={timeFilter}
-              selectedDate={selectedDate}
-              isCalendarOpen={isCalendarOpen}
               onTimeFilterChange={setTimeFilter}
-              onCalendarOpenChange={setIsCalendarOpen}
-              onDateChange={setSelectedDate}
             />
 
             <DeliveryStatsGrid stats={stats} />
@@ -207,7 +203,7 @@ export function DeliverysPage() {
               getMachineName={getMachineName}
               getStatusColor={getStatusColor}
             />
-          </>
+          </div>
         )}
       </AppPageContainer>
     </div>

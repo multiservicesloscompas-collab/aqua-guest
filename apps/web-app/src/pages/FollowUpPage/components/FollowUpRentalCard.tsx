@@ -43,7 +43,7 @@ export function FollowUpRentalCard({
             >
               {rental.status === 'agendado' ? 'Agendado' : 'Enviado'}
             </Badge>
-            {showPaymentStatus && (
+            {showPaymentStatus && !rental.isPaid && (
               <Badge variant="destructive" className="text-xs">
                 No pagado
               </Badge>

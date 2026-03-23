@@ -2,6 +2,7 @@ import { Banknote, type LucideIcon } from 'lucide-react';
 
 import type { PaymentDisplayModel } from '@/services/payments/paymentDisplayModel';
 import type { Sale } from '@/types';
+import { deriveSaleTipAmountBs } from '@/services/transactions/transactionTotals';
 
 interface SalePaymentBreakdownProps {
   sale: Sale;
@@ -16,6 +17,12 @@ export function SalePaymentBreakdown({
   timeLabel,
   paymentIcon: PaymentIcon,
 }: SalePaymentBreakdownProps) {
+  const subtotalBs = (sale.items || []).reduce(
+    (sum, item) => sum + Number(item.subtotal || 0),
+    0
+  );
+  const tipAmountBs = deriveSaleTipAmountBs(sale.totalBs, subtotalBs);
+
   return (
     <div>
       <div className="flex items-center gap-1.5">
@@ -31,6 +38,12 @@ export function SalePaymentBreakdown({
         {paymentDisplay.label} • ${Number(sale.totalUsd || 0).toFixed(2)} •{' '}
         {timeLabel}
       </p>
+      {tipAmountBs > 0 && (
+        <p className="text-xs text-muted-foreground">
+          Subtotal Bs {subtotalBs.toFixed(2)} + Propina Bs{' '}
+          {tipAmountBs.toFixed(2)}
+        </p>
+      )}
 
       {paymentDisplay.kind === 'mixed' && (
         <div

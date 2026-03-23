@@ -4,18 +4,28 @@ import { useAppStore } from '@/store/useAppStore';
 import { useConfigStore } from '@/store/useConfigStore';
 import { usePaymentBalanceStore } from '@/store/usePaymentBalanceStore';
 import { PaymentBalanceTransaction, PaymentMethod } from '@/types';
+import {
+  mapTransactionToFormData,
+  validatePaymentBalanceForm,
+} from './paymentBalanceFormLogic';
+
+export type PaymentBalanceOperationType = 'equilibrio' | 'avance';
 
 export interface PaymentBalanceFormData {
+  operationType: PaymentBalanceOperationType;
   fromMethod: PaymentMethod | '';
   toMethod: PaymentMethod | '';
-  amount: string;
+  amountOut: string;
+  amountIn: string;
   notes: string;
 }
 
 const DEFAULT_FORM_DATA: PaymentBalanceFormData = {
+  operationType: 'equilibrio',
   fromMethod: '',
   toMethod: '',
-  amount: '',
+  amountOut: '',
+  amountIn: '',
   notes: '',
 };
 
@@ -46,7 +56,7 @@ export function usePaymentBalancePageViewModel() {
 
   const balanceSummary = useMemo(() => {
     return getPaymentBalanceSummary(selectedDate);
-  }, [selectedDate, getPaymentBalanceSummary, paymentBalanceTransactions]);
+  }, [selectedDate, getPaymentBalanceSummary]);
 
   const transactionsForDate = useMemo(() => {
     return paymentBalanceTransactions
@@ -62,34 +72,25 @@ export function usePaymentBalancePageViewModel() {
   }, []);
 
   const getValidationResult = useCallback(() => {
-    if (!formData.fromMethod || !formData.toMethod || !formData.amount) {
-      toast.error('Completa todos los campos requeridos');
+    if (!formData.fromMethod || !formData.toMethod) {
       return null;
     }
 
-    if (formData.fromMethod === formData.toMethod) {
-      toast.error('Los métodos de pago origen y destino deben ser diferentes');
+    const validation = validatePaymentBalanceForm(
+      formData,
+      config.exchangeRate
+    );
+    if (validation.error) {
+      toast.error(validation.error);
       return null;
     }
 
-    const amount = parseFloat(formData.amount);
-    if (isNaN(amount) || amount <= 0) {
-      toast.error('El monto debe ser un número positivo');
+    if (!validation.payload) {
       return null;
-    }
-
-    const exchangeRate = config.exchangeRate;
-    let amountBs = amount;
-    let amountUsd = 0;
-
-    if (formData.fromMethod === 'divisa' || formData.toMethod === 'divisa') {
-      amountUsd = amount;
-      amountBs = amount * exchangeRate;
     }
 
     return {
-      amountBs,
-      amountUsd: amountUsd || undefined,
+      ...validation.payload,
       fromMethod: formData.fromMethod,
       toMethod: formData.toMethod,
       notes: formData.notes,
@@ -104,9 +105,16 @@ export function usePaymentBalancePageViewModel() {
     try {
       await addPaymentBalanceTransaction({
         date: selectedDate,
-        amount: payload.amountBs,
+        operationType: payload.operationType,
+        amount: payload.amount,
         amountBs: payload.amountBs,
         amountUsd: payload.amountUsd,
+        amountOutBs: payload.amountOutBs,
+        amountOutUsd: payload.amountOutUsd,
+        amountInBs: payload.amountInBs,
+        amountInUsd: payload.amountInUsd,
+        differenceBs: payload.differenceBs,
+        differenceUsd: payload.differenceUsd,
         fromMethod: payload.fromMethod,
         toMethod: payload.toMethod,
         notes: payload.notes,
@@ -135,9 +143,16 @@ export function usePaymentBalancePageViewModel() {
       setIsUpdating(true);
       try {
         await updatePaymentBalanceTransaction(id, {
-          amount: payload.amountBs,
+          operationType: payload.operationType,
+          amount: payload.amount,
           amountBs: payload.amountBs,
           amountUsd: payload.amountUsd,
+          amountOutBs: payload.amountOutBs,
+          amountOutUsd: payload.amountOutUsd,
+          amountInBs: payload.amountInBs,
+          amountInUsd: payload.amountInUsd,
+          differenceBs: payload.differenceBs,
+          differenceUsd: payload.differenceUsd,
           fromMethod: payload.fromMethod,
           toMethod: payload.toMethod,
           notes: payload.notes,
@@ -181,21 +196,13 @@ export function usePaymentBalancePageViewModel() {
     [deletePaymentBalanceTransaction]
   );
 
-  const startEdit = useCallback((transaction: PaymentBalanceTransaction) => {
-    setEditingTransaction(transaction.id);
-
-    let displayAmount = transaction.amount;
-    if (transaction.amountUsd) {
-      displayAmount = transaction.amountUsd;
-    }
-
-    setFormData({
-      fromMethod: transaction.fromMethod,
-      toMethod: transaction.toMethod,
-      amount: displayAmount.toString(),
-      notes: transaction.notes || '',
-    });
-  }, []);
+  const startEdit = useCallback(
+    (transaction: PaymentBalanceTransaction) => {
+      setEditingTransaction(transaction.id);
+      setFormData(mapTransactionToFormData(transaction, config.exchangeRate));
+    },
+    [config.exchangeRate]
+  );
 
   const cancelEdit = useCallback(() => {
     setEditingTransaction(null);

@@ -15,7 +15,7 @@ interface PrepaidState {
   // Acciones de prepagados
   addPrepaidOrder: (
     order: Omit<PrepaidOrder, 'id' | 'createdAt' | 'updatedAt'>
-  ) => Promise<any>;
+  ) => Promise<PrepaidOrder>;
   updatePrepaidOrder: (
     id: string,
     updates: Partial<PrepaidOrder>
@@ -26,6 +26,21 @@ interface PrepaidState {
   // Inicialización
   setPrepaidOrders: (orders: PrepaidOrder[]) => void;
 }
+
+type PrepaidOrderUpdatePayload = {
+  customer_name?: string;
+  customer_phone?: string;
+  liters?: number;
+  amount_bs?: number;
+  amount_usd?: number;
+  exchange_rate?: number;
+  payment_method?: PrepaidOrder['paymentMethod'];
+  status?: PrepaidOrder['status'];
+  date_paid?: string;
+  date_delivered?: string;
+  notes?: string;
+  updated_at?: string;
+};
 
 export const usePrepaidStore = create<PrepaidState>()(
   persist(
@@ -93,7 +108,7 @@ export const usePrepaidStore = create<PrepaidState>()(
           set((state) => ({
             prepaidOrders: [...state.prepaidOrders, newPrepaid],
           }));
-          return data;
+          return newPrepaid;
         } catch (err) {
           console.error('Supabase insert prepaid_orders failed:', err);
           throw err;
@@ -103,7 +118,7 @@ export const usePrepaidStore = create<PrepaidState>()(
       updatePrepaidOrder: async (id, updates) => {
         try {
           const updatedAt = new Date().toISOString();
-          const payload: any = {};
+          const payload: PrepaidOrderUpdatePayload = {};
           if (updates.customerName !== undefined)
             payload.customer_name = updates.customerName;
           if (updates.customerPhone !== undefined)

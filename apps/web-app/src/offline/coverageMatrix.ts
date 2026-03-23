@@ -82,6 +82,13 @@ export const OFFLINE_COVERAGE_MATRIX: OfflineTableCoveragePolicy[] = [
     dependencyGroup: 'expense-root',
   },
   {
+    table: 'expense_payment_splits',
+    domain: 'expenses/payments',
+    mutationContract: 'offline-mutation-enabled',
+    queueReconcileRequirement: 'queue-dependent-on-expenses',
+    dependencyGroup: 'expense-payment-splits-child',
+  },
+  {
     table: 'exchange_rates',
     domain: 'finance/config',
     mutationContract: 'offline-mutation-enabled',

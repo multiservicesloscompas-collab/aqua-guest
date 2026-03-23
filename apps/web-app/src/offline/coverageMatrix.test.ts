@@ -15,6 +15,7 @@ const REQUIRED_TABLES = [
   'rental_payment_splits',
   'prepaid_orders',
   'expenses',
+  'expense_payment_splits',
   'exchange_rates',
   'liter_pricing',
   'washing_machines',

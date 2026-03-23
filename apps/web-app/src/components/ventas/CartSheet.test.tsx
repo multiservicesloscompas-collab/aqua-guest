@@ -28,13 +28,12 @@ const mockConfigState = {
   },
 };
 
-vi.mock('@/components/ui/sheet', () => ({
-  Sheet: ({ children }: { children: ReactNode }) => <div>{children}</div>,
-  SheetContent: ({ children }: { children: ReactNode }) => (
-    <div>{children}</div>
-  ),
-  SheetHeader: ({ children }: { children: ReactNode }) => <div>{children}</div>,
-  SheetTitle: ({ children }: { children: ReactNode }) => <h2>{children}</h2>,
+vi.mock('@/components/ui/drawer', () => ({
+  Drawer: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+  DrawerContent: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+  DrawerHeader: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+  DrawerTitle: ({ children }: { children: ReactNode }) => <h2>{children}</h2>,
+  DrawerClose: ({ children }: { children: ReactNode }) => <div>{children}</div>,
 }));
 
 vi.mock('@/store/useAppStore', () => ({
@@ -75,15 +74,15 @@ describe('CartSheet mixed payment UX', () => {
       screen.queryByPlaceholderText('Monto método secundario (Bs)')
     ).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Pago mixto' }));
+    await user.click(screen.getByRole('button', { name: /pago mixto/i }));
 
     expect(
-      screen.getByText('Divide el cobro entre dos métodos')
+      screen.getByText(/Dividir cobro en dos métodos/i)
     ).toBeInTheDocument();
-    expect(screen.getByText('Activo')).toBeInTheDocument();
+    expect(screen.getByText(/Quitar/i)).toBeInTheDocument();
 
     expect(
-      screen.getByPlaceholderText('Monto método secundario (Bs)')
+      screen.getByLabelText(/Monto método secundario/i)
     ).toBeInTheDocument();
     expect(
       screen.getByText('Monto método principal: Bs 100.00')
@@ -95,11 +94,9 @@ describe('CartSheet mixed payment UX', () => {
 
     render(<CartSheet open={true} onOpenChange={vi.fn()} />);
 
-    await user.click(screen.getByRole('button', { name: 'Pago mixto' }));
+    await user.click(screen.getByRole('button', { name: /pago mixto/i }));
 
-    const secondaryAmountInput = screen.getByPlaceholderText(
-      'Monto método secundario (Bs)'
-    );
+    const secondaryAmountInput = screen.getByLabelText(/Monto método secundario/i);
     await user.clear(secondaryAmountInput);
     await user.type(secondaryAmountInput, '30');
 
@@ -123,7 +120,42 @@ describe('CartSheet mixed payment UX', () => {
             amountUsd: 0.6,
             exchangeRateUsed: 50,
           },
-        ]
+        ],
+        undefined
+      );
+    });
+  });
+
+  it('sends tip payload when tip capture is enabled', async () => {
+    const user = userEvent.setup();
+
+    render(<CartSheet open={true} onOpenChange={vi.fn()} />);
+
+    await user.click(screen.getByRole('button', { name: /propina/i }));
+
+    const amountInput = screen.getByPlaceholderText('Ej: 20.00...');
+    await user.type(amountInput, '20');
+
+    await user.click(screen.getByRole('button', { name: 'Confirmar Venta' }));
+
+    await waitFor(() => {
+      expect(mockCompleteSale).toHaveBeenCalledWith(
+        'efectivo',
+        '2026-03-07',
+        undefined,
+        [
+          {
+            method: 'efectivo',
+            amountBs: 100,
+            amountUsd: 2.0,
+            exchangeRateUsed: 50,
+          },
+        ],
+        {
+          amountBs: 20,
+          capturePaymentMethod: 'efectivo',
+          notes: undefined,
+        }
       );
     });
   });

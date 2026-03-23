@@ -64,7 +64,7 @@ export function PrepaidFormSheet({
           </SheetTitle>
         </SheetHeader>
 
-        <div className="space-y-4 overflow-y-auto max-h-[calc(85vh-120px)] pb-4">
+        <div className="space-y-4 overflow-y-auto overscroll-contain touch-pan-y max-h-[calc(85vh-120px)] pb-4">
           <div className="space-y-2">
             <Label htmlFor="customerName">Nombre del Cliente *</Label>
             <div className="relative">

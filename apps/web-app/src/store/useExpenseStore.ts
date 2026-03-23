@@ -13,8 +13,17 @@ import {
   enqueueOfflineExpenseCreate,
   enqueueOfflineExpenseDelete,
   enqueueOfflineExpenseUpdate,
+  enqueueOfflineExpensePaymentSplitsReplace,
 } from '@/offline/enqueue/expensesEnqueue';
-import { dedupExpensesByDateRange } from './useExpenseStore.helpers';
+import {
+  dedupExpensesByDateRange,
+  insertExpenseSplitsStrict,
+  mapExpenseRowToExpense,
+  type SupabaseCompensatingLike,
+  toExpenseInsertPayload,
+  toExpenseUpdatePayload,
+  updateExpenseWithSplitCompensationStrict,
+} from './useExpenseStore.helpers';
 import {
   type ExpenseState,
   type ExpenseInsertPayload,
@@ -52,14 +61,7 @@ export const useExpenseStore = create<ExpenseState>()(
             return;
           }
 
-          const payload: ExpenseInsertPayload = {
-            date: expense.date,
-            description: expense.description,
-            amount: expense.amount,
-            category: expense.category,
-            payment_method: expense.paymentMethod,
-            notes: expense.notes,
-          };
+          const payload = toExpenseInsertPayload(expense);
           const { data, error } = await supabase
             .from('expenses')
             .insert(payload)
@@ -67,16 +69,28 @@ export const useExpenseStore = create<ExpenseState>()(
             .single();
           if (error) throw error;
           const row = data as ExpenseRow;
-          const newExpense: Expense = {
-            id: row.id,
-            date: row.date,
-            description: row.description,
-            amount: Number(row.amount),
-            category: row.category,
-            paymentMethod: row.payment_method || 'efectivo',
-            notes: row.notes ?? undefined,
-            createdAt: row.created_at || new Date().toISOString(),
-          };
+
+          try {
+            await insertExpenseSplitsStrict(
+              supabase,
+              row.id,
+              expense.paymentSplits
+            );
+          } catch (splitsError) {
+            const { error: rollbackError } = await supabase
+              .from('expenses')
+              .delete()
+              .eq('id', row.id);
+            if (rollbackError) {
+              throw rollbackError;
+            }
+            throw splitsError;
+          }
+
+          const newExpense: Expense = mapExpenseRowToExpense(
+            row,
+            expense.paymentSplits
+          );
           set((state) => ({ expenses: [...state.expenses, newExpense] }));
           expensesDataService.invalidateCache(row.date);
         } catch (err) {
@@ -89,6 +103,12 @@ export const useExpenseStore = create<ExpenseState>()(
         try {
           if (!window.navigator.onLine) {
             enqueueOfflineExpenseUpdate(id, updates);
+            if (updates.paymentSplits !== undefined) {
+              enqueueOfflineExpensePaymentSplitsReplace(
+                id,
+                updates.paymentSplits
+              );
+            }
             set((state) => ({
               expenses: state.expenses.map((exp) =>
                 exp.id === id ? { ...exp, ...updates } : exp
@@ -104,22 +124,22 @@ export const useExpenseStore = create<ExpenseState>()(
             return;
           }
 
-          const payload: ExpenseUpdatePayload = {};
-          if (updates.description !== undefined)
-            payload.description = updates.description;
-          if (updates.amount !== undefined) payload.amount = updates.amount;
-          if (updates.category !== undefined)
-            payload.category = updates.category;
-          if (updates.paymentMethod !== undefined)
-            payload.payment_method = updates.paymentMethod;
-          if (updates.notes !== undefined) payload.notes = updates.notes;
-          if (updates.date !== undefined) payload.date = updates.date;
+          const payload = toExpenseUpdatePayload(updates);
 
-          const { error } = await supabase
-            .from('expenses')
-            .update(payload)
-            .eq('id', id);
-          if (error) throw error;
+          if (updates.paymentSplits !== undefined) {
+            await updateExpenseWithSplitCompensationStrict(
+              supabase as unknown as SupabaseCompensatingLike,
+              id,
+              payload,
+              updates.paymentSplits
+            );
+          } else if (Object.keys(payload).length > 0) {
+            const { error } = await supabase
+              .from('expenses')
+              .update(payload)
+              .eq('id', id);
+            if (error) throw error;
+          }
 
           set((state) => ({
             expenses: state.expenses.map((exp) =>

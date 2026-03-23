@@ -5,13 +5,17 @@ import {
   PrepaidOrder,
   PaymentBalanceTransaction,
   PaymentMethod,
+  TipPayout,
 } from '@/types';
 import {
   allocateRentalToMethodTotalsBs,
   allocateSaleToMethodTotalsBs,
   createEmptyMethodTotals,
 } from '@/services/payments/paymentSplitReadModel';
+import { resolvePaymentBalanceTransferLegs } from '@/services/payments/paymentBalanceTransferSemantics';
+import { hasValidMixedPaymentSplits } from '@/services/payments/paymentSplitValidity';
 import type { PaymentSplit } from '@/types/paymentSplits';
+import { normalizeToVenezuelaDate } from '@/services/DateService';
 
 export interface DateRange {
   start: string;
@@ -36,6 +40,7 @@ export interface DashboardMetricsInput {
   expenses: readonly Expense[];
   prepaidOrders: readonly PrepaidOrder[];
   paymentBalanceTransactions: readonly PaymentBalanceTransaction[];
+  tipPayouts?: readonly TipPayout[];
 }
 
 export interface DashboardMetricsResult {
@@ -78,17 +83,27 @@ interface SplitAwareRental extends WasherRental {
   paymentSplits?: PaymentSplit[];
 }
 
-function getBalanceTransactionAmountBs(
-  tx: PaymentBalanceTransaction,
-  exchangeRate: number
-): number {
-  if (tx.amountBs !== undefined) {
-    return Number(tx.amountBs);
+interface SplitAwareExpense extends Expense {
+  paymentSplits?: PaymentSplit[];
+}
+
+function computeExpenseTotalsByMethod(
+  expenses: readonly Expense[]
+): Record<PaymentMethod, number> {
+  const totals = createEmptyMethodTotals();
+
+  for (const expense of expenses as readonly SplitAwareExpense[]) {
+    if (hasValidMixedPaymentSplits(expense.paymentSplits)) {
+      for (const split of expense.paymentSplits) {
+        totals[split.method] += Number(split.amountBs || 0);
+      }
+      continue;
+    }
+
+    totals[expense.paymentMethod] += Number(expense.amount || 0);
   }
-  if (tx.amountUsd !== undefined) {
-    return Number(tx.amountUsd) * exchangeRate;
-  }
-  return Number(tx.amount || 0);
+
+  return totals;
 }
 
 function computeScope(
@@ -98,7 +113,8 @@ function computeScope(
   rentals: readonly WasherRental[],
   expenses: readonly Expense[],
   prepaidOrders: readonly PrepaidOrder[],
-  paymentBalanceTransactions: readonly PaymentBalanceTransaction[]
+  paymentBalanceTransactions: readonly PaymentBalanceTransaction[],
+  tipPayouts: readonly TipPayout[]
 ): ScopeMetrics {
   const filteredSales = filterByDateRange(
     sales as readonly SplitAwareSale[],
@@ -124,6 +140,11 @@ function computeScope(
     range,
     (t) => t.date
   );
+  const filteredTipPayouts = filterByDateRange(
+    dedupeTipPayouts(tipPayouts),
+    range,
+    (tip) => resolveTipPayoutDate(tip)
+  );
 
   const waterBs = filteredSales.reduce((sum, s) => sum + s.totalBs, 0);
   const rentalBs = filteredRentals.reduce(
@@ -133,12 +154,20 @@ function computeScope(
   const prepaidBs = filteredPrepaid.reduce((sum, p) => sum + p.amountBs, 0);
 
   const totalIncomeBs = waterBs + rentalBs + prepaidBs;
-  const expenseBs = filteredExpenses.reduce((sum, e) => sum + e.amount, 0);
+  const tipPayoutExpenseBs = filteredTipPayouts.reduce(
+    (sum, payout) => sum + payout.amountBs,
+    0
+  );
+  const expenseBs =
+    filteredExpenses.reduce((sum, e) => sum + e.amount, 0) + tipPayoutExpenseBs;
 
   const netBs = totalIncomeBs - expenseBs;
 
   const transactionsCount =
-    filteredSales.length + filteredRentals.length + filteredBalanceTx.length;
+    filteredSales.length +
+    filteredRentals.length +
+    filteredBalanceTx.length +
+    filteredTipPayouts.length;
 
   const methodTotalsBs = emptyMethodTotals();
   const salesTotals = filteredSales.reduce(
@@ -149,6 +178,7 @@ function computeScope(
     (acc, rental) => allocateRentalToMethodTotalsBs(rental, exchangeRate, acc),
     createEmptyMethodTotals()
   );
+  const expenseTotalsByMethod = computeExpenseTotalsByMethod(filteredExpenses);
 
   for (const method of PAYMENT_METHODS) {
     methodTotalsBs[method] += salesTotals[method];
@@ -158,19 +188,24 @@ function computeScope(
       .filter((p) => p.paymentMethod === method)
       .reduce((sum, p) => sum + p.amountBs, 0);
 
-    methodTotalsBs[method] -= filteredExpenses
-      .filter((e) => e.paymentMethod === method)
-      .reduce((sum, e) => sum + e.amount, 0);
+    methodTotalsBs[method] -= expenseTotalsByMethod[method];
 
     for (const tx of filteredBalanceTx) {
-      const amountBs = getBalanceTransactionAmountBs(tx, exchangeRate);
+      const { amountOutBs, amountInBs } = resolvePaymentBalanceTransferLegs(
+        tx,
+        exchangeRate
+      );
       if (tx.fromMethod === method) {
-        methodTotalsBs[method] -= amountBs;
+        methodTotalsBs[method] -= amountOutBs;
       }
       if (tx.toMethod === method) {
-        methodTotalsBs[method] += amountBs;
+        methodTotalsBs[method] += amountInBs;
       }
     }
+
+    methodTotalsBs[method] -= filteredTipPayouts
+      .filter((payout) => payout.paymentMethod === method)
+      .reduce((sum, payout) => sum + payout.amountBs, 0);
   }
 
   return {
@@ -195,6 +230,7 @@ export function calculateDashboardMetrics(
     expenses,
     prepaidOrders,
     paymentBalanceTransactions,
+    tipPayouts = [],
   } = input;
 
   const dayRange: DateRange = { start: selectedDate, end: selectedDate };
@@ -207,7 +243,8 @@ export function calculateDashboardMetrics(
     rentals,
     expenses,
     prepaidOrders,
-    paymentBalanceTransactions
+    paymentBalanceTransactions,
+    tipPayouts
   );
 
   const mtd = computeScope(
@@ -217,8 +254,23 @@ export function calculateDashboardMetrics(
     rentals,
     expenses,
     prepaidOrders,
-    paymentBalanceTransactions
+    paymentBalanceTransactions,
+    tipPayouts
   );
 
   return { day, mtd };
+}
+
+function resolveTipPayoutDate(payout: TipPayout): string {
+  return normalizeToVenezuelaDate(payout.paidAt || payout.tipDate);
+}
+
+function dedupeTipPayouts(payouts: readonly TipPayout[]): TipPayout[] {
+  const uniqueById = new Map<string, TipPayout>();
+  for (const payout of payouts) {
+    if (!uniqueById.has(payout.id)) {
+      uniqueById.set(payout.id, payout);
+    }
+  }
+  return Array.from(uniqueById.values());
 }

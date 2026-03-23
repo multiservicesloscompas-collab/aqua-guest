@@ -147,6 +147,19 @@ describe('calculatePaymentBalanceSummary', () => {
         createdAt: '2026-03-07T12:00:00.000Z',
         updatedAt: '2026-03-07T12:00:00.000Z',
       },
+      {
+        id: 'tx-avance',
+        date: '2026-03-07',
+        operationType: 'avance',
+        fromMethod: 'pago_movil',
+        toMethod: 'efectivo',
+        amount: 0,
+        amountOutBs: 80,
+        amountInBs: 75,
+        differenceBs: -5,
+        createdAt: '2026-03-07T13:00:00.000Z',
+        updatedAt: '2026-03-07T13:00:00.000Z',
+      },
     ];
 
     const summary = calculatePaymentBalanceSummary({
@@ -162,14 +175,14 @@ describe('calculatePaymentBalanceSummary', () => {
       {
         method: 'efectivo',
         originalTotal: 0,
-        adjustments: -20,
-        finalTotal: -20,
+        adjustments: 55,
+        finalTotal: 55,
       },
       {
         method: 'pago_movil',
         originalTotal: 0,
-        adjustments: 50,
-        finalTotal: 50,
+        adjustments: -30,
+        finalTotal: -30,
       },
       {
         method: 'punto_venta',
@@ -178,6 +191,56 @@ describe('calculatePaymentBalanceSummary', () => {
         finalTotal: 0,
       },
       { method: 'divisa', originalTotal: 0, adjustments: -30, finalTotal: -30 },
+    ]);
+  });
+
+  it('uses explicit out/in usd legs before legacy fields for avance semantics', () => {
+    const transactions: PaymentBalanceTransaction[] = [
+      {
+        id: 'tx-avance-usd-legs',
+        date: '2026-03-07',
+        operationType: 'avance',
+        fromMethod: 'divisa',
+        toMethod: 'pago_movil',
+        amount: 999,
+        amountBs: 999,
+        amountUsd: 10,
+        amountOutUsd: 2,
+        amountInUsd: 1.8,
+        createdAt: '2026-03-07T14:00:00.000Z',
+        updatedAt: '2026-03-07T14:00:00.000Z',
+      },
+    ];
+
+    const summary = calculatePaymentBalanceSummary({
+      date: '2026-03-07',
+      exchangeRate: 50,
+      sales: [],
+      prepaidOrders: EMPTY_PREPAID,
+      rentals: [],
+      paymentBalanceTransactions: transactions,
+    });
+
+    expect(summary).toEqual([
+      { method: 'efectivo', originalTotal: 0, adjustments: 0, finalTotal: 0 },
+      {
+        method: 'pago_movil',
+        originalTotal: 0,
+        adjustments: 90,
+        finalTotal: 90,
+      },
+      {
+        method: 'punto_venta',
+        originalTotal: 0,
+        adjustments: 0,
+        finalTotal: 0,
+      },
+      {
+        method: 'divisa',
+        originalTotal: 0,
+        adjustments: -100,
+        finalTotal: -100,
+      },
     ]);
   });
 });

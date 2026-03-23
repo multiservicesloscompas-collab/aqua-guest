@@ -9,6 +9,7 @@ import {
   RentalStatus,
   WasherRental,
 } from '@/types';
+import type { TipCaptureInput } from '@/types/tips';
 import type { PaymentSplit } from '@/types/paymentSplits';
 import { preparePaymentWritePayload } from '@/services/payments/paymentSplitWritePath';
 
@@ -70,9 +71,14 @@ export interface RentalState {
   loadingRentalsByRange: Record<string, boolean>;
 
   addRental: (
-    rental: Omit<WasherRental, 'id' | 'createdAt' | 'updatedAt'>
+    rental: Omit<WasherRental, 'id' | 'createdAt' | 'updatedAt'>,
+    tipInput?: TipCaptureInput
+  ) => Promise<WasherRental>;
+  updateRental: (
+    id: string,
+    updates: Partial<WasherRental>,
+    tipInput?: TipCaptureInput | null
   ) => Promise<void>;
-  updateRental: (id: string, updates: Partial<WasherRental>) => Promise<void>;
   deleteRental: (id: string) => Promise<void>;
 
   getRentalsByDate: (date: string) => WasherRental[];

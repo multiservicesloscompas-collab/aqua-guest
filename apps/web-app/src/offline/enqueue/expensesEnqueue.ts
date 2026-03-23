@@ -1,4 +1,7 @@
 import type { Expense } from '@/types';
+import type { PaymentSplit } from '@/types/paymentSplits';
+import { PAYMENT_SPLIT_SCHEMA } from '@/services/payments/paymentSplitSchemaContract';
+import { expensePaymentSplitAdapter } from '@/services/payments/paymentSplitSupabaseAdapters';
 import { useSyncStore } from '@/store/useSyncStore';
 
 type ExpenseCreateInput = Omit<Expense, 'id' | 'createdAt'>;
@@ -32,6 +35,24 @@ export const enqueueOfflineExpenseCreate = (
     enqueueSource: actionSource,
     businessKey,
   });
+
+  if (expense.paymentSplits?.length) {
+    useSyncStore.getState().addToQueue({
+      type: 'INSERT',
+      table: PAYMENT_SPLIT_SCHEMA.expensesSplitsTable,
+      payload: {
+        splits: expensePaymentSplitAdapter.toInsertRows(
+          tempId,
+          expense.paymentSplits
+        ),
+        isSplit: true,
+        parentId: tempId,
+      },
+      enqueueSource: actionSource,
+      businessKey: `expense-splits:${tempId}`,
+      dependencyKeys: [businessKey],
+    });
+  }
 
   return {
     id: tempId,
@@ -82,5 +103,38 @@ export const enqueueOfflineExpenseDelete = (
     enqueueSource: actionSource,
     businessKey,
     dependencyKeys: id.startsWith('temp-') ? [businessKey] : undefined,
+  });
+};
+
+export const enqueueOfflineExpensePaymentSplitsReplace = (
+  expenseId: string,
+  splits: PaymentSplit[],
+  actionSource = 'expenses/updateExpense'
+) => {
+  const businessKey = `expense-splits:${expenseId}`;
+
+  useSyncStore.getState().addToQueue({
+    type: 'DELETE',
+    table: PAYMENT_SPLIT_SCHEMA.expensesSplitsTable,
+    payload: {
+      id: `expense_id:${expenseId}`,
+      parentId: expenseId,
+      parentColumn: 'expense_id',
+      __op: 'delete_by_parent_id',
+    },
+    enqueueSource: actionSource,
+    businessKey,
+  });
+
+  useSyncStore.getState().addToQueue({
+    type: 'INSERT',
+    table: PAYMENT_SPLIT_SCHEMA.expensesSplitsTable,
+    payload: {
+      splits: expensePaymentSplitAdapter.toInsertRows(expenseId, splits),
+      isSplit: true,
+      parentId: expenseId,
+    },
+    enqueueSource: actionSource,
+    businessKey,
   });
 };

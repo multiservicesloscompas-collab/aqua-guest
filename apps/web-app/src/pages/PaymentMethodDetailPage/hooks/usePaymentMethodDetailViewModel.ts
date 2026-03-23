@@ -6,6 +6,7 @@ import { useExpenseStore } from '@/store/useExpenseStore';
 import { usePaymentBalanceStore } from '@/store/usePaymentBalanceStore';
 import { useConfigStore } from '@/store/useConfigStore';
 import { useRentalStore } from '@/store/useRentalStore';
+import { useTipStore } from '@/store/useTipStore';
 import { createCurrencyConverter } from '@/services/CurrencyService';
 import { AppRoute, PaymentMethod, PaymentMethodLabels } from '@/types';
 import {
@@ -22,6 +23,7 @@ interface TransactionViewItem {
   key: string;
   typeLabel: string;
   description: string;
+  linkedReference: string;
   amountText: string;
   amountUsdText?: string;
   paymentMethodLabel?: string;
@@ -128,6 +130,7 @@ export function usePaymentMethodDetailViewModel(
   const { paymentBalanceTransactions } = usePaymentBalanceStore();
   const { config } = useConfigStore();
   const { rentals } = useRentalStore();
+  const { tipPayouts } = useTipStore();
 
   const currencyConverter = useMemo(
     () => createCurrencyConverter(config.exchangeRate),
@@ -147,6 +150,7 @@ export function usePaymentMethodDetailViewModel(
       expenses,
       prepaidOrders,
       paymentBalanceTransactions,
+      tipPayouts,
       getMethodLabel,
     });
   }, [
@@ -155,6 +159,7 @@ export function usePaymentMethodDetailViewModel(
     expenses,
     prepaidOrders,
     paymentBalanceTransactions,
+    tipPayouts,
     selectedDate,
     paymentMethod,
     config.exchangeRate,
@@ -174,6 +179,7 @@ export function usePaymentMethodDetailViewModel(
         key: `${transaction.type}-${transaction.id}`,
         typeLabel: transaction.typeLabel,
         description: transaction.description,
+        linkedReference: transaction.linkedReference,
         amountText,
         amountUsdText: transaction.amountUsd
           ? `$${transaction.amountUsd.toFixed(2)}`

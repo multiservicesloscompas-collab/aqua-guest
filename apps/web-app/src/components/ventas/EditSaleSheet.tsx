@@ -1,14 +1,8 @@
-import { useState, useEffect } from 'react';
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet';
+import { Loader2, Pencil } from 'lucide-react';
+import { TipCaptureCard } from '@/components/tips/TipCaptureCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
@@ -16,15 +10,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Sale, PaymentMethod, PaymentMethodLabels, CartItem } from '@/types';
-import type { PaymentSplit } from '@/types/paymentSplits';
-import { useWaterSalesStore } from '@/store/useWaterSalesStore';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
+import { Textarea } from '@/components/ui/textarea';
+import { PaymentMethod, PaymentMethodLabels, Sale } from '@/types';
 import { useConfigStore } from '@/store/useConfigStore';
-import { Pencil, Loader2 } from 'lucide-react';
-import { toast } from 'sonner';
-import { normalizeAndValidatePaymentSplits } from '@/services/payments/paymentSplitValidation';
-import { buildDualPaymentSplits } from '@/services/payments/paymentSplitWritePath';
-import { SaleMixedPaymentFields } from './SaleMixedPaymentFields';
+import { CartTotalsSummary } from './CartTotalsSummary';
+import { EditSaleItemsEditor } from './EditSaleItemsEditor';
+import { MixedPaymentCard } from '../payments/MixedPaymentCard';
+import { useEditSaleSheetViewModel } from './useEditSaleSheetViewModel';
 
 interface EditSaleSheetProps {
   sale: Sale | null;
@@ -37,139 +35,8 @@ export function EditSaleSheet({
   open,
   onOpenChange,
 }: EditSaleSheetProps) {
-  const { updateSale } = useWaterSalesStore();
-  const { config } = useConfigStore();
-  const isMixedPaymentEnabled = useConfigStore((state) =>
-    state.isMixedPaymentEnabled('water')
-  );
-
-  const [paymentMethod, setPaymentMethod] =
-    useState<PaymentMethod>('pago_movil');
-  const [split2Method, setSplit2Method] = useState<PaymentMethod>('efectivo');
-  const [split1Amount, setSplit1Amount] = useState('');
-  const [notes, setNotes] = useState('');
-  const [totalBs, setTotalBs] = useState('');
-  const [isSaving, setIsSaving] = useState(false);
-  // We need a local type that allows quantity to be empty string for the input
-  interface EditableCartItem extends Omit<CartItem, 'quantity'> {
-    quantity: number | '';
-  }
-  const [items, setItems] = useState<EditableCartItem[]>([]);
-
-  useEffect(() => {
-    if (sale) {
-      setPaymentMethod(sale.paymentMethod);
-      const splitMain = sale.paymentSplits?.find(
-        (split) => split.method === sale.paymentMethod
-      );
-      const splitSecondary = sale.paymentSplits?.find(
-        (split) => split.method !== sale.paymentMethod
-      );
-      setSplit1Amount(splitMain ? String(splitMain.amountBs) : '');
-      setSplit2Method(splitSecondary?.method ?? 'efectivo');
-      setNotes(sale.notes || '');
-      setTotalBs(sale.totalBs.toString());
-      setItems(sale.items || []);
-    }
-  }, [sale]);
-
-  useEffect(() => {
-    if (split2Method === paymentMethod) {
-      setSplit2Method(paymentMethod === 'efectivo' ? 'pago_movil' : 'efectivo');
-    }
-  }, [paymentMethod, split2Method]);
-
-  const handleQuantityChange = (itemId: string, newQuantity: string) => {
-    // Allow empty string to let user clear the input
-    if (newQuantity === '') {
-      setItems(
-        items.map((item) =>
-          item.id === itemId ? { ...item, quantity: '' } : item
-        )
-      );
-      return;
-    }
-
-    const qty = parseInt(newQuantity);
-    if (isNaN(qty) || qty < 0) return; // Allow 0 momentarily or just ignore negative
-
-    const updatedItems = items.map((item) => {
-      if (item.id === itemId) {
-        return {
-          ...item,
-          quantity: qty,
-          subtotal: qty * item.unitPrice,
-        };
-      }
-      return item;
-    });
-
-    setItems(updatedItems);
-
-    // Auto-update total price based on items (treating empty or invalid as 0)
-    const newTotal = updatedItems.reduce((sum, item) => {
-      const q = item.quantity === '' ? 0 : item.quantity;
-      return sum + q * item.unitPrice;
-    }, 0);
-    setTotalBs(newTotal.toFixed(2));
-  };
-
-  const handleSubmit = async () => {
-    if (!sale) return;
-
-    const newTotalBs = parseFloat(totalBs);
-    if (isNaN(newTotalBs) || newTotalBs <= 0) {
-      toast.error('Monto inválido');
-      return;
-    }
-
-    setIsSaving(true);
-    try {
-      const totalUsd = newTotalBs / config.exchangeRate;
-      const paymentSplits: PaymentSplit[] = buildDualPaymentSplits({
-        enableMixedPayment: isMixedPaymentEnabled,
-        primaryMethod: paymentMethod,
-        secondaryMethod: split2Method,
-        amountInput: split1Amount,
-        amountInputMode: 'primary',
-        totalBs: newTotalBs,
-        totalUsd,
-        exchangeRate: config.exchangeRate,
-      });
-
-      const splitValidation = normalizeAndValidatePaymentSplits({
-        splits: paymentSplits,
-        totalBs: newTotalBs,
-        totalUsd,
-      });
-
-      if (!splitValidation.validation.ok) {
-        toast.error(splitValidation.validation.errors[0]);
-        return;
-      }
-
-      await updateSale(sale.id, {
-        paymentMethod,
-        notes: notes.trim() || undefined,
-        totalBs: newTotalBs,
-        totalUsd,
-        paymentSplits: splitValidation.splits,
-        // Map back to strict CartItem type (ensure no empty strings)
-        items: items.map((i) => ({
-          ...i,
-          quantity: i.quantity === '' || i.quantity === 0 ? 1 : i.quantity,
-        })),
-      });
-
-      toast.success('Venta actualizada');
-      onOpenChange(false);
-    } catch (err) {
-      console.error('Error actualizando venta:', err);
-      toast.error('Error al actualizar la venta');
-    } finally {
-      setIsSaving(false);
-    }
-  };
+  const config = useConfigStore((state) => state.config);
+  const viewModel = useEditSaleSheetViewModel({ sale, open, onOpenChange });
 
   if (!sale) return null;
 
@@ -179,7 +46,7 @@ export function EditSaleSheet({
         side="bottom"
         tabletSide="right"
         tabletClassName="sm:max-w-[440px]"
-        className="h-auto rounded-t-2xl px-4 pb-8 sm:h-full sm:rounded-none overflow-y-auto"
+        className="h-[90vh] sm:h-full flex flex-col rounded-t-2xl px-4 pb-8 sm:rounded-none overflow-y-auto overscroll-contain touch-pan-y"
       >
         <SheetHeader className="pb-4">
           <SheetTitle className="flex items-center gap-2 text-lg">
@@ -190,21 +57,23 @@ export function EditSaleSheet({
 
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label className="text-sm font-semibold">Total (Bs)</Label>
+            <Label className="text-sm font-semibold">Subtotal (Bs)</Label>
             <Input
               type="number"
               step="0.01"
-              value={totalBs}
-              onChange={(e) => setTotalBs(e.target.value)}
+              value={viewModel.subtotalBs}
+              onChange={(e) => viewModel.setSubtotalBs(e.target.value)}
               className="h-12 text-lg font-semibold"
             />
           </div>
 
           <div className="space-y-2">
-            <Label className="text-sm font-semibold">Método de Pago</Label>
+            <Label className="text-sm font-semibold">Metodo de Pago</Label>
             <Select
-              value={paymentMethod}
-              onValueChange={(v) => setPaymentMethod(v as PaymentMethod)}
+              value={viewModel.paymentMethod}
+              onValueChange={(value) =>
+                viewModel.setPaymentMethod(value as PaymentMethod)
+              }
             >
               <SelectTrigger className="h-12">
                 <SelectValue />
@@ -219,78 +88,77 @@ export function EditSaleSheet({
             </Select>
           </div>
 
-          {isMixedPaymentEnabled && (
-            <SaleMixedPaymentFields
-              primaryMethod={paymentMethod}
-              secondaryMethod={split2Method}
-              amountInput={split1Amount}
-              totalBs={Number(totalBs) || 0}
-              variant="select"
-              amountInputMode="primary"
-              onAmountInputChange={setSplit1Amount}
-              onSecondaryMethodChange={setSplit2Method}
+          <TipCaptureCard
+            enabled={viewModel.tipEnabled}
+            amount={viewModel.tipAmount}
+            paymentMethod={viewModel.tipPaymentMethod}
+            notes={viewModel.tipNotes}
+            onToggle={() => {
+              viewModel.setTipEnabled((current) => {
+                const next = !current;
+                if (next) {
+                  viewModel.setTipPaymentMethod(viewModel.paymentMethod);
+                }
+                return next;
+              });
+            }}
+            onAmountChange={viewModel.setTipAmount}
+            onPaymentMethodChange={viewModel.setTipPaymentMethod}
+            onNotesChange={viewModel.setTipNotes}
+          />
+
+          {viewModel.isMixedPaymentEnabled && (
+            <MixedPaymentCard
+              isMixedPayment={viewModel.isMixedPayment}
+              onToggle={() => {
+                const enabled = !viewModel.isMixedPayment;
+                viewModel.setIsMixedPayment(enabled);
+                if (!enabled) {
+                  viewModel.setSplit1Amount('');
+                }
+              }}
+              primaryMethod={viewModel.paymentMethod}
+              secondaryMethod={viewModel.split2Method}
+              amountInput={viewModel.split1Amount}
+              totalBs={viewModel.finalTotals.totalBs}
+              variant="grid"
+              amountInputMode="secondary"
+              onAmountInputChange={viewModel.setSplit1Amount}
+              onSecondaryMethodChange={viewModel.setSplit2Method}
             />
           )}
+
+          <EditSaleItemsEditor
+            items={viewModel.items}
+            onQuantityChange={viewModel.onQuantityChange}
+          />
 
           <div className="space-y-2">
             <Label className="text-sm font-semibold">Notas (opcional)</Label>
             <Textarea
               placeholder="Observaciones..."
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
+              value={viewModel.notes}
+              onChange={(e) => viewModel.setNotes(e.target.value)}
               className="h-20 resize-none"
             />
           </div>
 
-          <div className="space-y-4">
-            <Label className="text-sm font-semibold">Ítems</Label>
-            <div className="space-y-3">
-              {items.map((item) => (
-                <div
-                  key={item.id}
-                  className="flex items-center gap-3 bg-muted/30 p-2 rounded-lg"
-                >
-                  <div className="flex-1">
-                    <div className="font-medium text-sm">
-                      {item.productName}
-                    </div>
-                    {item.liters && (
-                      <div className="text-xs text-muted-foreground">
-                        {item.liters}L
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <Label className="text-xs text-muted-foreground">
-                      Cant.
-                    </Label>
-                    <Input
-                      type="number"
-                      min="1"
-                      value={item.quantity}
-                      onChange={(e) =>
-                        handleQuantityChange(item.id, e.target.value)
-                      }
-                      className="w-16 h-8 text-center"
-                    />
-                  </div>
-
-                  <div className="w-20 text-right font-medium text-sm">
-                    Bs {item.subtotal.toFixed(2)}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+          <CartTotalsSummary
+            subtotalBs={Number(viewModel.subtotalBs) || 0}
+            tipAmountBs={viewModel.tipAmountBs}
+            totalBs={viewModel.finalTotals.totalBs}
+            totalUsd={viewModel.finalTotals.totalUsd}
+          />
 
           <Button
-            onClick={handleSubmit}
-            disabled={isSaving}
+            onClick={viewModel.onSubmit}
+            disabled={viewModel.isSaving || config.exchangeRate <= 0}
             className="w-full h-12 text-base font-bold"
           >
-            {isSaving && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
-            {isSaving ? 'Guardando...' : 'Guardar Cambios'}
+            {viewModel.isSaving && (
+              <Loader2 className="w-4 h-4 animate-spin mr-2" />
+            )}
+            {viewModel.isSaving ? 'Guardando...' : 'Guardar Cambios'}
           </Button>
         </div>
       </SheetContent>

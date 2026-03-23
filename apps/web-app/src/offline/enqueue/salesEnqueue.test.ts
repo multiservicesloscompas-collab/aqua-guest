@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { useSyncStore } from '@/store/useSyncStore';
 import {
+  enqueueOfflineSaleTipDelete,
   enqueueOfflineSalePaymentSplitsReplace,
   enqueueOfflineSaleUpdate,
 } from './salesEnqueue';
@@ -37,5 +38,18 @@ describe('salesEnqueue', () => {
     expect(queue).toHaveLength(2);
     expect(queue.map((entry) => entry.type)).toEqual(['DELETE', 'INSERT']);
     expect(queue[0].payload.__op).toBe('delete_by_parent_id');
+  });
+
+  it('enqueues scoped tip deletion by sale origin', () => {
+    enqueueOfflineSaleTipDelete('sale-1');
+
+    const queue = useSyncStore.getState().queue;
+    expect(queue).toHaveLength(1);
+    expect(queue[0].table).toBe('tips');
+    expect(queue[0].type).toBe('DELETE');
+    expect(queue[0].payload.__op).toBe('delete_by_parent_id');
+    expect(queue[0].payload.parentColumn).toBe('origin_id');
+    expect(queue[0].payload.parentScopeColumn).toBe('origin_type');
+    expect(queue[0].payload.parentScopeValue).toBe('sale');
   });
 });

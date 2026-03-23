@@ -16,8 +16,8 @@ import { RentalCustomerSection } from './RentalCustomerSection';
 import { RentalNotesSection } from './RentalNotesSection';
 import { RentalSheetFooter } from './RentalSheetFooter';
 import { EditRentalStatusPaymentCard } from './EditRentalStatusPaymentCard';
-import { RentalMixedPaymentFields } from './RentalMixedPaymentFields';
-import { MixedPaymentToggleButton } from '@/components/payments/MixedPaymentToggleButton';
+import { MixedPaymentCard } from '@/components/payments/MixedPaymentCard';
+import { TipCaptureCard } from '@/components/tips/TipCaptureCard';
 
 interface EditRentalSheetProps {
   rental: WasherRental | null;
@@ -30,7 +30,7 @@ export function EditRentalSheet({
   open,
   onOpenChange,
 }: EditRentalSheetProps) {
-  const viewModel = useEditRentalSheetViewModel({ rental, onOpenChange });
+  const viewModel = useEditRentalSheetViewModel({ rental, open, onOpenChange });
 
   if (!rental) return null;
 
@@ -49,21 +49,7 @@ export function EditRentalSheet({
           </SheetTitle>
         </SheetHeader>
 
-        <div className="overflow-y-auto h-[calc(100%-8rem)] space-y-6 pb-40">
-          <EditRentalStatusPaymentCard
-            statusOptions={viewModel.statusOptions}
-            status={viewModel.status}
-            onChangeStatus={viewModel.onChangeStatus}
-            paymentStatus={viewModel.isPaid ? 'paid' : 'pending'}
-            onChangePaymentStatus={viewModel.onChangePaymentStatus}
-            isPaid={viewModel.isPaid}
-            paidDateLabel={viewModel.paidDateLabel}
-            datePaid={viewModel.datePaid}
-            onChangeDatePaid={viewModel.onChangeDatePaid}
-            isCalendarOpen={viewModel.isCalendarOpen}
-            onCalendarOpenChange={viewModel.setIsCalendarOpen}
-          />
-
+        <div className="overflow-y-auto overscroll-contain touch-pan-y h-[calc(100%-8rem)] space-y-6 pb-40">
           <RentalMachineSelector
             items={viewModel.machineItems}
             selectedMachineId={viewModel.selectedMachineId}
@@ -82,25 +68,6 @@ export function EditRentalSheet({
             onSelect={viewModel.onSelectPaymentMethod}
           />
 
-          {viewModel.isMixedPaymentEnabled && (
-            <>
-              <MixedPaymentToggleButton
-                isMixedPayment={viewModel.isMixedPayment}
-                onToggle={viewModel.onToggleMixedPayment}
-              />
-              {viewModel.isMixedPayment && (
-                <RentalMixedPaymentFields
-                  amount={viewModel.split1Amount}
-                  secondaryMethod={viewModel.split2Method}
-                  selectedPaymentMethod={viewModel.selectedPaymentMethod}
-                  onAmountChange={viewModel.onChangeSplit1Amount}
-                  onSecondaryMethodChange={viewModel.onSelectSplit2Method}
-                  totalBs={viewModel.totalBs}
-                />
-              )}
-            </>
-          )}
-
           <RentalDeliveryTimeSelector
             deliveryTime={viewModel.deliveryTime}
             timeSlots={viewModel.timeSlots}
@@ -114,30 +81,65 @@ export function EditRentalSheet({
             onSelect={viewModel.onSelectDeliveryFee}
           />
 
+          <EditRentalStatusPaymentCard
+            statusOptions={viewModel.statusOptions}
+            status={viewModel.status}
+            onChangeStatus={viewModel.onChangeStatus}
+            paymentStatus={viewModel.isPaid ? 'paid' : 'pending'}
+            onChangePaymentStatus={viewModel.onChangePaymentStatus}
+            isPaid={viewModel.isPaid}
+            paidDateLabel={viewModel.paidDateLabel}
+            datePaid={viewModel.datePaid}
+            onChangeDatePaid={viewModel.onChangeDatePaid}
+            isCalendarOpen={viewModel.isCalendarOpen}
+            onCalendarOpenChange={viewModel.setIsCalendarOpen}
+          />
+
           <RentalCustomerSection
             customers={viewModel.customers}
             selectedCustomerId={viewModel.selectedCustomerId || null}
             customerName={viewModel.customerName}
             customerPhone={viewModel.customerPhone}
             customerAddress={viewModel.customerAddress}
-            onSelectCustomer={(customerId) => {
-              if (!customerId) {
-                viewModel.onChangeCustomerName('');
-                viewModel.onChangeCustomerPhone('');
-                viewModel.onChangeCustomerAddress('');
-                return;
-              }
-              viewModel.onSelectCustomer(customerId);
-            }}
+            onSelectCustomer={(customerId) =>
+              viewModel.onSelectCustomer(customerId ?? '')
+            }
             onCreateNewCustomer={() => {
               viewModel.onChangeCustomerName('');
               viewModel.onChangeCustomerPhone('');
               viewModel.onChangeCustomerAddress('');
+              viewModel.onSelectCustomer('');
             }}
             onChangeCustomerName={viewModel.onChangeCustomerName}
             onChangeCustomerPhone={viewModel.onChangeCustomerPhone}
             onChangeCustomerAddress={viewModel.onChangeCustomerAddress}
           />
+
+          <TipCaptureCard
+            enabled={viewModel.tipEnabled}
+            amount={viewModel.tipAmount}
+            paymentMethod={viewModel.tipPaymentMethod}
+            notes={viewModel.tipNotes}
+            onToggle={viewModel.onToggleTip}
+            onAmountChange={viewModel.onChangeTipAmount}
+            onPaymentMethodChange={viewModel.onChangeTipPaymentMethod}
+            onNotesChange={viewModel.onChangeTipNotes}
+          />
+
+          {viewModel.isMixedPaymentEnabled && (
+            <MixedPaymentCard
+              isMixedPayment={viewModel.isMixedPayment}
+              onToggle={viewModel.onToggleMixedPayment}
+              primaryMethod={viewModel.selectedPaymentMethod}
+              secondaryMethod={viewModel.split2Method}
+              amountInput={viewModel.split1Amount}
+              totalBs={viewModel.totalBs}
+              variant="grid"
+              amountInputMode="secondary"
+              onAmountInputChange={viewModel.onChangeSplit1Amount}
+              onSecondaryMethodChange={viewModel.onSelectSplit2Method}
+            />
+          )}
 
           <RentalNotesSection
             notes={viewModel.notes}
@@ -146,6 +148,8 @@ export function EditRentalSheet({
         </div>
 
         <RentalSheetFooter
+          subtotalUsdText={viewModel.subtotalUsdText}
+          tipAmountBs={viewModel.tipAmountBs}
           totalUsdText={viewModel.totalUsdText}
           isSaving={viewModel.isLoading}
           onSubmit={viewModel.onSubmit}

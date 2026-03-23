@@ -25,7 +25,7 @@ export function RentalMixedPaymentFields({
       amountInput={amount}
       totalBs={totalBs}
       variant="select"
-      amountInputMode="primary"
+      amountInputMode="secondary"
       onAmountInputChange={onAmountChange}
       onSecondaryMethodChange={onSecondaryMethodChange}
     />

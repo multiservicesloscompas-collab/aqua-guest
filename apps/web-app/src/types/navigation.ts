@@ -8,6 +8,7 @@ export type AppRoute =
   | 'dashboard'
   | 'ventas'
   | 'alquiler'
+  | 'propinas'
   | 'egresos'
   | 'clientes'
   | 'lavadoras'
@@ -49,8 +50,8 @@ export const routeToModule: Partial<Record<AppRoute, ModuleRoute>> = {
   ventas: 'agua',
   'metricas-agua': 'agua',
   prepagados: 'agua',
-  'config-precios-agua': 'agua',
   alquiler: 'lavadoras',
+  propinas: 'finanzas',
   'lavadoras-metricas': 'lavadoras',
   lavadoras: 'lavadoras',
   seguimiento: 'lavadoras',
@@ -63,6 +64,8 @@ export const routeToModule: Partial<Record<AppRoute, ModuleRoute>> = {
   'egresos-metricas': 'finanzas',
   'equilibrio-pagos': 'finanzas',
   'config-tasa-cambio': 'configuracion',
+  'config-precios-agua': 'configuracion',
+  'config': 'configuracion',
   'historial-tasas': 'configuracion',
   dashboard: 'dashboard',
   'transacciones-hoy': 'dashboard',

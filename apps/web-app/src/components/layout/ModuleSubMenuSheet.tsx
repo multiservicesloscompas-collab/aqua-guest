@@ -1,10 +1,11 @@
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet';
-import { ChevronRight } from 'lucide-react';
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerClose,
+} from '@/components/ui/drawer';
+import { ChevronRight, X } from 'lucide-react';
 import type { AppRoute, ModuleRoute } from '@/types';
 import { cn } from '@/lib/utils';
 import { moduleSubItems } from './navigationItems';
@@ -45,13 +46,18 @@ export function ModuleSubMenuSheet({
   if (items.length === 0) return null;
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="h-auto max-h-[70vh] rounded-t-3xl">
-        <SheetHeader className="pb-4">
-          <SheetTitle className="text-lg">{title}</SheetTitle>
-        </SheetHeader>
+    <Drawer open={open} onOpenChange={onOpenChange}>
+      <DrawerContent className="h-auto max-h-[75vh] rounded-t-3xl flex flex-col">
+        <DrawerClose className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-secondary z-10">
+          <X className="h-4 w-4" />
+          <span className="sr-only">Cerrar</span>
+        </DrawerClose>
 
-        <div className="space-y-2 overflow-y-auto pb-8">
+        <DrawerHeader className="pb-4 shrink-0">
+          <DrawerTitle className="text-lg">{title}</DrawerTitle>
+        </DrawerHeader>
+
+        <div className="space-y-2 overflow-y-auto px-4 pb-8 flex-1">
           {items.map(({ route, label, icon: Icon }) => {
             const isActive = currentRoute === route;
             return (
@@ -95,7 +101,7 @@ export function ModuleSubMenuSheet({
             );
           })}
         </div>
-      </SheetContent>
-    </Sheet>
+      </DrawerContent>
+    </Drawer>
   );
 }

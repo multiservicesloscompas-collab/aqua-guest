@@ -24,6 +24,7 @@ interface SaleMixedPaymentFieldsProps {
   amountInputMode: 'primary' | 'secondary';
   onAmountInputChange: (value: string) => void;
   onSecondaryMethodChange: (value: PaymentMethod) => void;
+  hideHeader?: boolean;
 }
 
 const methodIcons: Record<PaymentMethod, LucideIcon> = {
@@ -49,6 +50,7 @@ export function SaleMixedPaymentFields({
   amountInputMode,
   onAmountInputChange,
   onSecondaryMethodChange,
+  hideHeader,
 }: SaleMixedPaymentFieldsProps) {
   const secondaryMethods = paymentMethods.filter(
     (method) => method !== primaryMethod
@@ -64,28 +66,32 @@ export function SaleMixedPaymentFields({
     amountInputMode === 'secondary' ? clampedInput : totalBs - clampedInput;
 
   return (
-    <div className="space-y-3">
-      <p className="text-sm font-semibold text-foreground">Pago mixto</p>
-      <input
-        id="mixed-payment-amount-input"
-        type="number"
-        min="0"
-        max={totalBs}
-        step="0.01"
-        value={amountInput}
-        onChange={(event) => onAmountInputChange(event.target.value)}
-        className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
-        aria-label={
-          amountInputMode === 'secondary'
+    <div className="space-y-4">
+      {!hideHeader && (
+        <p className="text-sm font-semibold text-foreground">Pago mixto</p>
+      )}
+      
+      <div className="space-y-2">
+        <label
+          htmlFor="mixed-payment-amount-input"
+          className="text-xs font-medium text-muted-foreground"
+        >
+          {amountInputMode === 'secondary'
             ? 'Monto método secundario (Bs)'
-            : 'Monto método principal (Bs)'
-        }
-        placeholder={
-          amountInputMode === 'secondary'
-            ? 'Monto método secundario (Bs)'
-            : 'Monto método principal (Bs)'
-        }
-      />
+            : 'Monto método principal (Bs)'}
+        </label>
+        <input
+          id="mixed-payment-amount-input"
+          type="number"
+          min="0"
+          max={totalBs}
+          step="0.01"
+          value={amountInput}
+          onChange={(event) => onAmountInputChange(event.target.value)}
+          className="flex h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+          placeholder="0.00"
+        />
+      </div>
 
       {variant === 'grid' ? (
         <div className="grid grid-cols-3 gap-2">
@@ -99,7 +105,7 @@ export function SaleMixedPaymentFields({
                 aria-label={`Método secundario ${PaymentMethodLabels[method]}`}
                 aria-pressed={secondaryMethod === method}
                 className={cn(
-                  'flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all',
+                  'flex flex-col items-center justify-center gap-1 h-14 rounded-xl border-2 transition-all',
                   secondaryMethod === method
                     ? 'border-primary bg-primary/10'
                     : 'border-border bg-card hover:border-primary/50'

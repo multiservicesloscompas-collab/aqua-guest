@@ -29,6 +29,7 @@ import { EntregasMetricsPage } from '@/pages/EntregasMetricsPage/index';
 import { ClientesMetricsPage } from '@/pages/ClientesMetricsPage/index';
 import { TopClientsPage } from '@/pages/TopClientsPage/index';
 import { EgresosMetricsPage } from '@/pages/EgresosMetricsPage/index';
+import { TipsPage } from '@/pages/TipsPage';
 import { AppRoute, PaymentMethod } from '@/types';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { useViewportMode } from '@/hooks/responsive/useViewportMode';
@@ -53,6 +54,7 @@ const routeHeaderMap: Record<AppRoute, RouteHeader> = {
   dashboard: { title: 'AquaGest', subtitle: 'Panel de Control' },
   ventas: { title: 'Venta de Agua', subtitle: 'Gestión de registros' },
   alquiler: { title: 'Alquiler de Lavadoras' },
+  propinas: { title: 'Propinas', subtitle: 'Gestión y pagos' },
   egresos: { title: 'Egresos', subtitle: 'Registro de gastos' },
   clientes: { title: 'Clientes' },
   lavadoras: { title: 'Lavadoras', subtitle: 'Gestión de máquinas' },
@@ -155,6 +157,8 @@ const Index = () => {
         return <WaterSalesPage />;
       case 'alquiler':
         return <RentalsPage />;
+      case 'propinas':
+        return <TipsPage />;
       case 'clientes':
         return <CustomersPage />;
       case 'lavadoras':

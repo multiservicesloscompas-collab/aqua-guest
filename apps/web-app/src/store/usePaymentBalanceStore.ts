@@ -23,6 +23,16 @@ import {
   type PaymentBalanceRow,
   rowToTransaction,
 } from './usePaymentBalanceStore.core';
+import {
+  hasAmountUpdates,
+  normalizeTransactionDraft,
+} from './paymentBalanceDraft';
+import {
+  applyLocalTransactionUpdate,
+  assignUpdatePayloadFromNormalized,
+  assignUpdatePayloadFromUpdates,
+  toDraftInput,
+} from './paymentBalanceStoreHelpers';
 
 // Re-export types so existing import paths continue to work
 export type {
@@ -43,10 +53,24 @@ export const usePaymentBalanceStore = create<PaymentBalanceState>()(
 
       addPaymentBalanceTransaction: async (transaction) => {
         try {
+          const normalized = normalizeTransactionDraft(transaction);
+
           if (!window.navigator.onLine) {
             const now = new Date().toISOString();
             const offlineTransaction = enqueueOfflinePaymentBalanceCreate(
-              transaction,
+              {
+                ...transaction,
+                operationType: normalized.operation_type,
+                amount: normalized.amount,
+                amountBs: normalized.amount_bs,
+                amountUsd: normalized.amount_usd,
+                amountOutBs: normalized.amount_out_bs,
+                amountOutUsd: normalized.amount_out_usd,
+                amountInBs: normalized.amount_in_bs,
+                amountInUsd: normalized.amount_in_usd,
+                differenceBs: normalized.difference_bs,
+                differenceUsd: normalized.difference_usd,
+              },
               { createdAt: now, updatedAt: now }
             );
             set((state) => ({
@@ -60,12 +84,19 @@ export const usePaymentBalanceStore = create<PaymentBalanceState>()(
 
           const payload: PaymentBalanceInsertPayload = {
             date: transaction.date,
+            operation_type: normalized.operation_type,
             from_method: transaction.fromMethod,
             to_method: transaction.toMethod,
-            amount: transaction.amount,
-            amount_bs: transaction.amountBs,
-            amount_usd: transaction.amountUsd,
-            notes: transaction.notes,
+            amount: normalized.amount,
+            amount_bs: normalized.amount_bs,
+            amount_usd: normalized.amount_usd,
+            amount_out_bs: normalized.amount_out_bs,
+            amount_out_usd: normalized.amount_out_usd,
+            amount_in_bs: normalized.amount_in_bs,
+            amount_in_usd: normalized.amount_in_usd,
+            difference_bs: normalized.difference_bs,
+            difference_usd: normalized.difference_usd,
+            notes: normalized.notes,
           };
           const { data, error } = await supabase
             .from('payment_balance_transactions')
@@ -93,12 +124,45 @@ export const usePaymentBalanceStore = create<PaymentBalanceState>()(
       updatePaymentBalanceTransaction: async (id, updates) => {
         try {
           const updatedAt = new Date().toISOString();
+          const current = get().paymentBalanceTransactions.find(
+            (transaction) => transaction.id === id
+          );
+          const resetDifference = hasAmountUpdates(updates);
+          const merged = current
+            ? {
+                ...current,
+                ...updates,
+                ...(resetDifference && updates.differenceBs === undefined
+                  ? { differenceBs: undefined }
+                  : {}),
+                ...(resetDifference && updates.differenceUsd === undefined
+                  ? { differenceUsd: undefined }
+                  : {}),
+              }
+            : undefined;
+          const normalized = merged
+            ? normalizeTransactionDraft(toDraftInput(merged))
+            : undefined;
 
           if (!window.navigator.onLine) {
-            enqueueOfflinePaymentBalanceUpdate(id, updates, updatedAt);
+            enqueueOfflinePaymentBalanceUpdate(
+              id,
+              updates,
+              updatedAt,
+              'paymentBalance/updatePaymentBalanceTransaction',
+              current
+            );
             set((state) => ({
               paymentBalanceTransactions: state.paymentBalanceTransactions.map(
-                (t) => (t.id === id ? { ...t, ...updates, updatedAt } : t)
+                (t) =>
+                  t.id === id
+                    ? applyLocalTransactionUpdate(
+                        t,
+                        updates,
+                        normalized,
+                        updatedAt
+                      )
+                    : t
               ),
             }));
             return;
@@ -107,17 +171,11 @@ export const usePaymentBalanceStore = create<PaymentBalanceState>()(
           const payload: PaymentBalanceUpdatePayload = {
             updated_at: updatedAt,
           };
-          if (updates.fromMethod !== undefined)
-            payload.from_method = updates.fromMethod;
-          if (updates.toMethod !== undefined)
-            payload.to_method = updates.toMethod;
-          if (updates.amount !== undefined) payload.amount = updates.amount;
-          if (updates.amountBs !== undefined)
-            payload.amount_bs = updates.amountBs;
-          if (updates.amountUsd !== undefined)
-            payload.amount_usd = updates.amountUsd;
-          if (updates.notes !== undefined) payload.notes = updates.notes;
-          if (updates.date !== undefined) payload.date = updates.date;
+          assignUpdatePayloadFromUpdates(payload, updates);
+
+          if (normalized !== undefined && hasAmountUpdates(updates)) {
+            assignUpdatePayloadFromNormalized(payload, normalized);
+          }
 
           const { error } = await supabase
             .from('payment_balance_transactions')
@@ -127,7 +185,15 @@ export const usePaymentBalanceStore = create<PaymentBalanceState>()(
 
           set((state) => ({
             paymentBalanceTransactions: state.paymentBalanceTransactions.map(
-              (t) => (t.id === id ? { ...t, ...updates, updatedAt } : t)
+              (t) =>
+                t.id === id
+                  ? applyLocalTransactionUpdate(
+                      t,
+                      updates,
+                      normalized,
+                      updatedAt
+                    )
+                  : t
             ),
           }));
         } catch (err) {

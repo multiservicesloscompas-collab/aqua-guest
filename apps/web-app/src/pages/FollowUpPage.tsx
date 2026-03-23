@@ -17,7 +17,25 @@ import { WasherRental } from '@/types';
 import { FollowUpFiltersCard } from './FollowUpPage/components/FollowUpFiltersCard';
 import { FollowUpPrioritizedList } from './FollowUpPage/components/FollowUpPrioritizedList';
 
-type PaymentFilter = 'paid' | 'unpaid';
+type FollowUpFilter = 'in-progress' | 'unpaid';
+
+type IndexedRental = {
+  rental: WasherRental;
+  index: number;
+};
+
+function dedupeRentalsById(indexedRentals: IndexedRental[]) {
+  const seenIds = new Set<string>();
+
+  return indexedRentals.filter(({ rental }) => {
+    if (seenIds.has(rental.id)) {
+      return false;
+    }
+
+    seenIds.add(rental.id);
+    return true;
+  });
+}
 
 export function FollowUpPage() {
   const { isTabletViewport } = useViewportMode();
@@ -27,25 +45,25 @@ export function FollowUpPage() {
   const [selectedRental, setSelectedRental] = useState<WasherRental | null>(
     null
   );
-  const [paymentFilter, setPaymentFilter] = useState<PaymentFilter | 'all'>(
+  const [paymentFilter, setPaymentFilter] = useState<FollowUpFilter | 'all'>(
     'all'
   );
 
   const filteredRentals = useMemo(() => {
-    return rentals
-      .map((rental, index) => ({ rental, index }))
-      .filter(({ rental }) => {
-        if (rental.status === 'finalizado') {
-          return false;
-        }
+    const indexedRentals = rentals.map((rental, index) => ({ rental, index }));
+    const inProgressRentals = indexedRentals.filter(
+      ({ rental }) => rental.status !== 'finalizado'
+    );
+    const unpaidRentals = indexedRentals.filter(({ rental }) => !rental.isPaid);
 
-        const paymentKey: PaymentFilter = rental.isPaid ? 'paid' : 'unpaid';
+    const filteredBySelection =
+      paymentFilter === 'in-progress'
+        ? inProgressRentals
+        : paymentFilter === 'unpaid'
+        ? unpaidRentals
+        : dedupeRentalsById([...inProgressRentals, ...unpaidRentals]);
 
-        const matchesPayment =
-          paymentFilter === 'all' || paymentFilter === paymentKey;
-
-        return matchesPayment;
-      })
+    return dedupeRentalsById(filteredBySelection)
       .sort((a, b) => {
         const priorityA = !a.rental.isPaid
           ? 0

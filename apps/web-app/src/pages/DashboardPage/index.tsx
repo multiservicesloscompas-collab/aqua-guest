@@ -4,7 +4,6 @@ import { TabletSplitLayout } from '@/components/layout/TabletSplitLayout';
 import { TabletSectionGrid } from '@/components/layout/TabletSectionGrid';
 import { KpiCard } from '@/components/ui/KpiCard';
 import { SalesChart } from '@/components/dashboard/SalesChart';
-import { RecentSales } from '@/components/dashboard/RecentSales';
 import { useViewportMode } from '@/hooks/responsive/useViewportMode';
 import { useAppStore } from '@/store/useAppStore';
 import { usePrepaidStore } from '@/store/usePrepaidStore';
@@ -13,6 +12,7 @@ import { useExpenseStore } from '@/store/useExpenseStore';
 import { usePaymentBalanceStore } from '@/store/usePaymentBalanceStore';
 import { useConfigStore } from '@/store/useConfigStore';
 import { useRentalStore } from '@/store/useRentalStore';
+import { useTipStore } from '@/store/useTipStore';
 import { DateSelector } from '@/components/ventas/DateSelector';
 import { Droplets } from 'lucide-react';
 import { AppRoute, PaymentMethod } from '@/types';
@@ -45,16 +45,17 @@ export function DashboardPage({
   const { paymentBalanceTransactions } = usePaymentBalanceStore();
   const { config } = useConfigStore();
   const { rentals, loadRentalsByDateRange } = useRentalStore();
+  const { tipPayouts, loadTipsByDateRange } = useTipStore();
   const [currency, setCurrency] = useState<'Bs' | 'USD'>('Bs');
   const { loading } = useDashboardData(selectedDate, {
     loadSalesByDateRange,
     loadExpensesByDateRange,
     loadRentalsByDateRange,
+    loadTipsByDateRange,
   });
 
   const {
     weekData,
-    selectedSales,
     activeIndex,
     kpiValues,
     kpiPrimary,
@@ -68,6 +69,7 @@ export function DashboardPage({
     expenses,
     prepaidOrders,
     paymentBalanceTransactions,
+    tipPayouts,
     currency,
   });
 
@@ -122,7 +124,6 @@ export function DashboardPage({
                     onPaymentMethodClick={onPaymentMethodClick}
                   />
                 ) : null}
-                <RecentSales sales={selectedSales} />
                 <SalesChart data={weekData} activeIndex={activeIndex} />
               </div>
             }
@@ -150,9 +151,6 @@ export function DashboardPage({
               items={paymentMethodItems}
               onPaymentMethodClick={onPaymentMethodClick}
             />
-
-            {/* Ventas recientes */}
-            <RecentSales sales={selectedSales} />
 
             {/* Gráfica de la semana */}
             <SalesChart data={weekData} activeIndex={activeIndex} />

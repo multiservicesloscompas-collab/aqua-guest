@@ -27,9 +27,17 @@ Manage the rental of washing machines by scheduling shifts (medio, completo, dob
 - **`RentalList` (`src/components/alquiler/RentalList.tsx`)**: Renders `RentalCard` components with status and payment toggles.
 - **Cards split-aware (registros):** `RentalList` + `RentalCardDetails` usan un read-model de presentación para mostrar `Pago mixto` con líneas por método y montos Bs/USD cuando existen `paymentSplits` válidos; si no, conservan el fallback legacy por `paymentMethod`.
 - **`RentalSheet` (`src/components/alquiler/RentalSheet.tsx`)**: Bottom sheet to create a new rental. Includes `CustomerSearch`, machine selection, shift, delivery fee, and auto-calculated pickup time.
+- **Regla UX de estado en creacion:** en `RentalSheet` el estado de entrega es fijo en `Agendado` y se muestra como valor estatico (sin selector). Los cambios de estado (`Agendado` -> `Enviado` -> `Finalizado`) se realizan en `EditRentalSheet` y seguimiento operativo.
 - **`EditRentalSheet` (`src/components/alquiler/EditRentalSheet.tsx`)**: Bottom sheet to modify an existing rental (status, payment, machine, delivery time).
+- **Propinas en crear/editar alquiler:** `RentalSheet` y `EditRentalSheet` renderizan `TipCaptureCard` con el mismo contrato UX de ventas (monto Bs separado, metodo de captura propio y nota opcional). El write-path persiste por `originType: 'rental'` + `originId` para mantener trazabilidad y evitar doble conteo financiero.
+- **Hidratación de propina en edición (fix):** `EditRentalSheet` resuelve la propina existente por origen (`originType: 'rental'`, `originId = rental.id`) al abrir/alternar registros. Si existe tip, el bloque se muestra preactivado y prellenado (monto/metodo/nota). Si no existe, conserva estado por defecto (`Agregar propina`).
+- **Determinismo open/close/switch (fix):** la hidratación de propina en edición aplica guardas anti-race para evitar arrastre visual de datos al cambiar rápido de registro (A→B) o al reabrir/cerrar el sheet.
+- **Default UX de propina en alquiler:** al activar `Agregar propina` en crear/editar, el método de captura se sincroniza por defecto con el método principal de pago seleccionado en el formulario.
+- **Regla de total final con propina (rebaseline v2):** en create/update de alquiler, el total transaccional persiste como `totalUsd = subtotalUsd + (propinaBs / exchangeRate)` y los splits se ajustan para incluir la propina en el método de captura.
+- **Desglose UI:** crear/editar y cards muestran `Subtotal + Propina = Total final` manteniendo jerarquía visual existente.
 - **Activación de pago mixto (crear/editar):** cuando `isMixedPaymentEnabled('rentals')` está activo en configuración, ambos sheets muestran primero un botón CTA de "Pago mixto" (mismo tono y presentación de Agua) y solo revelan los campos de reparto al activarlo; al desactivar, se limpia el monto editable para evitar arrastre de input previo.
 - **Consistencia visual/jerárquica Agua ↔ Alquiler:** crear y editar reutilizan el bloque compartido `SaleMixedPaymentFields` (variante `select`), unificando microcopy (`Pago mixto`, `Monto método principal/secundario`, `Método secundario`), espaciado y jerarquía textual sin alterar reglas de cálculo o persistencia.
+- **Hidratación unificada en edición (fix global):** `EditRentalSheet` ahora usa el mismo resolver compartido de Agua (`paymentSplitFormHydration`) para prefill de pago mixto (método principal/secundario + monto editable del método secundario), eliminando divergencia entre módulos cuando `paymentMethod` legacy no coincide con los splits persistidos.
 - **`ExtensionDialog` (`src/components/alquiler/ExtensionDialog.tsx`)**: Dialog to extend a rental period, auto-recalculating the new pickup time and additional fee.
 - **`FollowUpPage` (`src/pages/FollowUpPage.tsx`)**: Consolidates rentals requiring attention (unpaid, scheduled, in progress).
 - **`DeliverysPage` (`src/pages/DeliverysPage.tsx`)**: Historical view of rentals with a delivery fee > 0.
@@ -44,8 +52,9 @@ Manage the rental of washing machines by scheduling shifts (medio, completo, dob
 
 ## 📱 Responsive Secondary Flows (Phase 4)
 
-- `FollowUpPage` muestra una sola lista de alquileres no finalizados, sin secciones visuales separadas, con orden de prioridad fijo: `No pagadas` -> `Enviadas` -> `Agendadas`.
-- `FollowUpPage` usa una sola card de filtro por estado de pago (`Todos`, `No pagadas`, `Pagadas`), aplicada sobre el conjunto base de alquileres no finalizados.
+- `FollowUpPage` muestra una sola lista priorizada sin secciones visuales separadas, con orden fijo: `No pagadas` -> `Enviadas` -> `Agendadas`.
+- `FollowUpPage` usa filtros `Todos`, `En proceso` y `Por pagar` con estas reglas: `En proceso` = `status !== 'finalizado'`; `Por pagar` = `isPaid === false`; `Todos` = unión de ambos conjuntos.
+- Regla de integridad en seguimiento: cuando un alquiler pertenece a ambos conjuntos (por ejemplo, no finalizado y no pagado), `FollowUpPage` hace dedupe explícito por `rental.id` para evitar duplicados en la lista final.
 - En tablet y mobile se conserva `TabletSplitLayout`/stack responsive, manteniendo el look & feel existente de la app.
 - Se reutiliza `ExtensionDialog` sin cambios funcionales; la adaptacion es solo de distribucion visual.
 - `DeliverysPage` en tablet mantiene `DeliveryFiltersCard` en columna principal y `DeliveryStatsGrid` en columna secundaria, pero el `DeliveryListSection` se renderiza despues del bloque de metricas para conservar el listado como ultima seccion del flujo.

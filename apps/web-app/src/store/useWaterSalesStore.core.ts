@@ -4,6 +4,7 @@
  * No Zustand or Supabase dependencies — pure TypeScript.
  */
 import { CartItem, PaymentMethod, Sale } from '@/types';
+import type { TipCaptureInput } from '@/types/tips';
 import type { PaymentSplit } from '@/types/paymentSplits';
 
 // ─── Row / Insert / Update shapes ────────────────────────────────────────────
@@ -60,9 +61,14 @@ export interface WaterSalesState {
     paymentMethod: PaymentMethod,
     selectedDate: string,
     notes?: string,
-    paymentSplits?: PaymentSplit[]
+    paymentSplits?: PaymentSplit[],
+    tipInput?: TipCaptureInput
   ) => Promise<Sale>;
-  updateSale: (id: string, updates: Partial<Sale>) => Promise<void>;
+  updateSale: (
+    id: string,
+    updates: Partial<Sale>,
+    tipInput?: TipCaptureInput | null
+  ) => Promise<void>;
   deleteSale: (id: string) => Promise<void>;
 
   getSalesByDate: (date: string) => Sale[];

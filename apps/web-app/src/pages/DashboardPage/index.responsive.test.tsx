@@ -84,9 +84,6 @@ vi.mock('./components/QuickActionsCards', () => ({
 vi.mock('./components/PaymentMethodSummary', () => ({
   PaymentMethodSummary: () => <div>Summary</div>,
 }));
-vi.mock('@/components/dashboard/RecentSales', () => ({
-  RecentSales: () => <div>Recent</div>,
-}));
 vi.mock('@/components/dashboard/SalesChart', () => ({
   SalesChart: () => <div>Chart</div>,
 }));

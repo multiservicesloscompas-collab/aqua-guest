@@ -1,26 +1,17 @@
-/**
- * useRentalStore.actions.ts
- * Extracted async action implementations for the rental Zustand store.
- * Each function accepts Zustand's set/get so they can be used inside create().
- */
 import supabase from '@/lib/supabaseClient';
 import { WasherRental } from '@/types';
-import { preparePaymentWritePayload } from '@/services/payments/paymentSplitWritePath';
 import { rentalsDataService } from '@/services/RentalsDataService';
 import {
   enqueueOfflineRental,
   enqueueOfflineRentalDelete,
   enqueueOfflineRentalPaymentSplitsDelete,
-  enqueueOfflineRentalPaymentSplitsReplace,
-  enqueueOfflineRentalUpdate,
+  enqueueOfflineRentalTipDelete,
 } from '@/offline/enqueue/rentalsEnqueue';
 import { useCustomerStore } from './useCustomerStore';
 import {
   type RentalState,
   type RentalRow,
   type RentalInsert,
-  type RentalUpdate,
-  type CustomerUpdate,
   buildRentalWriteContext,
   mapRentalRowToWasherRental,
 } from './useRentalStore.core';
@@ -28,6 +19,12 @@ import {
   replaceRentalSplits,
   fetchRentalSplits,
 } from './useRentalStore.supabase';
+import type { TipCaptureInput } from '@/types/tips';
+import {
+  calculateFinalRentalTotals,
+  mergeTipIntoPaymentSplits,
+} from '@/services/transactions/transactionTotals';
+export { updateRentalAction } from './useRentalStore.actions.update';
 
 type SetFn = (
   partial: Partial<RentalState> | ((state: RentalState) => Partial<RentalState>)
@@ -36,9 +33,10 @@ type GetFn = () => RentalState;
 
 export async function addRentalAction(
   rental: Omit<WasherRental, 'id' | 'createdAt' | 'updatedAt'>,
+  tipInput: TipCaptureInput | undefined,
   set: SetFn,
   _get: GetFn
-): Promise<void> {
+): Promise<WasherRental> {
   try {
     let customerId = rental.customerId;
 
@@ -47,8 +45,9 @@ export async function addRentalAction(
         throw new Error('Nombre de cliente requerido para crear el alquiler');
       }
       const customerState = useCustomerStore.getState();
+      const normalizedCustomerName = rental.customerName.toLowerCase();
       const existingCustomer = customerState.customers.find(
-        (c) => c.name.toLowerCase() === rental.customerName!.toLowerCase()
+        (c) => c.name.toLowerCase() === normalizedCustomerName
       );
       if (existingCustomer) {
         customerId = existingCustomer.id;
@@ -81,10 +80,27 @@ export async function addRentalAction(
 
     if (!customerId) throw new Error('Customer ID is required for rental');
 
+    const exchangeRate =
+      rental.paymentSplits?.find((split) => split.exchangeRateUsed)
+        ?.exchangeRateUsed ?? 1;
+    const finalTotals = calculateFinalRentalTotals({
+      principalUsd: rental.totalUsd,
+      tipAmountBs: tipInput?.amountBs,
+      exchangeRate,
+    });
+
     const splitWrite = buildRentalWriteContext({
       paymentMethod: rental.paymentMethod,
-      paymentSplits: rental.paymentSplits,
-      totalUsd: rental.totalUsd,
+      paymentSplits: mergeTipIntoPaymentSplits({
+        paymentSplits: rental.paymentSplits,
+        fallbackMethod: rental.paymentMethod,
+        tipAmountBs: tipInput?.amountBs ?? 0,
+        tipPaymentMethod:
+          tipInput?.capturePaymentMethod ?? rental.paymentMethod,
+        exchangeRate,
+        principalUsd: rental.totalUsd, // Pass principal amount
+      }),
+      totalUsd: finalTotals.totalUsd,
     });
 
     const payload: RentalInsert = {
@@ -96,7 +112,7 @@ export async function addRentalAction(
       pickup_time: rental.pickupTime,
       pickup_date: rental.pickupDate,
       delivery_fee: rental.deliveryFee,
-      total_usd: rental.totalUsd,
+      total_usd: finalTotals.totalUsd,
       payment_method: splitWrite.paymentMethod,
       status: rental.status,
       is_paid: rental.isPaid,
@@ -107,11 +123,11 @@ export async function addRentalAction(
     if (!window.navigator.onLine) {
       const offlineRental = enqueueOfflineRental({
         payload,
-        rental: { ...rental, customerId },
+        rental: { ...rental, customerId, totalUsd: finalTotals.totalUsd },
         paymentSplits: splitWrite.paymentSplits,
       });
       set((state) => ({ rentals: [...state.rentals, offlineRental] }));
-      return;
+      return offlineRental;
     }
 
     const { data, error } = await supabase
@@ -137,132 +153,9 @@ export async function addRentalAction(
     rentalsDataService.invalidateCache(rentalRow.date);
     if (rentalRow.date_paid)
       rentalsDataService.invalidateCache(rentalRow.date_paid);
+    return newRental;
   } catch (err) {
     console.error('Failed to add rental to Supabase', err);
-    throw err;
-  }
-}
-
-export async function updateRentalAction(
-  id: string,
-  updates: Partial<WasherRental>,
-  set: SetFn,
-  get: GetFn
-): Promise<void> {
-  try {
-    const payload: RentalUpdate = {};
-    const nowIso = new Date().toISOString();
-    const currentRental = get().rentals.find((r) => r.id === id);
-    if (!currentRental) throw new Error('Alquiler no encontrado');
-
-    let splitWrite: ReturnType<typeof preparePaymentWritePayload> | undefined;
-    if (
-      updates.paymentMethod !== undefined ||
-      updates.paymentSplits !== undefined ||
-      updates.totalUsd !== undefined
-    ) {
-      const totalUsd = updates.totalUsd ?? currentRental.totalUsd;
-      splitWrite = buildRentalWriteContext(
-        {
-          paymentMethod: updates.paymentMethod ?? currentRental.paymentMethod,
-          paymentSplits: updates.paymentSplits ?? currentRental.paymentSplits,
-          totalUsd,
-        },
-        currentRental.paymentSplits?.find((s) => s.exchangeRateUsed)
-          ?.exchangeRateUsed ?? 1
-      );
-    }
-
-    if (updates.machineId !== undefined) payload.machine_id = updates.machineId;
-    if (updates.shift !== undefined) payload.shift = updates.shift;
-    if (updates.date !== undefined) payload.date = updates.date;
-    if (updates.deliveryTime !== undefined)
-      payload.delivery_time = updates.deliveryTime;
-    if (updates.pickupTime !== undefined)
-      payload.pickup_time = updates.pickupTime;
-    if (updates.pickupDate !== undefined)
-      payload.pickup_date = updates.pickupDate;
-    if (updates.deliveryFee !== undefined)
-      payload.delivery_fee = updates.deliveryFee;
-    if (updates.totalUsd !== undefined) payload.total_usd = updates.totalUsd;
-    if (updates.paymentMethod !== undefined)
-      payload.payment_method =
-        splitWrite?.paymentMethod ?? updates.paymentMethod;
-    if (updates.status !== undefined) payload.status = updates.status;
-    if (updates.isPaid !== undefined) payload.is_paid = updates.isPaid;
-    if ('datePaid' in updates) payload.date_paid = updates.datePaid || null;
-    if (updates.notes !== undefined) payload.notes = updates.notes;
-    if (updates.customerId !== undefined)
-      payload.customer_id = updates.customerId;
-    payload.updated_at = nowIso;
-
-    const customerUpdates: CustomerUpdate = {};
-    if (updates.customerName !== undefined)
-      customerUpdates.name = updates.customerName;
-    if (updates.customerPhone !== undefined)
-      customerUpdates.phone = updates.customerPhone;
-    if (updates.customerAddress !== undefined)
-      customerUpdates.address = updates.customerAddress;
-
-    const applyLocal = () => {
-      set((state) => ({
-        rentals: state.rentals.map((rental) =>
-          rental.id === id
-            ? {
-                ...rental,
-                ...updates,
-                paymentMethod:
-                  splitWrite?.paymentMethod ??
-                  updates.paymentMethod ??
-                  rental.paymentMethod,
-                paymentSplits:
-                  splitWrite?.paymentSplits ??
-                  updates.paymentSplits ??
-                  rental.paymentSplits,
-                updatedAt: nowIso,
-              }
-            : rental
-        ),
-      }));
-    };
-    const invalidate = () => {
-      const r = get().rentals.find((r) => r.id === id);
-      if (!r) return;
-      rentalsDataService.invalidateCache(r.date);
-      if (r.datePaid) rentalsDataService.invalidateCache(r.datePaid);
-      if (updates.date && updates.date !== r.date)
-        rentalsDataService.invalidateCache(updates.date);
-      if (updates.datePaid && updates.datePaid !== r.datePaid)
-        rentalsDataService.invalidateCache(updates.datePaid);
-    };
-
-    if (!window.navigator.onLine) {
-      enqueueOfflineRentalUpdate({ id, payload });
-      if (splitWrite)
-        enqueueOfflineRentalPaymentSplitsReplace(id, splitWrite.paymentSplits);
-      applyLocal();
-      invalidate();
-      return;
-    }
-
-    if (Object.keys(customerUpdates).length > 0 && updates.customerId) {
-      const { error: customerError } = await supabase
-        .from('customers')
-        .update(customerUpdates)
-        .eq('id', updates.customerId);
-      if (customerError) throw customerError;
-    }
-
-    const { error } = await supabase
-      .from('washer_rentals')
-      .update(payload)
-      .eq('id', id);
-    if (error) throw error;
-    if (splitWrite) await replaceRentalSplits(id, splitWrite.paymentSplits);
-    applyLocal();
-    invalidate();
-  } catch (err) {
-    console.error('Failed to update rental in Supabase', err);
     throw err;
   }
 }
@@ -270,13 +163,15 @@ export async function updateRentalAction(
 export async function deleteRentalAction(
   id: string,
   set: SetFn,
-  get: GetFn
+  get: GetFn,
+  deleteTipByOrigin?: (originType: 'rental', originId: string) => Promise<void>
 ): Promise<void> {
   const rentalToDelete = get().rentals.find((r) => r.id === id);
   try {
     if (!window.navigator.onLine) {
       enqueueOfflineRentalDelete({ id });
       enqueueOfflineRentalPaymentSplitsDelete(id);
+      enqueueOfflineRentalTipDelete(id);
       set((state) => ({ rentals: state.rentals.filter((r) => r.id !== id) }));
       if (rentalToDelete) {
         rentalsDataService.invalidateCache(rentalToDelete.date);
@@ -285,6 +180,11 @@ export async function deleteRentalAction(
       }
       return;
     }
+
+    if (deleteTipByOrigin) {
+      await deleteTipByOrigin('rental', id);
+    }
+
     const { error } = await supabase
       .from('washer_rentals')
       .delete()

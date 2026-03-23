@@ -50,7 +50,10 @@ export function CustomerFormSheet({
         onOpenChange(isOpen);
       }}
     >
-      <SheetContent side="bottom" className="rounded-t-3xl">
+      <SheetContent
+        side="bottom"
+        className="rounded-t-3xl max-h-[90dvh] overflow-y-auto overscroll-contain touch-pan-y"
+      >
         <SheetHeader className="pb-4">
           <SheetTitle className="flex items-center gap-2">
             {editingCustomer ? (

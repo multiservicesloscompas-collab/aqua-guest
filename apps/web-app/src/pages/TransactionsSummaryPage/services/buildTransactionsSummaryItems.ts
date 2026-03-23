@@ -5,17 +5,21 @@ import type {
   PaymentMethod,
   PrepaidOrder,
   Sale,
+  TipPayout,
   WasherRental,
 } from '@/types';
 import type { PaymentSplit } from '@/types/paymentSplits';
 import { hasValidMixedPaymentSplits } from '@/services/payments/paymentSplitValidity';
+import { normalizeToVenezuelaDate } from '@/services/DateService';
+import { resolvePaymentBalanceTransferLegs } from '@/services/payments/paymentBalanceTransferSemantics';
 
 export type TransactionType =
   | 'sale'
   | 'rental'
   | 'expense'
   | 'prepaid'
-  | 'balance_transfer';
+  | 'balance_transfer'
+  | 'tip_payout';
 
 export interface TransactionItem {
   id: string;
@@ -38,6 +42,7 @@ interface BuildTransactionsSummaryInput {
   expenses: readonly Expense[];
   prepaidOrders: readonly PrepaidOrder[];
   paymentBalanceTransactions: readonly PaymentBalanceTransaction[];
+  tipPayouts?: readonly TipPayout[];
 }
 
 function hasPaymentSplits(
@@ -72,17 +77,18 @@ function toSplitItems(input: {
   }));
 }
 
-function resolveBalanceTransactionAmountBs(
-  transaction: PaymentBalanceTransaction,
-  exchangeRate: number
-): number {
-  if (transaction.amountBs !== undefined) {
-    return Number(transaction.amountBs);
+function dedupeTipPayoutsById(payouts: readonly TipPayout[]): TipPayout[] {
+  const byId = new Map<string, TipPayout>();
+  for (const payout of payouts) {
+    if (!byId.has(payout.id)) {
+      byId.set(payout.id, payout);
+    }
   }
-  if (transaction.amountUsd !== undefined) {
-    return Number(transaction.amountUsd) * exchangeRate;
-  }
-  return Number(transaction.amount);
+  return Array.from(byId.values());
+}
+
+function resolveTipPayoutDate(payout: TipPayout): string {
+  return normalizeToVenezuelaDate(payout.paidAt || payout.tipDate);
 }
 
 export function buildTransactionsSummaryItems(
@@ -96,6 +102,7 @@ export function buildTransactionsSummaryItems(
     expenses,
     prepaidOrders,
     paymentBalanceTransactions,
+    tipPayouts = [],
   } = input;
 
   const items: TransactionItem[] = [];
@@ -172,6 +179,24 @@ export function buildTransactionsSummaryItems(
   expenses
     .filter((expense) => expense.date === selectedDate)
     .forEach((expense) => {
+      if (hasPaymentSplits(expense.paymentSplits)) {
+        items.push(
+          ...toSplitItems({
+            baseId: expense.id,
+            type: 'expense',
+            title:
+              expense.category.charAt(0).toUpperCase() +
+              expense.category.slice(1),
+            subtitle: expense.description,
+            paymentSplits: expense.paymentSplits,
+            timestamp: expense.createdAt,
+            originalDate: expense.date,
+            isIncome: false,
+          })
+        );
+        return;
+      }
+
       items.push({
         id: expense.id,
         type: 'expense',
@@ -209,19 +234,57 @@ export function buildTransactionsSummaryItems(
   paymentBalanceTransactions
     .filter((transaction) => transaction.date === selectedDate)
     .forEach((transaction) => {
+      const { amountOutBs, amountInBs, differenceBs, operationType } =
+        resolvePaymentBalanceTransferLegs(transaction, exchangeRate);
+
       items.push({
         id: transaction.id,
         type: 'balance_transfer',
-        title: 'Ajuste de Caja',
+        title:
+          operationType === 'avance'
+            ? 'Avance entre Métodos'
+            : 'Ajuste de Caja',
         subtitle: `${PaymentMethodLabels[transaction.fromMethod]} ➔ ${
           PaymentMethodLabels[transaction.toMethod]
-        }`,
-        amountBs: resolveBalanceTransactionAmountBs(transaction, exchangeRate),
-        amountUsd: transaction.amountUsd,
+        } · Salida Bs ${amountOutBs.toLocaleString('es-VE', {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        })} · Entrada Bs ${amountInBs.toLocaleString('es-VE', {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        })} · Dif ${
+          differenceBs >= 0 ? '+' : ''
+        }Bs ${differenceBs.toLocaleString('es-VE', {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        })}`,
+        amountBs: amountInBs,
+        amountUsd: transaction.amountInUsd ?? transaction.amountUsd,
         isIncome: true,
-        paymentMethod: 'Transferencia',
+        paymentMethod:
+          operationType === 'avance'
+            ? 'Transferencia · Avance'
+            : 'Transferencia',
         timestamp: transaction.createdAt,
         originalDate: transaction.date,
+      });
+    });
+
+  dedupeTipPayoutsById(tipPayouts)
+    .filter((payout) => resolveTipPayoutDate(payout) === selectedDate)
+    .forEach((payout) => {
+      items.push({
+        id: payout.id,
+        type: 'tip_payout',
+        title: 'Pago de Propina',
+        subtitle:
+          payout.originType === 'sale' ? 'Origen: Venta' : 'Origen: Alquiler',
+        amountBs: payout.amountBs,
+        amountUsd: payout.amountBs / exchangeRate,
+        isIncome: false,
+        paymentMethod: PaymentMethodLabels[payout.paymentMethod],
+        timestamp: payout.paidAt,
+        originalDate: payout.tipDate,
       });
     });
 

@@ -4,6 +4,7 @@
  * No Zustand or Supabase dependencies — pure TypeScript.
  */
 import { Expense, PaymentMethod } from '@/types';
+import { PaymentSplitRow } from '@/services/payments/paymentSplitSchemaContract';
 
 // ─── Row / Insert / Update shapes ────────────────────────────────────────────
 
@@ -34,6 +35,8 @@ export type ExpenseRow = {
   payment_method?: PaymentMethod;
   notes?: string | null;
   created_at?: string;
+  expense_payment_splits?: PaymentSplitRow[];
+  payment_splits?: PaymentSplitRow[]; // Added for generic compatibility if needed
 };
 
 // ─── State interface ──────────────────────────────────────────────────────────

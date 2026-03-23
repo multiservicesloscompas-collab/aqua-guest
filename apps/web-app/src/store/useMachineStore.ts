@@ -21,6 +21,23 @@ interface MachineState {
   loadWashingMachines: () => Promise<void>;
 }
 
+type WashingMachineUpdatePayload = {
+  name?: string;
+  kg?: number;
+  brand?: string;
+  status?: WashingMachine['status'];
+  is_available?: boolean;
+};
+
+type WashingMachineRow = {
+  id: string;
+  name: string;
+  kg: number;
+  brand: string;
+  status: WashingMachine['status'];
+  is_available: boolean;
+};
+
 export const useMachineStore = create<MachineState>()(
   persist(
     (set, get) => ({
@@ -79,7 +96,7 @@ export const useMachineStore = create<MachineState>()(
             return;
           }
 
-          const payload: any = {};
+          const payload: WashingMachineUpdatePayload = {};
           if (updates.name !== undefined) payload.name = updates.name;
           if (updates.kg !== undefined) payload.kg = updates.kg;
           if (updates.brand !== undefined) payload.brand = updates.brand;
@@ -135,7 +152,7 @@ export const useMachineStore = create<MachineState>()(
             .select('*');
           if (error) throw error;
           if (data) {
-            const machines = data.map((m: any) => ({
+            const machines = (data as WashingMachineRow[]).map((m) => ({
               id: m.id,
               name: m.name,
               kg: m.kg,

@@ -172,4 +172,40 @@ describe('calculateDashboardMetrics split-aware behavior', () => {
       divisa: 100,
     });
   });
+
+  it('applies avance out/in semantics using explicit legs in dashboard totals', () => {
+    const paymentBalanceTransactions: PaymentBalanceTransaction[] = [
+      {
+        id: 'tx-avance-legs',
+        date: '2026-03-07',
+        operationType: 'avance',
+        fromMethod: 'pago_movil',
+        toMethod: 'efectivo',
+        amount: 100,
+        amountBs: 100,
+        amountOutBs: 80,
+        amountInBs: 75,
+        differenceBs: -5,
+        createdAt: '2026-03-07T12:00:00.000Z',
+        updatedAt: '2026-03-07T12:00:00.000Z',
+      },
+    ];
+
+    const result = calculateDashboardMetrics({
+      selectedDate: '2026-03-07',
+      exchangeRate: 50,
+      sales: [],
+      rentals: [],
+      expenses: EMPTY_EXPENSES,
+      prepaidOrders: EMPTY_PREPAID,
+      paymentBalanceTransactions,
+    });
+
+    expect(result.day.methodTotalsBs).toEqual({
+      efectivo: 75,
+      pago_movil: -80,
+      punto_venta: 0,
+      divisa: 0,
+    });
+  });
 });

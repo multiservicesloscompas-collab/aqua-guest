@@ -1,4 +1,3 @@
-import type { ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 
@@ -24,7 +23,17 @@ vi.mock('@/store/useAppStore', () => ({
 
 vi.mock('@/store/useExpenseStore', () => ({
   useExpenseStore: () => ({
-    getExpensesByDate: () => [{ id: 'e-1', amount: 10 }],
+    getExpensesByDate: () => [
+      {
+        id: 'e-1',
+        amount: 10,
+        date: '2026-03-08',
+        description: 'Gasto base',
+        category: 'operativo',
+        paymentMethod: 'efectivo',
+        createdAt: '2026-03-08T10:00:00.000Z',
+      },
+    ],
     loadExpensesByDate: vi.fn().mockResolvedValue(undefined),
     addExpense: vi.fn(),
     updateExpense: vi.fn(),
@@ -32,11 +41,45 @@ vi.mock('@/store/useExpenseStore', () => ({
   }),
 }));
 
+vi.mock('@/store/useTipStore', () => ({
+  useTipStore: () => ({
+    tipPayouts: [
+      {
+        id: 'tip-1',
+        tipDate: '2026-03-08',
+        paidAt: '2026-03-08T12:00:00.000Z',
+        paymentMethod: 'pago_movil',
+        amountBs: 15,
+        originType: 'sale',
+        originId: 'sale-1',
+      },
+    ],
+    loadTipsByDateRange: vi.fn().mockResolvedValue(undefined),
+  }),
+}));
+
 vi.mock('@/components/layout/Header', () => ({
   Header: () => <div>Header</div>,
 }));
 vi.mock('./ExpensesPage/components/ExpensesContent', () => ({
-  ExpensesContent: () => <div>ExpensesContent</div>,
+  ExpensesContent: ({
+    expenses,
+  }: {
+    expenses: Array<{ description: string; amount: number }>;
+  }) => (
+    <div>
+      ExpensesContent
+      <span data-testid="expenses-content-count">{expenses.length}</span>
+      <span data-testid="expenses-content-total">
+        {expenses.reduce((sum, expense) => sum + expense.amount, 0)}
+      </span>
+      <span data-testid="expenses-content-has-tip-payout">
+        {expenses.some((expense) => expense.description === 'Pago de Propina')
+          ? 'yes'
+          : 'no'}
+      </span>
+    </div>
+  ),
 }));
 vi.mock('./ExpensesPage/components/ExpensesTabletSidebar', () => ({
   ExpensesTabletSidebar: ({ dataTestId }: { dataTestId?: string }) => (
@@ -49,37 +92,14 @@ vi.mock('./ExpensesPage/components/ExpensesMobileHeaderControls', () => ({
 vi.mock('./ExpensesPage/components/ExpensesDayTotalCard', () => ({
   ExpensesDayTotalCard: () => <div>TotalCard</div>,
 }));
-vi.mock('./ExpensesPage/components/ExpenseSheetForm', () => ({
-  ExpenseSheetForm: () => <div>Form</div>,
-}));
-
-vi.mock('@/components/ui/sheet', () => ({
-  Sheet: ({ children }: { children: ReactNode }) => <div>{children}</div>,
-  SheetContent: ({
-    side,
-    tabletSide,
-    tabletClassName,
-    className,
-    children,
-  }: {
-    side?: string;
-    tabletSide?: string;
-    tabletClassName?: string;
-    className?: string;
-    children: ReactNode;
-  }) => (
+vi.mock('./ExpensesPage/components/ExpensesSheet', () => ({
+  ExpensesSheet: () => (
     <div
       data-testid="expense-sheet-content"
-      data-side={side}
-      data-tablet-side={tabletSide}
-      data-tablet-class={tabletClassName}
-      className={className}
-    >
-      {children}
-    </div>
+      data-side="bottom"
+      data-tablet-side="right"
+    />
   ),
-  SheetHeader: ({ children }: { children: ReactNode }) => <div>{children}</div>,
-  SheetTitle: ({ children }: { children: ReactNode }) => <h2>{children}</h2>,
 }));
 
 describe('ExpensesPage responsive secondary flow', () => {
@@ -102,6 +122,13 @@ describe('ExpensesPage responsive secondary flow', () => {
       'data-tablet-side',
       'right'
     );
+    expect(screen.getByTestId('expenses-content-count')).toHaveTextContent('2');
+    expect(screen.getByTestId('expenses-content-total')).toHaveTextContent(
+      '25'
+    );
+    expect(
+      screen.getByTestId('expenses-content-has-tip-payout')
+    ).toHaveTextContent('yes');
   });
 
   it('keeps mobile stack without tablet split under 768px', () => {
@@ -122,5 +149,8 @@ describe('ExpensesPage responsive secondary flow', () => {
       'data-side',
       'bottom'
     );
+    expect(
+      screen.getByTestId('expenses-content-has-tip-payout')
+    ).toHaveTextContent('yes');
   });
 });

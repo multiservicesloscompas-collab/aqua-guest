@@ -42,6 +42,12 @@ interface ConfigState {
   ) => void;
 }
 
+type LiterPricingRow = {
+  id: string;
+  breakpoint: number | string;
+  price: number | string;
+};
+
 export const useConfigStore = create<ConfigState>()(
   persist(
     (set, get) => ({
@@ -150,7 +156,8 @@ export const useConfigStore = create<ConfigState>()(
 
           const payload = pricing.map((p) => {
             const existing = existingPricing?.find(
-              (ep: any) => Number(ep.breakpoint) === Number(p.breakpoint)
+              (ep: LiterPricingRow) =>
+                Number(ep.breakpoint) === Number(p.breakpoint)
             );
             return {
               ...(existing ? { id: existing.id } : {}),

@@ -8,11 +8,13 @@ import {
   Home,
   Scale,
   Settings,
+  HandCoins,
   TrendingDown,
   Trophy,
   Truck,
   Users,
   WashingMachine,
+  ArrowRightLeft,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -48,6 +50,12 @@ export const secondaryNavigationItems: SecondaryNavigationItem[] = [
     icon: Users,
   },
   {
+    route: 'propinas',
+    label: 'Propinas',
+    description: 'Gestiona pagos de propinas',
+    icon: HandCoins,
+  },
+  {
     route: 'egresos',
     label: 'Egresos',
     description: 'Registra gastos operativos',
@@ -57,7 +65,13 @@ export const secondaryNavigationItems: SecondaryNavigationItem[] = [
     route: 'transacciones-hoy',
     label: 'Transacciones',
     description: 'Movimientos diarios por módulo',
-    icon: TrendingDown,
+    icon: ArrowRightLeft,
+  },
+  {
+    route: 'config',
+    label: 'Configuración Global',
+    description: 'Administra los ajustes de la aplicación',
+    icon: Settings,
   },
 ];
 
@@ -101,6 +115,7 @@ export const moduleSubItems: Record<ModuleRoute, ModuleSubItem[]> = {
   ],
   configuracion: [
     { label: 'Tasa de Cambio', route: 'config-tasa-cambio', icon: DollarSign },
+    { label: 'Precio por Litros', route: 'config-precios-agua', icon: Settings },
     { label: 'Historial de Tasas', route: 'historial-tasas', icon: History },
   ],
   dashboard: [],

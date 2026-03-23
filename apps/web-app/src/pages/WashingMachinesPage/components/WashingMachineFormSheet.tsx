@@ -60,8 +60,8 @@ export function WashingMachineFormSheet({
       <SheetContent
         side="bottom"
         tabletSide="right"
-        tabletClassName="sm:max-w-[440px]"
-        className="rounded-t-3xl sm:rounded-none"
+        tabletClassName="sm:max-w-[440px] sm:h-full sm:max-h-screen sm:rounded-none"
+        className="rounded-t-3xl max-h-[90dvh] overflow-y-auto overscroll-contain touch-pan-y"
       >
         <SheetHeader className="pb-4">
           <SheetTitle className="flex items-center gap-2">

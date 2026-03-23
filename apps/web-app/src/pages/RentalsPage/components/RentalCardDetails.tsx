@@ -3,6 +3,8 @@ import { format, parse } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { WasherRental } from '@/types';
 import type { PaymentDisplayModel } from '@/services/payments/paymentDisplayModel';
+import { deriveRentalTipAmountBs } from '@/services/transactions/transactionTotals';
+import { useConfigStore } from '@/store/useConfigStore';
 
 interface RentalCardDetailsProps {
   rental: WasherRental;
@@ -15,6 +17,22 @@ export function RentalCardDetails({
   paymentIcon: PaymentIcon,
   paymentDisplay,
 }: RentalCardDetailsProps) {
+  const exchangeRate = useConfigStore((state) => state.config.exchangeRate);
+  const baseUsd =
+    rental.shift === 'completo' && rental.paymentMethod === 'divisa'
+      ? 5
+      : rental.shift === 'medio'
+      ? 4
+      : rental.shift === 'completo'
+      ? 6
+      : 12;
+  const subtotalUsd = baseUsd + Number(rental.deliveryFee || 0);
+  const tipAmountBs = deriveRentalTipAmountBs(
+    rental.totalUsd,
+    subtotalUsd,
+    exchangeRate
+  );
+
   return (
     <div className="space-y-2">
       <p className="font-medium">{rental.customerName}</p>
@@ -62,6 +80,12 @@ export function RentalCardDetails({
             )}
           </span>
         </div>
+      )}
+      {tipAmountBs > 0 && (
+        <p className="text-xs text-muted-foreground">
+          Subtotal ${subtotalUsd.toFixed(2)} + Propina Bs{' '}
+          {tipAmountBs.toFixed(2)}
+        </p>
       )}
     </div>
   );

@@ -1,15 +1,5 @@
 import { useState, useEffect } from 'react';
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import {
   Drawer,
   DrawerContent,
   DrawerHeader,
@@ -69,25 +59,41 @@ export function RentalCardDialogs({
 
   return (
     <>
-      <AlertDialog
+      <Drawer
         open={confirmDialogOpen}
         onOpenChange={onConfirmDialogOpenChange}
       >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Confirmar cambio de estado</AlertDialogTitle>
-            <AlertDialogDescription>
+        <DrawerContent className="p-4 sm:p-6 pb-8">
+          <DrawerHeader className="px-0 pt-2">
+            <DrawerTitle className="text-xl font-bold flex items-center gap-2">
+              <CheckCircle2 className="w-6 h-6 text-primary" />
+              Confirmar cambio de estado
+            </DrawerTitle>
+            <DrawerDescription className="text-sm pt-1">
               {statusChangeMessage}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={onConfirmStatusChange}>
+            </DrawerDescription>
+          </DrawerHeader>
+
+          <DrawerFooter className="px-0 pb-0 gap-3 pt-6">
+            <Button
+              size="lg"
+              className="w-full h-14 rounded-2xl text-base font-semibold shadow-lg"
+              onClick={onConfirmStatusChange}
+            >
               Aceptar
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+            </Button>
+            <DrawerClose asChild>
+              <Button
+                variant="outline"
+                size="lg"
+                className="w-full h-14 rounded-2xl text-base font-medium border-border/50 bg-background"
+              >
+                Cancelar
+              </Button>
+            </DrawerClose>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
 
       <Drawer open={paymentDialogOpen} onOpenChange={onPaymentDialogOpenChange}>
         <DrawerContent className="p-4 sm:p-6 pb-8">

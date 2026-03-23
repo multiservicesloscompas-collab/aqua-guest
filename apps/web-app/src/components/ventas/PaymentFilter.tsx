@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import {
+  type LucideIcon,
   Banknote,
   Smartphone,
   CreditCard,
@@ -18,7 +19,7 @@ interface PaymentFilterProps {
   onFilterChange: (filter: PaymentMethod | 'todos') => void;
 }
 
-const paymentIcons: Record<PaymentMethod, any> = {
+const paymentIcons: Record<PaymentMethod, LucideIcon> = {
   efectivo: Banknote,
   pago_movil: Smartphone,
   punto_venta: CreditCard,

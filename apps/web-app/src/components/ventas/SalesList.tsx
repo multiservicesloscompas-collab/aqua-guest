@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Sale, PaymentMethod, PaymentMethodLabels } from '@/types';
 import { useWaterSalesStore } from '@/store/useWaterSalesStore';
 import {
+  type LucideIcon,
   Trash2,
   Smartphone,
   Banknote,
@@ -26,13 +27,14 @@ import { getSafeTimestampForSorting } from '@/lib/date-utils';
 import { buildSalePaymentDisplayModel } from '@/services/payments/paymentDisplayModel';
 import { hasValidMixedPaymentSplits } from '@/services/payments/paymentSplitValidity';
 import { SalePaymentBreakdown } from './SalePaymentBreakdown';
+import { deriveSaleTipAmountBs } from '@/services/transactions/transactionTotals';
 
 interface SalesListProps {
   sales: Sale[];
   paymentFilter?: PaymentMethod | 'todos';
 }
 
-const paymentIcons: Record<PaymentMethod, any> = {
+const paymentIcons: Record<PaymentMethod, LucideIcon> = {
   pago_movil: Smartphone,
   efectivo: Banknote,
   punto_venta: CreditCard,
@@ -126,6 +128,11 @@ export function SalesList({ sales, paymentFilter = 'todos' }: SalesListProps) {
               hour: '2-digit',
               minute: '2-digit',
             });
+            const subtotalBs = (sale.items || []).reduce(
+              (sum, item) => sum + Number(item.subtotal || 0),
+              0
+            );
+            const tipAmountBs = deriveSaleTipAmountBs(sale.totalBs, subtotalBs);
 
             return (
               <div
@@ -178,6 +185,11 @@ export function SalesList({ sales, paymentFilter = 'todos' }: SalesListProps) {
                       {item.liters && ` (${item.liters}L)`}
                     </span>
                   ))}
+                  {tipAmountBs > 0 && (
+                    <span className="text-xs bg-black px-2 py-1 rounded-full text-white">
+                      Propina
+                    </span>
+                  )}
                 </div>
 
                 {sale.notes && (

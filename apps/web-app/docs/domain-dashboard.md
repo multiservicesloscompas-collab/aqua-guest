@@ -2,7 +2,7 @@
 
 ## 🎯 Business Goal
 
-Provide an at-a-glance financial and operational summary of the business. This is the first screen the user sees (Index route). It displays daily and Month-To-Date (MTD) gross income, net profit (income minus expenses), total transactions, a breakdown of income by payment method, a weekly sales chart, and recent sales activity.
+Provide an at-a-glance financial and operational summary of the business. This is the first screen the user sees (Index route). It displays daily and Month-To-Date (MTD) gross income, net profit (income minus expenses), total transactions, a breakdown of income by payment method, and a weekly sales chart.
 
 ## 🗄️ Data Structure & Services (Supabase, Zustand & Services)
 
@@ -25,6 +25,11 @@ Provide an at-a-glance financial and operational summary of the business. This i
   - Dashboard method totals are split-aware end-to-end for sales/rentals, with deterministic fallback for balance transfers (`amountBs` → `amountUsd*rate` → `amount`).
   - Transactions summary now explodes mixed payments into per-split rows (same visual cards, same navigation).
   - Payment method detail now attributes sales/rentals using split-aware helpers with legacy fallback when no splits exist.
+  - Rebaseline propinas v2: ingresos ya incluyen propina en `sale.totalBs` / `rental.totalUsd`; payout de propina se mantiene como egreso explícito (`tip_payout`) para evitar doble conteo semántico en dashboard y transacciones.
+- **Avance no equivalente (Batch 4):**
+  - Dashboard method totals now apply transfer legs semantically (`amountOut*` debits origin, `amountIn*` credits destination), with deterministic legacy fallback when explicit legs are absent.
+  - Timeline transfer rows distinguish `Equilibrio` vs `Avance` and show `Salida`, `Entrada` and `Diferencia` in the same row metadata without redesigning cards.
+  - Payment method detail mirrors the same semantics by rendering `Avance/Equilibrio (Salida|Entrada)` with amount-out/amount-in and visible difference trace.
 - **`useWeekData.ts` (Hook):** Calculates the last 7 days of income (Water + Paid Rentals) for the bar chart.
 - **`CurrencyService.ts`**: Handles the dynamic conversion between Bolívares (Bs) and USD based on the active global `exchangeRate`.
 
@@ -32,9 +37,6 @@ Provide an at-a-glance financial and operational summary of the business. This i
 
 - **`DashboardPage` (`src/pages/DashboardPage.tsx`)**: The main aggregator view. Manages the currency toggle state (Bs/USD) and fetches the month's data.
 - **`KpiCard` (`src/components/ui/KpiCard.tsx`)**: Reusable UI component for metric blocks (e.g., "Ingresos del Día", "Neto Mes").
-- **`RecentSales` (`src/components/dashboard/RecentSales.tsx`)**: Displays the 3 most recent water sales of the day.
-- **`RecentSales` (`src/components/dashboard/RecentSales.tsx`)**: Displays the 3 most recent water sales of the day.
-- **Etiquetado de pago en recientes:** para ventas con split válido, el subtítulo usa `Pago mixto` y el ícono se deriva del método principal del split; mantiene fallback simple para registros legacy.
 - **`SalesChart` (`src/components/dashboard/SalesChart.tsx`)**: Recharts-based bar chart showing income over the last week.
 
 ## 🧭 Interactions & Navigation (Routing)
@@ -65,7 +67,7 @@ The Dashboard serves as the central hub. Clicking on specific metric cards redir
 - `DashboardPage` usa primitivas responsive (`AppPageContainer`, `TabletSectionGrid`, `TabletSplitLayout`) para activar layout tablet incremental sin tocar mobile `<768px`.
 - En tablet:
   - Header de contenido queda en grid de 2 columnas (KPI principal + selector de fecha).
-  - El bloque principal se divide en columnas: izquierda (`QuickActions`, `RecentSales`, `SalesChart`) y derecha fija (`PaymentMethodSummary`).
+  - El bloque principal se divide en columnas: izquierda (`QuickActions`, `SalesChart`) y derecha fija (`PaymentMethodSummary`).
 - En mobile `<768px` se conserva el stack previo (sin columnas nuevas ni cambios de jerarquía).
 
 ## 📱 Responsive Secondary Modules (Phase 4)
@@ -96,6 +98,6 @@ The Dashboard serves as the central hub. Clicking on specific metric cards redir
     - Add income from that method.
     - Subtract expenses paid via that method.
     - Add/Subtract `PaymentBalanceTransaction` (Equilibrio de pagos) where funds were moved into or out of that method.
-    - For `PaymentBalanceTransaction` amounts, use deterministic compatibility order: `amountBs`, else `amountUsd * exchangeRate`, else legacy `amount`.
+    - For `PaymentBalanceTransaction`, prioritize explicit transfer legs (`amountOut*` and `amountIn*`); if missing, use deterministic compatibility order (`amountBs`, else `amountUsd * exchangeRate`, else legacy `amount`).
 5.  **Currency Toggling:** The UI allows toggling the entire dashboard between Bs and USD. All base metrics are calculated in Bolívares (`Bs`) by the service. The UI uses `currencyConverter.toUsd()` to display USD values on-the-fly. Never alter the underlying `Bs` data when toggling.
 6.  **Data Loading:** The Dashboard is responsible for loading the entire month's data (`loadDataForDateRange`) to ensure MTD (Month-to-Date) calculations are accurate without making excessive single-day queries.

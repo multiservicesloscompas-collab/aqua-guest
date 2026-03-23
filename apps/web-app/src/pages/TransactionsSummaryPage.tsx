@@ -13,12 +13,14 @@ import { usePaymentBalanceStore } from '@/store/usePaymentBalanceStore';
 import { usePrepaidStore } from '@/store/usePrepaidStore';
 import { useRentalStore } from '@/store/useRentalStore';
 import { useWaterSalesStore } from '@/store/useWaterSalesStore';
+import { useTipStore } from '@/store/useTipStore';
 import {
   TABLET_PRIMARY_COLUMN_COMPACT_CLASS,
   TABLET_SECONDARY_COLUMN_CLASS,
   TABLET_SPLIT_LAYOUT_CLASS,
 } from '@/lib/responsive/tabletLayoutPatterns';
 import { AppRoute } from '@/types';
+import { DateSelector } from '@/components/ventas/DateSelector';
 
 import { TransactionsSummaryList } from './TransactionsSummaryPage/components/TransactionsSummaryList';
 import { TransactionsSummaryTotals } from './TransactionsSummaryPage/components/TransactionsSummaryTotals';
@@ -32,13 +34,14 @@ export function TransactionsSummaryPage({
   onNavigate,
 }: TransactionsSummaryPageProps = {}) {
   const { isTabletViewport } = useViewportMode();
-  const { selectedDate } = useAppStore();
+  const { selectedDate, setSelectedDate } = useAppStore();
   const { prepaidOrders } = usePrepaidStore();
   const { sales } = useWaterSalesStore();
   const { expenses } = useExpenseStore();
   const { paymentBalanceTransactions } = usePaymentBalanceStore();
   const { config } = useConfigStore();
   const { rentals } = useRentalStore();
+  const { tipPayouts } = useTipStore();
 
   const transactions = useMemo(() => {
     return buildTransactionsSummaryItems({
@@ -49,6 +52,7 @@ export function TransactionsSummaryPage({
       expenses,
       prepaidOrders,
       paymentBalanceTransactions,
+      tipPayouts,
     });
   }, [
     sales,
@@ -56,16 +60,17 @@ export function TransactionsSummaryPage({
     expenses,
     prepaidOrders,
     paymentBalanceTransactions,
+    tipPayouts,
     selectedDate,
     config.exchangeRate,
   ]);
 
   const totalIncome = transactions
-    .filter((t) => t.type !== 'expense' && t.type !== 'balance_transfer')
+    .filter((t) => t.isIncome)
     .reduce((sum, t) => sum + t.amountBs, 0);
 
   const totalExpenses = transactions
-    .filter((t) => t.type === 'expense')
+    .filter((t) => !t.isIncome && t.type !== 'balance_transfer')
     .reduce((sum, t) => sum + t.amountBs, 0);
 
   return (
@@ -89,9 +94,13 @@ export function TransactionsSummaryPage({
             className={TABLET_SPLIT_LAYOUT_CLASS}
             primary={
               <div
-                className={TABLET_PRIMARY_COLUMN_COMPACT_CLASS}
+                className={`${TABLET_PRIMARY_COLUMN_COMPACT_CLASS} space-y-4`}
                 data-testid="transactions-primary-column"
               >
+                <DateSelector
+                  selectedDate={selectedDate}
+                  onDateChange={setSelectedDate}
+                />
                 <TransactionsSummaryList transactions={transactions} />
               </div>
             }
@@ -108,13 +117,17 @@ export function TransactionsSummaryPage({
             }
           />
         ) : (
-          <>
+          <div className="space-y-4 pt-2">
+            <DateSelector
+              selectedDate={selectedDate}
+              onDateChange={setSelectedDate}
+            />
             <TransactionsSummaryTotals
               totalIncome={totalIncome}
               totalExpenses={totalExpenses}
             />
             <TransactionsSummaryList transactions={transactions} />
-          </>
+          </div>
         )}
       </AppPageContainer>
     </div>

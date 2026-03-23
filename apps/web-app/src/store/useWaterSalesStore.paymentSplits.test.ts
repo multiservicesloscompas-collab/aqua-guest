@@ -13,6 +13,13 @@ vi.mock('@/services/SalesDataService', () => ({
   },
 }));
 
+vi.mock('@/services/tips/TipDataService', () => ({
+  tipsDataService: {
+    upsertTipForOrigin: vi.fn(),
+    deleteTipByOrigin: vi.fn(),
+  },
+}));
+
 vi.mock('@/lib/supabaseClient', () => {
   const from = vi.fn((table: string) => {
     if (table === 'sales') {
@@ -180,6 +187,60 @@ describe('useWaterSalesStore payment split persistence', () => {
     expect(updatedSale?.paymentMethod).toBe('divisa');
     expect(updatedSale?.paymentSplits).toEqual([
       { method: 'divisa', amountBs: 100, amountUsd: 2, exchangeRateUsed: 50 },
+    ]);
+  });
+
+  it('preserves explicit total and split amounts when tipInput is provided on edit', async () => {
+    await useWaterSalesStore.getState().updateSale(
+      'sale-1',
+      {
+        paymentMethod: 'pago_movil',
+        totalBs: 100, // Pass principal amount
+        totalUsd: 2,
+        paymentSplits: [
+          {
+            method: 'pago_movil',
+            amountBs: 80,
+            amountUsd: 1.6,
+            exchangeRateUsed: 50,
+          },
+          {
+            method: 'efectivo',
+            amountBs: 60,
+            amountUsd: 1.2,
+            exchangeRateUsed: 50,
+          },
+        ],
+      },
+      {
+        amountBs: 40,
+        capturePaymentMethod: 'efectivo',
+      }
+    );
+
+    const updatePayload = (
+      salesUpdateMock.mock.calls as unknown as Array<
+        Array<{ total_bs: number; total_usd: number }>
+      >
+    )[0]?.[0];
+    expect(updatePayload.total_bs).toBe(140); // Base 100 + Tip 40
+    expect(updatePayload.total_usd).toBe(2.8);
+
+    expect(salesSplitsInsertMock).toHaveBeenCalledWith([
+      {
+        sale_id: 'sale-1',
+        payment_method: 'pago_movil',
+        amount_bs: 80,
+        amount_usd: 1.6,
+        exchange_rate_used: 50,
+      },
+      {
+        sale_id: 'sale-1',
+        payment_method: 'efectivo',
+        amount_bs: 60,
+        amount_usd: 1.2,
+        exchange_rate_used: 50,
+      },
     ]);
   });
 });

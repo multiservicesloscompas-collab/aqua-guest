@@ -1,4 +1,4 @@
-import type { PaymentMethod, Sale, WasherRental } from '@/types';
+import type { PaymentMethod, Sale, WasherRental, Expense } from '@/types';
 import type { PaymentSplit } from '@/types/paymentSplits';
 import { hasValidMixedPaymentSplits } from '@/services/payments/paymentSplitValidity';
 
@@ -7,6 +7,10 @@ interface SplitAwareSale extends Sale {
 }
 
 interface SplitAwareRental extends WasherRental {
+  paymentSplits?: PaymentSplit[];
+}
+
+interface SplitAwareExpense extends Expense {
   paymentSplits?: PaymentSplit[];
 }
 
@@ -92,4 +96,25 @@ export function getRentalAmountForMethodUsd(
 
   const amountBs = getRentalAmountForMethodBs(rental, method, exchangeRate);
   return exchangeRate > 0 ? amountBs / exchangeRate : 0;
+}
+
+export function includesMethodInExpense(
+  expense: SplitAwareExpense,
+  method: PaymentMethod
+): boolean {
+  if (hasValidMixedPaymentSplits(expense.paymentSplits)) {
+    return Boolean(findSplitByMethod(expense.paymentSplits, method));
+  }
+  return expense.paymentMethod === method;
+}
+
+export function getExpenseAmountForMethodBs(
+  expense: SplitAwareExpense,
+  method: PaymentMethod
+): number {
+  if (hasValidMixedPaymentSplits(expense.paymentSplits)) {
+    const split = findSplitByMethod(expense.paymentSplits, method);
+    if (split) return Number(split.amountBs || 0);
+  }
+  return expense.paymentMethod === method ? Number(expense.amount || 0) : 0;
 }

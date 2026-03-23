@@ -11,7 +11,16 @@ const baseSale: Sale = {
   id: 'sale-1',
   dailyNumber: 1,
   date: '2026-03-10',
-  items: [],
+  items: [
+    {
+      id: 'item-1',
+      productId: 'prod-1',
+      productName: 'Botellón',
+      quantity: 1,
+      unitPrice: 80,
+      subtotal: 80,
+    },
+  ],
   paymentMethod: 'efectivo',
   totalBs: 100,
   totalUsd: 2,
@@ -59,6 +68,9 @@ describe('SalePaymentBreakdown', () => {
     expect(screen.getByText('Efectivo: Bs 70.00 • $1.40')).toBeInTheDocument();
     expect(
       screen.getByText('Pago Móvil: Bs 30.00 • $0.60')
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('Subtotal Bs 80.00 + Propina Bs 20.00')
     ).toBeInTheDocument();
     expect(screen.getByTestId('sale-price-sale-1')).toBeInTheDocument();
   });

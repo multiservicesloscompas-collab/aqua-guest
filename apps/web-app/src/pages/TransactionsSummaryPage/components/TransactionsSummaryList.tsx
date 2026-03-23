@@ -34,6 +34,8 @@ function getIcon(type: TransactionType) {
       return <Receipt className="w-5 h-5 text-green-500" />;
     case 'balance_transfer':
       return <ArrowRightLeft className="w-5 h-5 text-orange-500" />;
+    case 'tip_payout':
+      return <Wallet className="w-5 h-5 text-red-500" />;
   }
 }
 
@@ -88,14 +90,14 @@ export function TransactionsSummaryList({
               <span className="text-muted-foreground">Monto</span>
               <span
                 className={
-                  t.type === 'expense'
-                    ? 'text-red-600'
-                    : t.type === 'balance_transfer'
+                  t.type === 'balance_transfer'
                     ? 'text-orange-600'
-                    : 'text-green-600'
+                    : t.isIncome
+                    ? 'text-green-600'
+                    : 'text-red-600'
                 }
               >
-                {t.type === 'expense' ? '-' : '+'} Bs{' '}
+                {t.isIncome ? '+' : '-'} Bs{' '}
                 {t.amountBs.toLocaleString('es-VE', {
                   minimumFractionDigits: 2,
                   maximumFractionDigits: 2,

@@ -1,4 +1,5 @@
 import type { Sale } from '@/types';
+import type { PaymentMethod } from '@/types';
 import type { PaymentSplit } from '@/types/paymentSplits';
 import { PAYMENT_SPLIT_SCHEMA } from '@/services/payments/paymentSplitSchemaContract';
 import { salePaymentSplitAdapter } from '@/services/payments/paymentSplitSupabaseAdapters';
@@ -162,5 +163,63 @@ export const enqueueOfflineSalePaymentSplitsDelete = (
     },
     enqueueSource: actionSource,
     businessKey: `sale-splits:${saleId}`,
+  });
+};
+
+export const enqueueOfflineSaleTipDelete = (
+  saleId: string,
+  actionSource = 'water-sales/deleteSale'
+) => {
+  useSyncStore.getState().addToQueue({
+    type: 'DELETE',
+    table: 'tips',
+    payload: {
+      id: `sale_tip:${saleId}`,
+      parentId: saleId,
+      parentColumn: 'origin_id',
+      parentScopeColumn: 'origin_type',
+      parentScopeValue: 'sale',
+      __op: 'delete_by_parent_id',
+    },
+    enqueueSource: actionSource,
+    businessKey: `tip-origin-sale:${saleId}`,
+  });
+};
+
+interface EnqueueOfflineSaleTipUpsertInput {
+  saleId: string;
+  tipDate: string;
+  amountBs: number;
+  amountUsd?: number;
+  exchangeRateUsed?: number;
+  capturePaymentMethod: PaymentMethod;
+  notes?: string;
+  actionSource?: string;
+}
+
+export const enqueueOfflineSaleTipUpsert = (
+  input: EnqueueOfflineSaleTipUpsertInput
+) => {
+  const businessKey = `tip-origin-sale:${input.saleId}`;
+
+  useSyncStore.getState().addToQueue({
+    type: 'INSERT',
+    table: 'tips',
+    payload: {
+      origin_type: 'sale',
+      origin_id: input.saleId,
+      tip_date: input.tipDate,
+      amount_bs: input.amountBs,
+      amount_usd: input.amountUsd,
+      exchange_rate_used: input.exchangeRateUsed,
+      capture_payment_method: input.capturePaymentMethod,
+      notes: input.notes,
+      __op: 'upsert_on_origin',
+    },
+    enqueueSource: input.actionSource ?? 'water-sales/updateSale',
+    businessKey,
+    dependencyKeys: input.saleId.startsWith('temp-')
+      ? [`sale:${input.saleId}`]
+      : undefined,
   });
 };

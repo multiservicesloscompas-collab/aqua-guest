@@ -1,24 +1,18 @@
-import { useEffect, useState } from 'react';
-import { Pencil, Plus } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { Plus } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { AppPageContainer } from '@/components/layout/AppPageContainer';
 import { TabletSplitLayout } from '@/components/layout/TabletSplitLayout';
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet';
 import { useViewportMode } from '@/hooks/responsive/useViewportMode';
 import { useExpenseStore } from '@/store/useExpenseStore';
+import { useTipStore } from '@/store/useTipStore';
 import { useAppStore } from '@/store/useAppStore';
-import { Expense, ExpenseCategory, PaymentMethod } from '@/types';
-
-import { ExpenseSheetForm } from './ExpensesPage/components/ExpenseSheetForm';
+import { useConfigStore } from '@/store/useConfigStore';
 import { ExpensesContent } from './ExpensesPage/components/ExpensesContent';
 import { ExpensesDayTotalCard } from './ExpensesPage/components/ExpensesDayTotalCard';
 import { ExpensesMobileHeaderControls } from './ExpensesPage/components/ExpensesMobileHeaderControls';
+import { ExpensesSheet } from './ExpensesPage/components/ExpensesSheet';
 import { ExpensesTabletSidebar } from './ExpensesPage/components/ExpensesTabletSidebar';
 import { Button } from '@/components/ui/button';
 import {
@@ -28,6 +22,10 @@ import {
   TABLET_SPLIT_LAYOUT_CLASS,
 } from '@/lib/responsive/tabletLayoutPatterns';
 import { cn } from '@/lib/utils';
+import { mergeExpensesWithTipPayouts } from '@/services/expenses/expensesWithTipPayouts';
+import { isMixedPaymentEnabledForModule } from '@/services/payments/paymentSplitFeatureFlag';
+import { useExpenseSheetState } from './ExpensesPage/hooks/useExpenseSheetState';
+import { resolveExpensePaymentSubmit } from './ExpensesPage/utils/expensePaymentSubmit';
 
 type ExpensesViewMode = 'day' | 'week';
 
@@ -44,30 +42,52 @@ export function ExpensesPage({ autoOpenAdd }: ExpensesPageProps = {}) {
     updateExpense,
     deleteExpense,
   } = useExpenseStore();
+  const { tipPayouts, loadTipsByDateRange } = useTipStore();
   const { selectedDate, setSelectedDate } = useAppStore();
+  const { config, mixedPaymentFlags } = useConfigStore();
 
   const [viewMode, setViewMode] = useState<ExpensesViewMode>('day');
-  const [showSheet, setShowSheet] = useState(false);
-  const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
-  const [description, setDescription] = useState('');
-  const [amount, setAmount] = useState('');
-  const [category, setCategory] = useState<ExpenseCategory>('operativo');
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('efectivo');
-  const [notes, setNotes] = useState('');
+  const {
+    showSheet,
+    setShowSheet,
+    editingExpense,
+    description,
+    amount,
+    category,
+    paymentMethod,
+    notes,
+    isMixedPayment,
+    secondaryMethod,
+    mixedAmountInput,
+    setDescription,
+    setAmount,
+    setCategory,
+    setPaymentMethod,
+    setNotes,
+    setIsMixedPayment,
+    setSecondaryMethod,
+    setMixedAmountInput,
+    handleReset,
+    handleOpenNew,
+    handleEdit,
+  } = useExpenseSheetState({ autoOpenAdd });
+
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [loadingExpenses, setLoadingExpenses] = useState(false);
 
+  const enableMixedPaymentFeature = isMixedPaymentEnabledForModule(
+    mixedPaymentFlags,
+    'expenses'
+  );
+
   useEffect(() => {
     if (!selectedDate || viewMode !== 'day') return;
-
     const cachedExpenses = getExpensesByDate(selectedDate);
-
     if (cachedExpenses.length > 0) {
       return;
     }
-
     setLoadingExpenses(true);
     loadExpensesByDate(selectedDate)
       .catch((err: unknown) => {
@@ -79,47 +99,48 @@ export function ExpensesPage({ autoOpenAdd }: ExpensesPageProps = {}) {
   }, [selectedDate, loadExpensesByDate, getExpensesByDate, viewMode]);
 
   const expenses = getExpensesByDate(selectedDate);
-  const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
-
-  const handleReset = () => {
-    setDescription('');
-    setAmount('');
-    setCategory('operativo');
-    setPaymentMethod('efectivo');
-    setNotes('');
-    setEditingExpense(null);
-  };
-
-  const handleOpenNew = () => {
-    handleReset();
-    setShowSheet(true);
-  };
+  const visibleExpenses = useMemo(
+    () =>
+      mergeExpensesWithTipPayouts({
+        date: selectedDate,
+        expenses,
+        tipPayouts,
+      }),
+    [selectedDate, expenses, tipPayouts]
+  );
+  const totalExpenses = visibleExpenses.reduce((sum, e) => sum + e.amount, 0);
 
   useEffect(() => {
-    if (autoOpenAdd) handleOpenNew();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoOpenAdd]);
-
-  const handleEdit = (expense: Expense) => {
-    setEditingExpense(expense);
-    setDescription(expense.description);
-    setAmount(expense.amount.toString());
-    setCategory(expense.category);
-    setPaymentMethod(expense.paymentMethod || 'efectivo');
-    setNotes(expense.notes || '');
-    setShowSheet(true);
-  };
+    void loadTipsByDateRange(selectedDate, selectedDate);
+  }, [loadTipsByDateRange, selectedDate]);
 
   const handleSubmit = async () => {
     if (!description || !amount) return;
     setIsSaving(true);
     try {
+      const parsedAmount = Number(amount);
+      const paymentResolution = resolveExpensePaymentSubmit({
+        enableMixedPaymentFeature,
+        isMixedPayment,
+        paymentMethod,
+        secondaryMethod,
+        mixedAmountInput,
+        parsedAmount,
+        exchangeRate: config.exchangeRate || 1,
+      });
+
+      if (paymentResolution.errorMessage) {
+        toast.error(paymentResolution.errorMessage);
+        return;
+      }
+
       if (editingExpense) {
         await updateExpense(editingExpense.id, {
           description,
-          amount: Number(amount),
+          amount: parsedAmount,
           category,
-          paymentMethod,
+          paymentMethod: paymentResolution.paymentMethod,
+          paymentSplits: paymentResolution.paymentSplits,
           notes: notes || undefined,
         });
         toast.success('Egreso actualizado');
@@ -127,9 +148,10 @@ export function ExpensesPage({ autoOpenAdd }: ExpensesPageProps = {}) {
         await addExpense({
           date: selectedDate,
           description,
-          amount: Number(amount),
+          amount: parsedAmount,
           category,
-          paymentMethod,
+          paymentMethod: paymentResolution.paymentMethod,
+          paymentSplits: paymentResolution.paymentSplits,
           notes: notes || undefined,
         });
         toast.success('Egreso registrado');
@@ -183,11 +205,10 @@ export function ExpensesPage({ autoOpenAdd }: ExpensesPageProps = {}) {
                   onToggleViewMode={toggleViewMode}
                   onOpenNewExpense={handleOpenNew}
                 />
-
                 <ExpensesContent
                   viewMode={viewMode}
                   selectedDate={selectedDate}
-                  expenses={expenses}
+                  expenses={visibleExpenses}
                   loadingExpenses={loadingExpenses}
                   isDeleting={isDeleting}
                   deletingId={deletingId}
@@ -212,15 +233,13 @@ export function ExpensesPage({ autoOpenAdd }: ExpensesPageProps = {}) {
               onDateChange={setSelectedDate}
               onToggleViewMode={toggleViewMode}
             />
-
             {viewMode === 'day' ? (
               <ExpensesDayTotalCard totalExpenses={totalExpenses} />
             ) : null}
-
             <ExpensesContent
               viewMode={viewMode}
               selectedDate={selectedDate}
-              expenses={expenses}
+              expenses={visibleExpenses}
               loadingExpenses={loadingExpenses}
               isDeleting={isDeleting}
               deletingId={deletingId}
@@ -243,49 +262,33 @@ export function ExpensesPage({ autoOpenAdd }: ExpensesPageProps = {}) {
         </Button>
       )}
 
-      <Sheet
+      <ExpensesSheet
         open={showSheet}
         onOpenChange={(o) => {
           if (!o) handleReset();
           setShowSheet(o);
         }}
-      >
-        <SheetContent
-          side="bottom"
-          tabletSide="right"
-          tabletClassName="sm:max-w-xl"
-          className="h-auto rounded-t-2xl px-4 pb-8"
-        >
-          <SheetHeader className="pb-4">
-            <SheetTitle className="text-lg font-bold flex items-center gap-2">
-              {editingExpense ? (
-                <>
-                  <Pencil className="w-5 h-5 text-primary" />
-                  Editar Egreso
-                </>
-              ) : (
-                'Registrar Egreso'
-              )}
-            </SheetTitle>
-          </SheetHeader>
-
-          <ExpenseSheetForm
-            description={description}
-            amount={amount}
-            category={category}
-            paymentMethod={paymentMethod}
-            notes={notes}
-            editing={Boolean(editingExpense)}
-            isSaving={isSaving}
-            onDescriptionChange={setDescription}
-            onAmountChange={setAmount}
-            onCategoryChange={setCategory}
-            onPaymentMethodChange={setPaymentMethod}
-            onNotesChange={setNotes}
-            onSubmit={handleSubmit}
-          />
-        </SheetContent>
-      </Sheet>
+        editingExpense={editingExpense}
+        description={description}
+        amount={amount}
+        category={category}
+        paymentMethod={paymentMethod}
+        notes={notes}
+        isSaving={isSaving}
+        isMixedPayment={isMixedPayment}
+        secondaryMethod={secondaryMethod}
+        mixedAmountInput={mixedAmountInput}
+        enableMixedPaymentFeature={enableMixedPaymentFeature}
+        onIsMixedPaymentChange={setIsMixedPayment}
+        onSecondaryMethodChange={setSecondaryMethod}
+        onMixedAmountInputChange={setMixedAmountInput}
+        onDescriptionChange={setDescription}
+        onAmountChange={setAmount}
+        onCategoryChange={setCategory}
+        onPaymentMethodChange={setPaymentMethod}
+        onNotesChange={setNotes}
+        onSubmit={handleSubmit}
+      />
     </div>
   );
 }

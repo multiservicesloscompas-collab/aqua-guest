@@ -36,14 +36,16 @@ interface RentalDataRow {
     address?: string;
   };
   rental_payment_splits?: PaymentSplitRow[];
+  payment_splits?: PaymentSplitRow[];
+  splits?: PaymentSplitRow[];
 }
 
 const RENTALS_SELECT = `*, customers(name, phone, address), ${PAYMENT_SPLIT_SCHEMA.rentalsSplitsTable}(payment_method, amount_bs, amount_usd, exchange_rate_used)`;
 
 function toRentalRow(r: RentalDataRow): WasherRental {
-  const splits = rentalPaymentSplitAdapter.fromRows(
-    r.rental_payment_splits ?? []
-  );
+  const rawSplits =
+    r.rental_payment_splits ?? r.payment_splits ?? r.splits ?? [];
+  const splits = rentalPaymentSplitAdapter.fromRows(rawSplits);
 
   return {
     id: r.id,

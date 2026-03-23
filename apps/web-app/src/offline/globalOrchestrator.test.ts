@@ -91,6 +91,14 @@ describe('processGlobalOfflineQueue', () => {
         return deleteEqBreakpointMock(column, value);
       }
 
+      if (column === 'origin_id') {
+        deleteEqMock(column, value);
+        return {
+          eq: (nestedColumn: string, nestedValue: unknown) =>
+            deleteEqMock(nestedColumn, nestedValue),
+        };
+      }
+
       return deleteEqMock(column, value);
     });
     deleteMock.mockImplementation(() => ({ eq: deleteEqRouterMock }));
@@ -417,6 +425,31 @@ describe('processGlobalOfflineQueue', () => {
     const result = await processGlobalOfflineQueue({ queue });
 
     expect(deleteEqMock).toHaveBeenCalledWith('sale_id', 'sale-1');
+    expect(result.nextQueue).toHaveLength(0);
+    expect(result.results[0].status).toBe('succeeded');
+  });
+
+  it('deletes scoped rows by parent id when scope metadata is present', async () => {
+    const queue = [
+      baseAction({
+        id: 'tip-origin-delete',
+        type: 'DELETE',
+        table: 'tips',
+        payload: {
+          id: 'sale_tip:sale-1',
+          parentId: 'sale-1',
+          parentColumn: 'origin_id',
+          parentScopeColumn: 'origin_type',
+          parentScopeValue: 'sale',
+          __op: 'delete_by_parent_id',
+        },
+      }),
+    ];
+
+    const result = await processGlobalOfflineQueue({ queue });
+
+    expect(deleteEqMock).toHaveBeenNthCalledWith(1, 'origin_id', 'sale-1');
+    expect(deleteEqMock).toHaveBeenNthCalledWith(2, 'origin_type', 'sale');
     expect(result.nextQueue).toHaveLength(0);
     expect(result.results[0].status).toBe('succeeded');
   });
