@@ -22,6 +22,7 @@ export interface Company {
 export interface UserProfile {
   id: string;
   email: string;
+  username?: string; // Nombre de usuario único para login (alternativo al email)
   role: UserRole;
   fullName?: string;
   companyId?: string; // NULL para admin (super admin), requerido para client y employee

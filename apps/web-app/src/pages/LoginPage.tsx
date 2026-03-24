@@ -96,16 +96,16 @@ export default function LoginPage() {
       <div className="flex-1 relative z-10 flex flex-col justify-between px-6 pt-4 pb-6 overflow-hidden">
         <div className="w-full max-w-sm mx-auto">
           <form onSubmit={handleSubmit} className="space-y-3">
-            {/* Email Input */}
+            {/* Email or Username Input */}
             <div>
               <Input
                 id="email"
-                type="email"
-                placeholder="User, email"
+                type="text"
+                placeholder="Email o Usuario"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 disabled={isLoading || isGoogleLoading}
-                autoComplete="email"
+                autoComplete="username"
                 className="h-12 bg-white border-0 rounded-full px-5 shadow-md focus:ring-2 focus:ring-blue-400 transition-all placeholder:text-gray-400 text-sm"
                 required
               />

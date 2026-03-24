@@ -62,9 +62,26 @@ export const useAppStore = create<AppState>()(
         set({ isLoading });
       },
 
-      signIn: async (email, password) => {
+      signIn: async (emailOrUsername, password) => {
         try {
           set({ isLoading: true });
+
+          let email = emailOrUsername;
+
+          // Si no contiene @, buscar username en user_profiles
+          if (!emailOrUsername.includes('@')) {
+            const { data: profile, error: profileError } = await supabase
+              .from('user_profiles')
+              .select('email')
+              .eq('username', emailOrUsername)
+              .single();
+
+            if (profileError || !profile) {
+              throw new Error('Usuario no encontrado');
+            }
+
+            email = profile.email;
+          }
 
           const { data, error } = await supabase.auth.signInWithPassword({
             email,
@@ -85,6 +102,7 @@ export const useAppStore = create<AppState>()(
             const userProfile: UserProfile = {
               id: profileData.id,
               email: profileData.email,
+              username: profileData.username,
               role: profileData.role,
               fullName: profileData.full_name,
               companyId: profileData.company_id,
@@ -192,6 +210,7 @@ export const useAppStore = create<AppState>()(
             const userProfile: UserProfile = {
               id: profileData.id,
               email: profileData.email,
+              username: profileData.username,
               role: profileData.role,
               fullName: profileData.full_name,
               companyId: profileData.company_id,

@@ -1,5 +1,5 @@
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { Users, TrendingDown, Settings, WashingMachine, ChevronRight, ClipboardList, Droplets, Truck, ArrowLeftRight } from 'lucide-react';
+import { Users, TrendingDown, Settings, WashingMachine, ChevronRight, ClipboardList, Droplets, Truck, ArrowLeftRight, UserCog } from 'lucide-react';
 import { AppRoute } from '@/types';
 import { cn } from '@/lib/utils';
 
@@ -23,6 +23,12 @@ const menuItems: { route: AppRoute; label: string; description: string; icon: ty
     //description: 'Pedidos pagados por adelantado',
     //icon: Droplets 
   //},
+  { 
+    route: 'usuarios', 
+    label: 'Usuarios', 
+    description: 'Gestionar usuarios y empleados',
+    icon: UserCog 
+  },
   { 
     route: 'seguimiento', 
     label: 'Seguimiento', 

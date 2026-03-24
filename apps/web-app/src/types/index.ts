@@ -308,4 +308,5 @@ export type AppRoute =
   | 'metricas-agua'
   | 'equilibrio-pagos'
   | 'transacciones-hoy'
-  | 'detalle-pago';
+  | 'detalle-pago'
+  | 'usuarios';
