@@ -27,6 +27,7 @@ export function CreateUserDialog({ open, onOpenChange, onUserCreated, currentUse
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
+  const [selectedRole, setSelectedRole] = useState<'client' | 'admin'>('client');
   const [selectedCompanyId, setSelectedCompanyId] = useState('');
 
   // Datos de nueva empresa
@@ -56,6 +57,7 @@ export function CreateUserDialog({ open, onOpenChange, onUserCreated, currentUse
     setUsername('');
     setPassword('');
     setFullName('');
+    setSelectedRole('client');
     setSelectedCompanyId('');
     setCompanyName('');
     setCompanyRif('');
@@ -72,8 +74,9 @@ export function CreateUserDialog({ open, onOpenChange, onUserCreated, currentUse
       return;
     }
 
-    if (currentUser.role === 'admin' && !selectedCompanyId && !showNewCompany) {
-      toast.error('Debes seleccionar o crear una empresa');
+    // Solo validar empresa si el rol seleccionado es 'client'
+    if (currentUser.role === 'admin' && selectedRole === 'client' && !selectedCompanyId && !showNewCompany) {
+      toast.error('Debes seleccionar o crear una empresa para un cliente');
       return;
     }
 
@@ -98,9 +101,14 @@ export function CreateUserDialog({ open, onOpenChange, onUserCreated, currentUse
         companyId = newCompany.id;
       }
 
-      // Si es cliente, usar su empresa
+      // Si es cliente quien crea, usar su empresa
       if (currentUser.role === 'client') {
         companyId = currentUser.companyId!;
+      }
+
+      // Si el admin está creando un admin, no debe tener company_id
+      if (currentUser.role === 'admin' && selectedRole === 'admin') {
+        companyId = '';
       }
 
       // Crear usuario en auth.users usando signUp
@@ -117,18 +125,17 @@ export function CreateUserDialog({ open, onOpenChange, onUserCreated, currentUse
       if (authError) throw authError;
       if (!authData.user) throw new Error('No se pudo crear el usuario');
 
-      // Crear perfil en user_profiles
+      // Actualizar perfil en user_profiles (el trigger handle_new_user ya lo creó)
       const { error: profileError } = await supabase
         .from('user_profiles')
-        .insert({
-          id: authData.user.id,
-          email,
+        .update({
           username: username || null,
           full_name: fullName || null,
-          role: currentUser.role === 'admin' ? 'client' : 'employee',
-          company_id: companyId,
+          role: currentUser.role === 'admin' ? selectedRole : 'employee',
+          company_id: companyId || null,
           created_by: currentUser.id,
-        });
+        })
+        .eq('id', authData.user.id);
 
       if (profileError) throw profileError;
 
@@ -137,11 +144,22 @@ export function CreateUserDialog({ open, onOpenChange, onUserCreated, currentUse
       onUserCreated();
     } catch (error: any) {
       console.error('Error creating user:', error);
-      
+
       if (error.message?.includes('User already registered')) {
         toast.error('El email ya está registrado');
-      } else if (error.message?.includes('duplicate key')) {
+      } else if (error.message?.includes('duplicate key') && error.message?.includes('username')) {
         toast.error('El username ya está en uso');
+      } else if (error.message?.includes('duplicate key') && error.message?.includes('email')) {
+        toast.error('El email ya está registrado');
+      } else if (error.code === '23505') {
+        // Código PostgreSQL para unique violation
+        if (error.message?.includes('user_profiles_username_key')) {
+          toast.error('El username ya está en uso');
+        } else if (error.message?.includes('user_profiles_email_key')) {
+          toast.error('El email ya está registrado');
+        } else {
+          toast.error('Ya existe un usuario con esos datos');
+        }
       } else {
         toast.error('Error al crear usuario: ' + (error.message || 'Error desconocido'));
       }
@@ -162,7 +180,9 @@ export function CreateUserDialog({ open, onOpenChange, onUserCreated, currentUse
       <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
-            Crear {currentUser.role === 'admin' ? 'Cliente' : 'Empleado'}
+            {currentUser.role === 'admin'
+              ? 'Crear Usuario'
+              : 'Crear Empleado'}
           </DialogTitle>
         </DialogHeader>
 
@@ -222,8 +242,35 @@ export function CreateUserDialog({ open, onOpenChange, onUserCreated, currentUse
             />
           </div>
 
-          {/* Empresa (solo para admin) */}
+          {/* Selector de Rol (solo para admin) */}
           {currentUser.role === 'admin' && (
+            <div className="space-y-2">
+              <Label htmlFor="role">Tipo de Usuario *</Label>
+              <Select
+                value={selectedRole}
+                onValueChange={(value: 'client' | 'admin') => {
+                  setSelectedRole(value);
+                  // Si cambia a admin, limpiar empresa seleccionada
+                  if (value === 'admin') {
+                    setSelectedCompanyId('');
+                    setShowNewCompany(false);
+                  }
+                }}
+                disabled={isLoading}
+              >
+                <SelectTrigger id="role">
+                  <SelectValue placeholder="Seleccionar tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="client">Cliente</SelectItem>
+                  <SelectItem value="admin">Administrador</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {/* Empresa (solo para admin creando cliente) */}
+          {currentUser.role === 'admin' && selectedRole === 'client' && (
             <>
               <div className="space-y-2">
                 <Label>Empresa *</Label>

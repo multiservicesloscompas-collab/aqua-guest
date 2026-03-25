@@ -2,6 +2,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { Users, TrendingDown, Settings, WashingMachine, ChevronRight, ClipboardList, Droplets, Truck, ArrowLeftRight, UserCog } from 'lucide-react';
 import { AppRoute } from '@/types';
 import { cn } from '@/lib/utils';
+import { useAppStore } from '@/store/useAppStore';
 
 interface MenuSheetProps {
   open: boolean;
@@ -10,68 +11,78 @@ interface MenuSheetProps {
   onNavigate: (route: AppRoute) => void;
 }
 
-const menuItems: { route: AppRoute; label: string; description: string; icon: typeof Users }[] = [
+const menuItems: { route: AppRoute; label: string; description: string; icon: typeof Users; allowedRoles?: ('admin' | 'client' | 'employee')[] }[] = [
   //{ 
-    //route: 'equilibrio-pagos', 
-    //label: 'Equilibrar Pagos', 
-    //description: 'Transferir entre métodos de pago',
-    //icon: ArrowLeftRight 
+  //route: 'equilibrio-pagos', 
+  //label: 'Equilibrar Pagos', 
+  //description: 'Transferir entre métodos de pago',
+  //icon: ArrowLeftRight 
   //},
   //{
-    //route: 'prepagados', 
-    //label: 'Agua Prepagada', 
-    //description: 'Pedidos pagados por adelantado',
-    //icon: Droplets 
+  //route: 'prepagados', 
+  //label: 'Agua Prepagada', 
+  //description: 'Pedidos pagados por adelantado',
+  //icon: Droplets 
   //},
-  { 
-    route: 'usuarios', 
-    label: 'Usuarios', 
+  {
+    route: 'usuarios',
+    label: 'Usuarios',
     description: 'Gestionar usuarios y empleados',
-    icon: UserCog 
+    icon: UserCog,
+    allowedRoles: ['admin', 'client'] // Solo admin y client pueden ver usuarios
   },
-  { 
-    route: 'seguimiento', 
-    label: 'Seguimiento', 
+  {
+    route: 'seguimiento',
+    label: 'Seguimiento',
     description: 'Alquileres pendientes y enviados',
-    icon: ClipboardList 
+    icon: ClipboardList
   },
-  { 
-    route: 'deliverys', 
-    label: 'Entregas', 
+  {
+    route: 'deliverys',
+    label: 'Entregas',
     description: 'Historial de entregas de lavadoras',
-    icon: Truck 
+    icon: Truck
   },
-  { 
-    route: 'lavadoras', 
-    label: 'Lavadoras', 
+  {
+    route: 'lavadoras',
+    label: 'Lavadoras',
     description: 'Gestiona tus lavadoras',
-    icon: WashingMachine 
+    icon: WashingMachine
   },
-  { 
-    route: 'clientes', 
-    label: 'Clientes', 
+  {
+    route: 'clientes',
+    label: 'Clientes',
     description: 'Gestiona tu base de clientes',
-    icon: Users 
+    icon: Users
   },
-  { 
-    route: 'egresos', 
-    label: 'Egresos', 
+  {
+    route: 'egresos',
+    label: 'Egresos',
     description: 'Registra gastos operativos',
-    icon: TrendingDown 
+    icon: TrendingDown
   },
-  { 
-    route: 'config', 
-    label: 'Configuración', 
+  {
+    route: 'config',
+    label: 'Configuración',
     description: 'Tasa de cambio y ajustes',
-    icon: Settings 
+    icon: Settings
   },
 ];
 
 export function MenuSheet({ open, onOpenChange, currentRoute, onNavigate }: MenuSheetProps) {
+  const { user } = useAppStore();
+
   const handleNavigate = (route: AppRoute) => {
     onNavigate(route);
     onOpenChange(false);
   };
+
+  // Filtrar items del menú según el rol del usuario
+  const visibleMenuItems = menuItems.filter(item => {
+    if (!item.allowedRoles) return true; // Si no tiene restricción, mostrar siempre
+    if (!user) return false; // Si no hay usuario, no mostrar
+    return item.allowedRoles.includes(user.role); // Mostrar solo si el rol está permitido
+  });
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -79,9 +90,9 @@ export function MenuSheet({ open, onOpenChange, currentRoute, onNavigate }: Menu
         <SheetHeader className="pb-4">
           <SheetTitle className="text-lg">Más opciones</SheetTitle>
         </SheetHeader>
-        
+
         <div className="space-y-2 pb-6 overflow-y-auto max-h-[60vh] -webkit-overflow-scrolling: touch">
-          {menuItems.map(({ route, label, description, icon: Icon }) => {
+          {visibleMenuItems.map(({ route, label, description, icon: Icon }) => {
             const isActive = currentRoute === route;
             return (
               <button
@@ -89,8 +100,8 @@ export function MenuSheet({ open, onOpenChange, currentRoute, onNavigate }: Menu
                 onClick={() => handleNavigate(route)}
                 className={cn(
                   'w-full flex items-center gap-4 p-4 rounded-xl transition-all duration-200 text-left',
-                  isActive 
-                    ? 'bg-primary/10 border border-primary/20' 
+                  isActive
+                    ? 'bg-primary/10 border border-primary/20'
                     : 'bg-accent/50 hover:bg-accent'
                 )}
               >

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Header } from '@/components/layout/Header';
 import { Button } from '@/components/ui/button';
 import { UserPlus, Loader2 } from 'lucide-react';
@@ -20,11 +20,7 @@ export function UsersPage({ onNavigate }: UsersPageProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
-  useEffect(() => {
-    loadUsers();
-  }, []);
-
-  const loadUsers = async () => {
+  const loadUsers = useCallback(async () => {
     if (!user) return;
 
     try {
@@ -37,12 +33,15 @@ export function UsersPage({ onNavigate }: UsersPageProps) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    loadUsers();
+  }, [loadUsers]);
 
   const handleUserCreated = () => {
     setCreateDialogOpen(false);
     loadUsers();
-    toast.success('Usuario creado exitosamente');
   };
 
   // Verificar permisos
@@ -79,7 +78,7 @@ export function UsersPage({ onNavigate }: UsersPageProps) {
             </div>
             <Button onClick={() => setCreateDialogOpen(true)} size="sm">
               <UserPlus className="w-4 h-4 mr-2" />
-              Crear Usuario
+              {user.role === 'admin' ? 'Crear Usuario' : 'Crear Empleado'}
             </Button>
           </div>
 
@@ -95,7 +94,7 @@ export function UsersPage({ onNavigate }: UsersPageProps) {
               </p>
               <Button onClick={() => setCreateDialogOpen(true)} variant="outline">
                 <UserPlus className="w-4 h-4 mr-2" />
-                Crear primer usuario
+                {user.role === 'admin' ? 'Crear primer usuario' : 'Crear primer empleado'}
               </Button>
             </div>
           ) : (
