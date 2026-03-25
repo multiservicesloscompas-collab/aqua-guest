@@ -18,6 +18,7 @@ import { WaterMetricsPage } from '@/pages/WaterMetricsPage';
 import { PaymentBalancePage } from '@/pages/PaymentBalancePage/index';
 import { TransactionsSummaryPage } from '@/pages/TransactionsSummaryPage';
 import { PaymentMethodDetailPage } from '@/pages/PaymentMethodDetailPage';
+import { UsersPage } from '@/pages/UsersPage';
 import { AppRoute, PaymentMethod } from '@/types';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { RefreshCw } from 'lucide-react';
@@ -101,6 +102,8 @@ const Index = () => {
             onPaymentMethodChange={setSelectedPaymentMethod}
           />
         );
+      case 'usuarios':
+        return <UsersPage onNavigate={setCurrentRoute} />;
       default:
         return <DashboardPage />;
     }

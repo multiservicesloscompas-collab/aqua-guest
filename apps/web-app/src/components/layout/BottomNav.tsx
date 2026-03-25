@@ -21,6 +21,7 @@ export function BottomNav({
 }: BottomNavProps) {
   // Check if current route is a secondary menu item
   const isMenuActive = [
+    'usuarios',
     'clientes',
     'egresos',
     'config',
