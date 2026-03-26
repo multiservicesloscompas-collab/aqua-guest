@@ -31,6 +31,7 @@ export function CartPaymentSection({
             key={method}
             type="button"
             onClick={() => onSelectPaymentMethod(method)}
+            data-testid={`cart-payment-method-${method}`}
             aria-label={`Método principal ${PaymentMethodLabels[method]}`}
             aria-pressed={paymentMethod === method}
             className={cn(

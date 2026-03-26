@@ -4,6 +4,7 @@ interface PaymentMethodCardProps {
   title: string;
   amountText: string;
   convertedText: string;
+  testId?: string;
   accent: {
     background: string;
     border: string;
@@ -19,6 +20,7 @@ export function PaymentMethodCard({
   title,
   amountText,
   convertedText,
+  testId,
   accent,
   icon: Icon,
   onClick,
@@ -26,6 +28,7 @@ export function PaymentMethodCard({
   return (
     <div
       onClick={onClick}
+      data-testid={testId}
       className={`flex items-center justify-between p-3 rounded-xl ${accent.background} ${accent.border} cursor-pointer transition-colors active:scale-[0.98]`}
     >
       <div className="flex items-center gap-3">

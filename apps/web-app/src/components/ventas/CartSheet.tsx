@@ -19,9 +19,7 @@ import { normalizeAndValidatePaymentSplits } from '@/services/payments/paymentSp
 import { buildDualPaymentSplits } from '@/services/payments/paymentSplitWritePath';
 import { MixedPaymentCard } from '../payments/MixedPaymentCard';
 import { TipCaptureCard } from '@/components/tips/TipCaptureCard';
-import {
-  calculateFinalSaleTotals,
-} from '@/services/transactions/transactionTotals';
+import { calculateFinalSaleTotals } from '@/services/transactions/transactionTotals';
 import { CartTotalsSummary } from './CartTotalsSummary';
 import { CartItemsList } from './CartItemsList';
 import { CartPaymentSection } from './CartPaymentSection';
@@ -58,6 +56,7 @@ export function CartSheet({ open, onOpenChange }: CartSheetProps) {
 
   const totalBs = finalTotals.totalBs;
   const totalUsd = finalTotals.totalUsd;
+  const cartRunMarker = notes.trim();
 
   const subtotalUsd = exchangeRate > 0 ? subtotalBs / exchangeRate : 0;
 
@@ -210,8 +209,17 @@ export function CartSheet({ open, onOpenChange }: CartSheetProps) {
                     placeholder="Observaciones de la venta..."
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
+                    data-testid="cart-notes-input"
                     className="h-20 resize-none bg-muted/30"
                   />
+                  {cartRunMarker ? (
+                    <p
+                      className="text-xs text-muted-foreground"
+                      data-testid="cart-run-marker-preview"
+                    >
+                      Marcador de prueba: {cartRunMarker}
+                    </p>
+                  ) : null}
                 </div>
               </div>
 
@@ -226,6 +234,7 @@ export function CartSheet({ open, onOpenChange }: CartSheetProps) {
                 <Button
                   onClick={handleComplete}
                   disabled={saving}
+                  data-testid="cart-confirm-sale"
                   className="w-full h-14 text-base font-bold gradient-primary rounded-xl shadow-fab"
                 >
                   <Check className="w-5 h-5 mr-2" />

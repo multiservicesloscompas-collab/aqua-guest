@@ -46,6 +46,7 @@ export function SalesList({ sales, paymentFilter = 'todos' }: SalesListProps) {
   const [editingSale, setEditingSale] = useState<Sale | null>(null);
   const [editSheetOpen, setEditSheetOpen] = useState(false);
   const [saleToDelete, setSaleToDelete] = useState<string | null>(null);
+  const [deletingSaleId, setDeletingSaleId] = useState<string | null>(null);
 
   // Filtrar ventas por método de pago si es necesario
   const filteredSales =
@@ -61,11 +62,19 @@ export function SalesList({ sales, paymentFilter = 'todos' }: SalesListProps) {
           );
         });
 
-  const handleDelete = () => {
-    if (saleToDelete) {
-      deleteSale(saleToDelete);
+  const handleDelete = async () => {
+    if (!saleToDelete) return;
+
+    setDeletingSaleId(saleToDelete);
+
+    try {
+      await deleteSale(saleToDelete);
       toast.success('Venta eliminada');
       setSaleToDelete(null);
+    } catch {
+      toast.error('No se pudo eliminar la venta');
+    } finally {
+      setDeletingSaleId(null);
     }
   };
 
@@ -137,6 +146,7 @@ export function SalesList({ sales, paymentFilter = 'todos' }: SalesListProps) {
             return (
               <div
                 key={sale.id}
+                data-testid={`sale-row-${sale.id}`}
                 className="bg-card rounded-xl p-4 border shadow-card space-y-2"
               >
                 <div className="flex items-start justify-between">
@@ -159,6 +169,7 @@ export function SalesList({ sales, paymentFilter = 'todos' }: SalesListProps) {
                       variant="ghost"
                       size="icon"
                       onClick={() => handleEdit(sale)}
+                      data-testid={`sale-edit-trigger-${sale.id}`}
                       className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/10"
                     >
                       <Pencil className="w-4 h-4" />
@@ -167,6 +178,7 @@ export function SalesList({ sales, paymentFilter = 'todos' }: SalesListProps) {
                       variant="ghost"
                       size="icon"
                       onClick={() => setSaleToDelete(sale.id)}
+                      data-testid={`sale-delete-trigger-${sale.id}`}
                       className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -186,8 +198,11 @@ export function SalesList({ sales, paymentFilter = 'todos' }: SalesListProps) {
                     </span>
                   ))}
                   {tipAmountBs > 0 && (
-                    <span className="text-xs bg-black px-2 py-1 rounded-full text-white">
-                      Propina
+                    <span
+                      className="text-xs bg-black px-2 py-1 rounded-full text-white"
+                      data-testid={`sale-tip-badge-${sale.id}`}
+                    >
+                      Propina Bs {tipAmountBs.toFixed(2)}
                     </span>
                   )}
                 </div>
@@ -229,8 +244,10 @@ export function SalesList({ sales, paymentFilter = 'todos' }: SalesListProps) {
             <Button
               size="lg"
               variant="destructive"
+              data-testid="sale-delete-confirm"
               className="w-full h-14 rounded-2xl text-base font-semibold shadow-lg sm:h-16 sm:text-lg"
               onClick={handleDelete}
+              disabled={deletingSaleId !== null}
             >
               Eliminar Permanentemente
             </Button>

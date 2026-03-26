@@ -26,7 +26,10 @@ export function TipDaySummaryCard({
   onPayAllTips,
 }: TipDaySummaryCardProps) {
   return (
-    <section className="rounded-2xl border border-primary/15 bg-gradient-to-br from-primary/10 via-background to-background px-4 py-4 shadow-card">
+    <section
+      className="rounded-2xl border border-primary/15 bg-gradient-to-br from-primary/10 via-background to-background px-4 py-4 shadow-card"
+      data-testid="tips-summary-card"
+    >
       <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
         Resumen del dia
       </p>
@@ -37,7 +40,9 @@ export function TipDaySummaryCard({
             {formatTipsDateLabel(selectedDate)}
           </p>
           <p className="mt-1 text-3xl font-semibold tracking-tight text-foreground [font-variant-numeric:tabular-nums]">
-            Bs {formatBolivars(totalTipsBs)}
+            <span data-testid="tips-summary-total-bs">
+              Bs {formatBolivars(totalTipsBs)}
+            </span>
           </p>
         </div>
         <div className="rounded-xl border border-border/80 bg-background/80 px-3 py-2 text-right">
@@ -45,7 +50,7 @@ export function TipDaySummaryCard({
             Registros
           </p>
           <p className="text-lg font-semibold text-foreground [font-variant-numeric:tabular-nums]">
-            {totalTipsCount}
+            <span data-testid="tips-summary-total-count">{totalTipsCount}</span>
           </p>
         </div>
       </div>
@@ -57,7 +62,9 @@ export function TipDaySummaryCard({
             Pendientes
           </p>
           <p className="mt-1 text-base font-semibold text-amber-700 [font-variant-numeric:tabular-nums]">
-            {pendingTipsCount}
+            <span data-testid="tips-summary-pending-count">
+              {pendingTipsCount}
+            </span>
           </p>
         </div>
         <div className="rounded-xl border border-emerald-300/40 bg-emerald-50/60 px-3 py-2">
@@ -66,7 +73,7 @@ export function TipDaySummaryCard({
             Pagadas
           </p>
           <p className="mt-1 text-base font-semibold text-emerald-700 [font-variant-numeric:tabular-nums]">
-            {paidTipsCount}
+            <span data-testid="tips-summary-paid-count">{paidTipsCount}</span>
           </p>
         </div>
       </div>

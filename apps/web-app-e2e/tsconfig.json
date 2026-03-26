@@ -1,0 +1,14 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "types": ["node", "@playwright/test"],
+    "baseUrl": ".",
+    "rootDir": "./",
+    "outDir": "../../dist/out-tsc/apps/web-app-e2e",
+    "emitDeclarationOnly": false,
+    "noEmit": true
+  },
+  "include": ["playwright.config.ts", "src/**/*.ts"]
+}

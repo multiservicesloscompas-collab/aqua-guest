@@ -2,7 +2,11 @@
   "name": "@org/source",
   "version": "0.0.0",
   "license": "MIT",
-  "scripts": {},
+  "scripts": {
+    "playwright:install": "playwright install chromium",
+    "e2e:web-app": "npx nx run web-app-e2e:e2e",
+    "e2e:web-app:ci": "npx nx run web-app-e2e:e2e-ci"
+  },
   "private": true,
   "devDependencies": {
     "@eslint/js": "^9.8.0",
@@ -13,6 +17,7 @@
     "@nx/react": "^22.2.3",
     "@nx/vite": "22.2.3",
     "@nx/vitest": "22.2.3",
+    "@playwright/test": "^1.53.2",
     "@nx/web": "22.2.3",
     "@nx/webpack": "^22.2.3",
     "@swc-node/register": "~1.9.1",

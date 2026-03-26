@@ -75,6 +75,7 @@ export function TipCard({
       <div className="flex flex-wrap items-center gap-2">
         <Badge
           variant={isPending ? 'outline' : 'secondary'}
+          data-testid={`tip-status-badge-${tip.id}`}
           className={
             isPending
               ? 'border-amber-400 text-amber-700'
@@ -85,7 +86,9 @@ export function TipCard({
         </Badge>
         <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
           <CreditCard className="h-3.5 w-3.5" aria-hidden="true" />
-          {getMethodLabel(tip.capturePaymentMethod)}
+          <span data-testid={`tip-capture-method-${tip.id}`}>
+            {getMethodLabel(tip.capturePaymentMethod)}
+          </span>
         </span>
       </div>
 
@@ -147,6 +150,7 @@ export function TipCard({
               size="sm"
               className="h-10 touch-manipulation"
               onClick={() => onPayTip(tip.id)}
+              data-testid={`tip-pay-button-${tip.id}`}
               disabled={!isPending || isPaying}
               variant={isPending ? 'default' : 'secondary'}
             >

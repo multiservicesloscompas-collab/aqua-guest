@@ -40,6 +40,7 @@ export function DateSelector({
         size="icon"
         onClick={handlePrevDay}
         disabled={loading}
+        data-testid="water-sales-date-prev"
         className="touch-target rounded-full"
       >
         <ChevronLeft className="w-5 h-5" />
@@ -48,6 +49,8 @@ export function DateSelector({
       <button
         onClick={handleToday}
         disabled={loading}
+        data-testid="water-sales-current-date"
+        data-date={format(date, 'yyyy-MM-dd')}
         className="flex flex-col items-center gap-0.5 flex-1 px-2 disabled:opacity-50"
       >
         <div className="flex items-center gap-2">
@@ -70,6 +73,7 @@ export function DateSelector({
         size="icon"
         onClick={handleNextDay}
         disabled={loading}
+        data-testid="water-sales-date-next"
         className="touch-target rounded-full"
       >
         <ChevronRight className="w-5 h-5" />

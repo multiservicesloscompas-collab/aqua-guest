@@ -43,6 +43,10 @@ export function MixedPaymentCard({
     >
       <button
         type="button"
+        data-testid="mixed-payment-toggle"
+        aria-label="Pago mixto"
+        aria-pressed={isMixedPayment}
+        data-state={isMixedPayment ? 'on' : 'off'}
         onClick={onToggle}
         disabled={isDisabled}
         className="w-full flex items-center justify-between p-4 text-left focus:outline-none disabled:cursor-not-allowed"

@@ -32,12 +32,18 @@ export function ExpenseCard({
 }: ExpenseCardProps) {
   const isReadOnlyTipPayout = isTipPayoutDerivedExpenseId(expense.id);
   const isMixed = hasValidMixedPaymentSplits(expense.paymentSplits);
+  const normalizedDescription = expense.description
+    .toLowerCase()
+    .replace(/\s+/g, '-');
 
   return (
     <div className="bg-card rounded-xl p-4 border shadow-card flex flex-col gap-3">
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-bold text-foreground truncate">
+          <p
+            className="text-sm font-bold text-foreground truncate"
+            data-testid={`expense-description-${expense.id}`}
+          >
             {expense.description}
           </p>
           <div className="flex items-center gap-2 mt-1 flex-wrap">
@@ -61,9 +67,12 @@ export function ExpenseCard({
             </p>
           )}
         </div>
-        
+
         <div className="flex flex-col items-end gap-2 shrink-0">
-          <span className="text-base font-bold text-destructive">
+          <span
+            className="text-base font-bold text-destructive"
+            data-testid={`expense-amount-${expense.id}`}
+          >
             Bs {expense.amount.toFixed(2)}
           </span>
           {isReadOnlyTipPayout ? null : (
@@ -137,6 +146,13 @@ export function ExpenseCard({
             ))}
         </div>
       )}
+
+      <span
+        className="sr-only"
+        data-testid={`expense-kind-${normalizedDescription}-${expense.id}`}
+      >
+        {expense.description}
+      </span>
     </div>
   );
 }

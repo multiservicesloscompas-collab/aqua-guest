@@ -39,6 +39,7 @@ export function DashboardKpiGrid({
         subtitle="Ingresos"
         icon={<TrendingUp className="w-4 h-4 text-primary" />}
         variant="default"
+        dataTestId="dashboard-kpi-mtd-income"
       />
       <KpiCard
         title="Neto Mes"
@@ -46,6 +47,7 @@ export function DashboardKpiGrid({
         subtitle={values.mtdNetSubtitle}
         icon={<DollarSign className="w-4 h-4 text-primary" />}
         variant={values.mtdNetVariant}
+        dataTestId="dashboard-kpi-mtd-net"
       />
       <KpiCard
         title="Egresos Hoy"
@@ -54,12 +56,14 @@ export function DashboardKpiGrid({
         icon={<Wallet className="w-4 h-4 text-destructive" />}
         variant="danger"
         onClick={() => onNavigate?.('egresos')}
+        dataTestId="dashboard-kpi-day-expenses"
       />
       <KpiCard
         title="Neto Hoy"
         value={values.dayNetText}
         subtitle={values.dayNetSubtitle}
         variant={values.dayNetVariant}
+        dataTestId="dashboard-kpi-day-net"
       />
       <KpiCard
         title="Transacciones"
@@ -69,6 +73,7 @@ export function DashboardKpiGrid({
         icon={<Receipt className="w-4 h-4 text-primary" />}
         onClick={() => onNavigate?.('transacciones-hoy')}
         className="cursor-pointer hover:bg-muted/50 active:scale-95 transition-all"
+        dataTestId="dashboard-kpi-transactions"
       />
       <KpiCard
         title="Moneda"

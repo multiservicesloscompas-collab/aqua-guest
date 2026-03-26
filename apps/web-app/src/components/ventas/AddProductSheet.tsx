@@ -133,6 +133,7 @@ export function AddProductSheet({ open, onOpenChange }: AddProductSheetProps) {
                 <button
                   key={product.id}
                   onClick={() => setSelectedProduct(product)}
+                  data-testid={`add-product-option-${product.id}`}
                   className="flex flex-col items-center gap-2 p-4 bg-muted/50 rounded-xl border-2 border-transparent hover:border-primary/30 transition-all active:scale-95"
                 >
                   <span className="text-3xl">{product.icon || '📦'}</span>
@@ -257,6 +258,7 @@ export function AddProductSheet({ open, onOpenChange }: AddProductSheetProps) {
               <Button
                 onClick={handleAdd}
                 disabled={unitPrice <= 0}
+                data-testid="add-product-confirm"
                 className="w-full h-14 text-base font-bold gradient-primary rounded-xl shadow-fab"
               >
                 <Plus className="w-5 h-5 mr-2" />

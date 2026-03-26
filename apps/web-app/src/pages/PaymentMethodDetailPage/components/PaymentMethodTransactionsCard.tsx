@@ -52,6 +52,7 @@ export function PaymentMethodTransactionsCard({
               return (
                 <div
                   key={transaction.key}
+                  data-testid={`payment-method-transaction-row-${transaction.key}`}
                   className={`flex items-center justify-between p-3 rounded-lg border ${transaction.containerClass}`}
                 >
                   <div className="flex items-center gap-3">
@@ -82,6 +83,14 @@ export function PaymentMethodTransactionsCard({
                       <p className="text-xs text-muted-foreground/90">
                         {transaction.linkedReference}
                       </p>
+                      {transaction.typeLabel === 'Pago de Propina' ? (
+                        <span
+                          className="sr-only"
+                          data-testid={`payment-method-tip-payout-${transaction.key}`}
+                        >
+                          tip-payout
+                        </span>
+                      ) : null}
                     </div>
                   </div>
                   <div className="text-right">

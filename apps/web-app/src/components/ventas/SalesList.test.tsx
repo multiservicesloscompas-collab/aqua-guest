@@ -94,7 +94,7 @@ describe('SalesList', () => {
 
     expect(screen.getByText('1x Recarga de Agua (19L)')).toBeInTheDocument();
 
-    const tipBadge = screen.getByText('Propina');
+    const tipBadge = screen.getByText('Propina Bs 20.00');
     expect(tipBadge).toBeInTheDocument();
     expect(tipBadge).toHaveClass('bg-black', 'text-white');
     expect(tipBadge).not.toHaveClass('font-bold');

@@ -178,6 +178,7 @@ export function WaterSalesPage({ autoOpenAdd }: WaterSalesPageProps = {}) {
             {cartCount > 0 && (
               <Button
                 onClick={() => setShowCart(true)}
+                data-testid="water-sales-open-cart-mobile"
                 className={cn(
                   'fixed bottom-24 left-4 h-14 px-6 rounded-full bg-foreground text-background shadow-fab z-40',
                   'transition-all hover:scale-105 active:scale-95 animate-scale-in'
@@ -211,6 +212,7 @@ export function WaterSalesPage({ autoOpenAdd }: WaterSalesPageProps = {}) {
       {/* FAB para agregar producto */}
       <Button
         onClick={() => setShowAddProduct(true)}
+        data-testid="water-sales-add-product-fab"
         className={cn(
           'fixed bottom-24 right-4 w-14 h-14 rounded-full gradient-primary shadow-fab z-40',
           'transition-transform hover:scale-105 active:scale-95'

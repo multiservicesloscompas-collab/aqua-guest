@@ -56,34 +56,41 @@ export function TipCaptureCard({
   }, [enabled, onAmountChange, onNotesChange]);
 
   return (
-    <div 
+    <div
       className={cn(
-        "rounded-[24px] border transition-all duration-300 overflow-hidden",
-        enabled ? "bg-card border-border shadow-md" : "bg-card/50 border-border/40 shadow-sm active:scale-[0.98]"
+        'rounded-[24px] border transition-all duration-300 overflow-hidden',
+        enabled
+          ? 'bg-card border-border shadow-md'
+          : 'bg-card/50 border-border/40 shadow-sm active:scale-[0.98]'
       )}
     >
       <button
         type="button"
         onClick={onToggle}
+        data-testid="cart-tip-toggle"
         className="w-full flex items-center justify-between p-4 text-left focus:outline-none"
       >
         <div className="flex items-center gap-4">
-          <div 
+          <div
             className={cn(
-              "flex items-center justify-center w-12 h-12 rounded-2xl shrink-0 transition-colors",
-              enabled ? "bg-amber-500/10 text-amber-600" : "bg-muted text-muted-foreground"
+              'flex items-center justify-center w-12 h-12 rounded-2xl shrink-0 transition-colors',
+              enabled
+                ? 'bg-amber-500/10 text-amber-600'
+                : 'bg-muted text-muted-foreground'
             )}
           >
             <HandCoins className="w-6 h-6" />
           </div>
           <div className="flex flex-col items-start min-w-0">
-            <span className="text-[16px] font-bold text-foreground">Propina</span>
+            <span className="text-[16px] font-bold text-foreground">
+              Propina
+            </span>
             <span className="text-[13px] font-medium text-muted-foreground truncate">
               {enabled ? 'Ocultar propina' : 'Agrega un extra al servicio'}
             </span>
           </div>
         </div>
-        
+
         <div
           className={cn(
             'px-4 py-1.5 rounded-full text-[13px] font-bold whitespace-nowrap transition-colors',
@@ -112,6 +119,7 @@ export function TipCaptureCard({
               placeholder="Ej: 20.00..."
               value={amount}
               onChange={(event) => onAmountChange(event.target.value)}
+              data-testid="cart-tip-amount-input"
             />
           </div>
 
@@ -128,6 +136,7 @@ export function TipCaptureCard({
                     key={method}
                     type="button"
                     onClick={() => onPaymentMethodChange(method)}
+                    data-testid={`cart-tip-payment-method-${method}`}
                     className={cn(
                       'flex items-center gap-3 h-14 px-4 rounded-xl border-2 transition-all text-left',
                       isActive
@@ -166,6 +175,7 @@ export function TipCaptureCard({
               placeholder="Ej: Cliente feliz con el servicio..."
               value={notes}
               onChange={(event) => onNotesChange(event.target.value)}
+              data-testid="cart-tip-notes-input"
             />
           </div>
         </div>

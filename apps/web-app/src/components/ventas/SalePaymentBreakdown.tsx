@@ -2,6 +2,7 @@ import { Banknote, type LucideIcon } from 'lucide-react';
 
 import type { PaymentDisplayModel } from '@/services/payments/paymentDisplayModel';
 import type { Sale } from '@/types';
+import { PaymentMethodLabels } from '@/types';
 import { deriveSaleTipAmountBs } from '@/services/transactions/transactionTotals';
 
 interface SalePaymentBreakdownProps {
@@ -22,6 +23,11 @@ export function SalePaymentBreakdown({
     0
   );
   const tipAmountBs = deriveSaleTipAmountBs(sale.totalBs, subtotalBs);
+  const inferredTipMethod =
+    paymentDisplay.kind === 'mixed'
+      ? paymentDisplay.lines.find((line) => line.method !== sale.paymentMethod)
+          ?.label ?? PaymentMethodLabels[sale.paymentMethod]
+      : PaymentMethodLabels[sale.paymentMethod];
 
   return (
     <div>
@@ -39,10 +45,16 @@ export function SalePaymentBreakdown({
         {timeLabel}
       </p>
       {tipAmountBs > 0 && (
-        <p className="text-xs text-muted-foreground">
-          Subtotal Bs {subtotalBs.toFixed(2)} + Propina Bs{' '}
-          {tipAmountBs.toFixed(2)}
-        </p>
+        <div className="text-xs text-muted-foreground space-y-1">
+          <p data-testid={`sale-tip-descriptor-${sale.id}`}>
+            Subtotal Bs {subtotalBs.toFixed(2)} + Propina Bs{' '}
+            {tipAmountBs.toFixed(2)}
+          </p>
+          <p data-testid={`sale-method-descriptor-${sale.id}`}>
+            Método principal: {PaymentMethodLabels[sale.paymentMethod]} ·
+            Captura propina: {inferredTipMethod}
+          </p>
+        </div>
       )}
 
       {paymentDisplay.kind === 'mixed' && (

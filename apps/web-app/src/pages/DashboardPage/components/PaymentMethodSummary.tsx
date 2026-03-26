@@ -45,6 +45,7 @@ export function PaymentMethodSummary({
         {items.map((item) => (
           <PaymentMethodCard
             key={item.id}
+            testId={`dashboard-method-card-${item.id}`}
             title={item.title}
             amountText={item.amountText}
             convertedText={item.convertedText}

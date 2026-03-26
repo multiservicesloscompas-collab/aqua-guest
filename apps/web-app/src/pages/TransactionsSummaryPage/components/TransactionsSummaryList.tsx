@@ -54,7 +54,11 @@ export function TransactionsSummaryList({
   return (
     <div className="space-y-3">
       {transactions.map((t) => (
-        <Card key={t.id} className="overflow-hidden">
+        <Card
+          key={t.id}
+          className="overflow-hidden"
+          data-testid={`transaction-row-${t.id}`}
+        >
           <CardContent className="p-0">
             <div className="flex items-center p-4 gap-3">
               <div
@@ -76,6 +80,7 @@ export function TransactionsSummaryList({
                   {t.paymentMethod ? (
                     <Badge
                       variant="outline"
+                      data-testid={`transaction-method-badge-${t.id}`}
                       className="text-[10px] px-1.5 py-0 h-5"
                     >
                       {t.paymentMethod}
@@ -89,6 +94,7 @@ export function TransactionsSummaryList({
             >
               <span className="text-muted-foreground">Monto</span>
               <span
+                data-testid={`transaction-amount-${t.id}`}
                 className={
                   t.type === 'balance_transfer'
                     ? 'text-orange-600'
