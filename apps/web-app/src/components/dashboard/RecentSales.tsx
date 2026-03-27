@@ -1,6 +1,13 @@
-import { Sale, PaymentMethodLabels, PaymentMethod } from '@/types';
-import { Clock, CreditCard, Banknote, Smartphone, DollarSign } from 'lucide-react';
+import { Sale, PaymentMethod } from '@/types';
+import {
+  Clock,
+  CreditCard,
+  Banknote,
+  Smartphone,
+  DollarSign,
+} from 'lucide-react';
 import { LucideIcon } from 'lucide-react';
+import { buildSalePaymentDisplayModel } from '@/services/payments/paymentDisplayModel';
 
 interface RecentSalesProps {
   sales: Sale[];
@@ -35,7 +42,9 @@ export function RecentSales({ sales }: RecentSalesProps) {
       </h3>
       <div className="space-y-2">
         {sales.slice(0, 3).map((sale) => {
-          const PaymentIcon = paymentIcons[sale.paymentMethod] || Banknote;
+          const paymentDisplay = buildSalePaymentDisplayModel(sale);
+          const PaymentIcon =
+            paymentIcons[paymentDisplay.primaryMethod] || Banknote;
           const time = new Date(sale.createdAt).toLocaleTimeString('es-VE', {
             hour: '2-digit',
             minute: '2-digit',
@@ -56,7 +65,7 @@ export function RecentSales({ sales }: RecentSalesProps) {
                     {sale.items.length > 1 ? 's' : ''}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {PaymentMethodLabels[sale.paymentMethod]} • {time}
+                    {paymentDisplay.label} • {time}
                   </p>
                 </div>
               </div>

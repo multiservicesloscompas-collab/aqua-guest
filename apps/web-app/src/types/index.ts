@@ -1,3 +1,5 @@
+import type { PaymentSplit } from './paymentSplits';
+
 export interface Product {
   id: string;
   name: string;
@@ -38,6 +40,7 @@ export interface Sale {
   date: string; // ISO date string
   items: CartItem[];
   paymentMethod: PaymentMethod;
+  paymentSplits?: PaymentSplit[];
   totalBs: number;
   totalUsd: number;
   exchangeRate: number; // Tasa al momento de la venta
@@ -54,6 +57,7 @@ export interface Expense {
   amount: number; // En Bolívares
   category: ExpenseCategory;
   paymentMethod: PaymentMethod;
+  paymentSplits?: PaymentSplit[];
   notes?: string;
   createdAt: string;
 }
@@ -149,6 +153,7 @@ export interface WasherRental {
   deliveryFee: number; // $0 - $5
   totalUsd: number; // Precio jornada + delivery
   paymentMethod: PaymentMethod; // Método de pago
+  paymentSplits?: PaymentSplit[];
   status: RentalStatus;
   isPaid: boolean;
   datePaid?: string; // Fecha en que se realizó el pago (YYYY-MM-DD)
@@ -214,25 +219,6 @@ export interface AppConfig {
   exchangeRateHistory: ExchangeRateHistory[]; // Historial de tasas
 }
 
-// Estadísticas del Dashboard
-export interface DashboardStats {
-  totalSalesToday: number;
-  totalSalesWeek: number;
-  totalSalesMonth: number;
-  totalSalesYear: number;
-  totalExpensesToday: number;
-  totalExpensesMonth: number;
-  salesCount: number;
-  averageTicket: number;
-}
-
-// Para gráficas
-export interface ChartDataPoint {
-  label: string;
-  value: number;
-  date?: string;
-}
-
 // ============================================
 // AGUA PREPAGADA
 // ============================================
@@ -274,11 +260,18 @@ export interface PrepaidOrder {
 export interface PaymentBalanceTransaction {
   id: string;
   date: string; // YYYY-MM-DD
+  operationType?: 'equilibrio' | 'avance';
   fromMethod: PaymentMethod; // Método de pago origen
   toMethod: PaymentMethod; // Método de pago destino
   amount: number; // Monto en Bolívares (para compatibilidad)
   amountBs?: number; // Monto en Bolívares
   amountUsd?: number; // Monto en USD
+  amountOutBs?: number;
+  amountOutUsd?: number;
+  amountInBs?: number;
+  amountInUsd?: number;
+  differenceBs?: number;
+  differenceUsd?: number;
   notes?: string;
   createdAt: string;
   updatedAt: string;
@@ -291,21 +284,14 @@ export interface PaymentBalanceSummary {
   adjustments: number; // Ajustes netos (+/-)
   finalTotal: number; // Total después de ajustes
 }
-
-// Navegación
-export type AppRoute =
-  | 'dashboard'
-  | 'ventas'
-  | 'alquiler'
-  | 'egresos'
-  | 'clientes'
-  | 'lavadoras'
-  | 'config'
-  | 'seguimiento'
-  | 'historial-tasas'
-  | 'prepagados'
-  | 'deliverys'
-  | 'metricas-agua'
-  | 'equilibrio-pagos'
-  | 'transacciones-hoy'
-  | 'detalle-pago';
+// Navegación — tipos centralizados en navigation.ts
+export type { AppRoute, ModuleRoute, ModuleSubItem } from './navigation';
+export { routeToModule } from './navigation';
+export type {
+  Tip,
+  TipOriginType,
+  TipPayout,
+  TipPayoutSummary,
+  TipStatus,
+} from './tips';
+export type { DashboardStats, ChartDataPoint } from './analytics';

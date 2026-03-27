@@ -11,6 +11,7 @@ interface KpiCardProps {
   variant?: 'default' | 'primary' | 'success' | 'warning' | 'danger' | 'info';
   className?: string;
   onClick?: () => void;
+  dataTestId?: string;
 }
 
 const variantStyles = {
@@ -32,12 +33,14 @@ export function KpiCard({
   variant = 'default',
   className,
   onClick,
+  dataTestId,
 }: KpiCardProps) {
   const isPrimary = variant === 'primary';
 
   return (
     <div
       onClick={onClick}
+      data-testid={dataTestId}
       className={cn(
         'relative overflow-hidden rounded-xl p-4 border shadow-card transition-transform active:scale-[0.98]',
         onClick && 'cursor-pointer hover:bg-muted/50',
@@ -60,6 +63,7 @@ export function KpiCard({
               'text-xl font-bold tracking-tight',
               isPrimary ? 'text-primary-foreground' : 'text-foreground'
             )}
+            data-testid={dataTestId ? `${dataTestId}-value` : undefined}
           >
             {value}
           </p>

@@ -1,0 +1,76 @@
+{
+  "name": "web-app-e2e",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "apps/web-app-e2e/src",
+  "projectType": "application",
+  "implicitDependencies": ["web-app"],
+  "targets": {
+    "e2e": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "playwright test -c apps/web-app-e2e/playwright.config.ts apps/web-app-e2e/src/tests/water-sale-cleanup.e2e.spec.ts && playwright test -c apps/web-app-e2e/playwright.config.ts apps/web-app-e2e/src/tests/water-sale-dashboard-metrics.e2e.spec.ts -g \"dashboard transactions and metrics validation with 4 water sales\""
+      },
+      "configurations": {
+        "headed": {
+          "command": "playwright test -c apps/web-app-e2e/playwright.config.ts --headed --workers=1 apps/web-app-e2e/src/tests/water-sale-cleanup.e2e.spec.ts && playwright test -c apps/web-app-e2e/playwright.config.ts --headed --workers=1 apps/web-app-e2e/src/tests/water-sale-dashboard-metrics.e2e.spec.ts -g \"dashboard transactions and metrics validation with 4 water sales\""
+        },
+        "debug": {
+          "command": "playwright test -c apps/web-app-e2e/playwright.config.ts --debug --workers=1 apps/web-app-e2e/src/tests/water-sale-cleanup.e2e.spec.ts && playwright test -c apps/web-app-e2e/playwright.config.ts --debug --workers=1 apps/web-app-e2e/src/tests/water-sale-dashboard-metrics.e2e.spec.ts -g \"dashboard transactions and metrics validation with 4 water sales\""
+        },
+        "ci": {
+          "command": "playwright test -c apps/web-app-e2e/playwright.config.ts --reporter=line --workers=1"
+        }
+      }
+    },
+    "e2e-full": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "playwright test -c apps/web-app-e2e/playwright.config.ts"
+      },
+      "configurations": {
+        "headed": {
+          "command": "playwright test -c apps/web-app-e2e/playwright.config.ts --headed --workers=1"
+        },
+        "debug": {
+          "command": "playwright test -c apps/web-app-e2e/playwright.config.ts --debug --workers=1"
+        },
+        "ci": {
+          "command": "playwright test -c apps/web-app-e2e/playwright.config.ts --reporter=line --workers=1"
+        }
+      }
+    },
+    "e2e-ci": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "playwright test -c apps/web-app-e2e/playwright.config.ts --reporter=line"
+      },
+      "configurations": {
+        "ci": {
+          "command": "playwright test -c apps/web-app-e2e/playwright.config.ts --reporter=line --workers=1"
+        }
+      }
+    },
+    "e2e-preclean-dashboard": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "playwright test -c apps/web-app-e2e/playwright.config.ts apps/web-app-e2e/src/tests/water-sale-cleanup.e2e.spec.ts && playwright test -c apps/web-app-e2e/playwright.config.ts apps/web-app-e2e/src/tests/water-sale-dashboard-metrics.e2e.spec.ts -g \"dashboard transactions and metrics validation with 4 water sales\""
+      },
+      "configurations": {
+        "headed": {
+          "command": "playwright test -c apps/web-app-e2e/playwright.config.ts --headed --workers=1 apps/web-app-e2e/src/tests/water-sale-cleanup.e2e.spec.ts && playwright test -c apps/web-app-e2e/playwright.config.ts --headed --workers=1 apps/web-app-e2e/src/tests/water-sale-dashboard-metrics.e2e.spec.ts -g \"dashboard transactions and metrics validation with 4 water sales\""
+        },
+        "debug": {
+          "command": "playwright test -c apps/web-app-e2e/playwright.config.ts --debug --workers=1 apps/web-app-e2e/src/tests/water-sale-cleanup.e2e.spec.ts && playwright test -c apps/web-app-e2e/playwright.config.ts --debug --workers=1 apps/web-app-e2e/src/tests/water-sale-dashboard-metrics.e2e.spec.ts -g \"dashboard transactions and metrics validation with 4 water sales\""
+        }
+      }
+    },
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "cwd": "apps/web-app-e2e",
+        "command": "eslint ."
+      }
+    }
+  },
+  "tags": ["scope:e2e"]
+}

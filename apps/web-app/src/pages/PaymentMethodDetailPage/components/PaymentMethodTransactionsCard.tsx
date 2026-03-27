@@ -1,13 +1,16 @@
 import { ComponentType } from 'react';
 import { Receipt } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 
 interface TransactionViewItem {
   key: string;
   typeLabel: string;
   description: string;
+  linkedReference: string;
   amountText: string;
   amountUsdText?: string;
+  paymentMethodLabel?: string;
   icon: ComponentType<{ className?: string }>;
   containerClass: string;
   iconWrapperClass: string;
@@ -49,6 +52,7 @@ export function PaymentMethodTransactionsCard({
               return (
                 <div
                   key={transaction.key}
+                  data-testid={`payment-method-transaction-row-${transaction.key}`}
                   className={`flex items-center justify-between p-3 rounded-lg border ${transaction.containerClass}`}
                 >
                   <div className="flex items-center gap-3">
@@ -60,12 +64,33 @@ export function PaymentMethodTransactionsCard({
                       />
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-foreground">
-                        {transaction.typeLabel}
-                      </p>
+                      <div className="flex items-center gap-1.5">
+                        <p className="text-sm font-medium text-foreground">
+                          {transaction.typeLabel}
+                        </p>
+                        {transaction.paymentMethodLabel ? (
+                          <Badge
+                            variant="outline"
+                            className="text-[10px] px-1.5 py-0 h-5"
+                          >
+                            {transaction.paymentMethodLabel}
+                          </Badge>
+                        ) : null}
+                      </div>
                       <p className="text-xs text-muted-foreground">
                         {transaction.description}
                       </p>
+                      <p className="text-xs text-muted-foreground/90">
+                        {transaction.linkedReference}
+                      </p>
+                      {transaction.typeLabel === 'Pago de Propina' ? (
+                        <span
+                          className="sr-only"
+                          data-testid={`payment-method-tip-payout-${transaction.key}`}
+                        >
+                          tip-payout
+                        </span>
+                      ) : null}
                     </div>
                   </div>
                   <div className="text-right">

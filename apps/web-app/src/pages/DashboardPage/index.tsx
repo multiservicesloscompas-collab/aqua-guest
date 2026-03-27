@@ -1,8 +1,10 @@
 import { useState } from 'react';
-import { Header } from '@/components/layout/Header';
+import { AppPageContainer } from '@/components/layout/AppPageContainer';
+import { TabletSplitLayout } from '@/components/layout/TabletSplitLayout';
+import { TabletSectionGrid } from '@/components/layout/TabletSectionGrid';
 import { KpiCard } from '@/components/ui/KpiCard';
 import { SalesChart } from '@/components/dashboard/SalesChart';
-import { RecentSales } from '@/components/dashboard/RecentSales';
+import { useViewportMode } from '@/hooks/responsive/useViewportMode';
 import { useAppStore } from '@/store/useAppStore';
 import { usePrepaidStore } from '@/store/usePrepaidStore';
 import { useWaterSalesStore } from '@/store/useWaterSalesStore';
@@ -10,6 +12,7 @@ import { useExpenseStore } from '@/store/useExpenseStore';
 import { usePaymentBalanceStore } from '@/store/usePaymentBalanceStore';
 import { useConfigStore } from '@/store/useConfigStore';
 import { useRentalStore } from '@/store/useRentalStore';
+import { useTipStore } from '@/store/useTipStore';
 import { DateSelector } from '@/components/ventas/DateSelector';
 import { Droplets } from 'lucide-react';
 import { AppRoute, PaymentMethod } from '@/types';
@@ -18,6 +21,11 @@ import { QuickActionsCards } from './components/QuickActionsCards';
 import { PaymentMethodSummary } from './components/PaymentMethodSummary';
 import { useDashboardData } from './hooks/useDashboardData';
 import { useDashboardViewModel } from './hooks/useDashboardViewModel';
+import {
+  TABLET_PRIMARY_COLUMN_CLASS,
+  TABLET_SECONDARY_COLUMN_CLASS,
+  TABLET_SPLIT_LAYOUT_CLASS,
+} from '@/lib/responsive/tabletLayoutPatterns';
 
 interface DashboardPageProps {
   onNavigate?: (route: AppRoute) => void;
@@ -28,6 +36,8 @@ export function DashboardPage({
   onNavigate,
   onPaymentMethodClick,
 }: DashboardPageProps = {}) {
+  const { isTabletViewport, viewportMode } = useViewportMode();
+  const isTabletLandscape = viewportMode === 'tablet-landscape';
   const { selectedDate, setSelectedDate } = useAppStore();
   const { prepaidOrders } = usePrepaidStore();
   const { sales, loadSalesByDateRange } = useWaterSalesStore();
@@ -35,16 +45,17 @@ export function DashboardPage({
   const { paymentBalanceTransactions } = usePaymentBalanceStore();
   const { config } = useConfigStore();
   const { rentals, loadRentalsByDateRange } = useRentalStore();
+  const { tipPayouts, loadTipsByDateRange } = useTipStore();
   const [currency, setCurrency] = useState<'Bs' | 'USD'>('Bs');
   const { loading } = useDashboardData(selectedDate, {
     loadSalesByDateRange,
     loadExpensesByDateRange,
     loadRentalsByDateRange,
+    loadTipsByDateRange,
   });
 
   const {
     weekData,
-    selectedSales,
     activeIndex,
     kpiValues,
     kpiPrimary,
@@ -58,29 +69,34 @@ export function DashboardPage({
     expenses,
     prepaidOrders,
     paymentBalanceTransactions,
+    tipPayouts,
     currency,
   });
 
   return (
     <div className="flex flex-col min-h-screen pb-20">
-      <Header title="AquaGest" subtitle="Panel de Control" />
+      <AppPageContainer>
+        <TabletSectionGrid>
+          {/* Selector de fecha */}
+          <div className={isTabletViewport ? 'col-span-2' : undefined}>
+            <DateSelector
+              selectedDate={selectedDate}
+              onDateChange={setSelectedDate}
+              loading={loading}
+            />
+          </div>
 
-      <main className="flex-1 px-4 py-4 space-y-4 max-w-lg mx-auto w-full">
-        {/* KPI Principal - Ventas del día seleccionado */}
-        <KpiCard
-          title={kpiPrimary.title}
-          value={kpiPrimary.value}
-          subtitle={kpiPrimary.subtitle}
-          icon={<Droplets className="w-5 h-5 text-primary-foreground" />}
-          variant="primary"
-        />
-
-        {/* Selector de fecha */}
-        <DateSelector
-          selectedDate={selectedDate}
-          onDateChange={setSelectedDate}
-          loading={loading}
-        />
+          {/* KPI Principal - Ventas del día seleccionado */}
+          <div className={isTabletViewport ? 'col-span-2' : undefined}>
+            <KpiCard
+              title={kpiPrimary.title}
+              value={kpiPrimary.value}
+              subtitle={kpiPrimary.subtitle}
+              icon={<Droplets className="w-5 h-5 text-primary-foreground" />}
+              variant="primary"
+            />
+          </div>
+        </TabletSectionGrid>
 
         {/* Grid de KPIs - Acumulado del mes hasta la fecha seleccionada */}
         <DashboardKpiGrid
@@ -92,20 +108,55 @@ export function DashboardPage({
           values={kpiValues}
         />
 
-        <QuickActionsCards onNavigate={onNavigate} />
+        {isTabletViewport ? (
+          <TabletSplitLayout
+            className={TABLET_SPLIT_LAYOUT_CLASS}
+            primary={
+              <div
+                className={TABLET_PRIMARY_COLUMN_CLASS}
+                data-testid="dashboard-primary-column"
+              >
+                <QuickActionsCards onNavigate={onNavigate} />
+                {!isTabletLandscape ? (
+                  <PaymentMethodSummary
+                    currencyLabel={currencyLabel}
+                    items={paymentMethodItems}
+                    onPaymentMethodClick={onPaymentMethodClick}
+                  />
+                ) : null}
+                <SalesChart data={weekData} activeIndex={activeIndex} />
+              </div>
+            }
+            secondary={
+              <div
+                className={TABLET_SECONDARY_COLUMN_CLASS}
+                data-testid="dashboard-secondary-column"
+              >
+                {isTabletLandscape ? (
+                  <PaymentMethodSummary
+                    currencyLabel={currencyLabel}
+                    items={paymentMethodItems}
+                    onPaymentMethodClick={onPaymentMethodClick}
+                  />
+                ) : null}
+              </div>
+            }
+          />
+        ) : (
+          <>
+            <QuickActionsCards onNavigate={onNavigate} />
 
-        <PaymentMethodSummary
-          currencyLabel={currencyLabel}
-          items={paymentMethodItems}
-          onPaymentMethodClick={onPaymentMethodClick}
-        />
+            <PaymentMethodSummary
+              currencyLabel={currencyLabel}
+              items={paymentMethodItems}
+              onPaymentMethodClick={onPaymentMethodClick}
+            />
 
-        {/* Ventas recientes */}
-        <RecentSales sales={selectedSales} />
-
-        {/* Gráfica de la semana */}
-        <SalesChart data={weekData} activeIndex={activeIndex} />
-      </main>
+            {/* Gráfica de la semana */}
+            <SalesChart data={weekData} activeIndex={activeIndex} />
+          </>
+        )}
+      </AppPageContainer>
     </div>
   );
 }

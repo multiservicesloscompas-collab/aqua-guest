@@ -27,3 +27,4 @@ Maintain a centralized directory of frequent customers to expedite the creation 
 3.  **Search & Autocomplete:** The `CustomerSearch` component filters the `customers` array based on `name`, `phone`, or `address` (case-insensitive).
 4.  **Optimistic UI:** When calling `addCustomer`, `updateCustomer`, or `deleteCustomer`, the store updates the local state immediately before the Supabase request. If Supabase fails, the local state MUST remain as a fallback to ensure offline capability or resilience against network issues.
 5.  **Required Fields:** Only `name` is strictly required to create a customer. `phone` and `address` are optional but highly recommended for the rental delivery workflow.
+6.  **Offline Queue Contract:** When offline, `addCustomer`, `updateCustomer`, and `deleteCustomer` must enqueue `customers` mutations in the global sync queue and apply optimistic local state updates so customer directory changes replay when connectivity returns.

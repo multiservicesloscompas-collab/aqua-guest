@@ -2,6 +2,11 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { Customer } from '@/types';
 import supabase from '@/lib/supabaseClient';
+import {
+  enqueueOfflineCustomerCreate,
+  enqueueOfflineCustomerDelete,
+  enqueueOfflineCustomerUpdate,
+} from '@/offline/enqueue/customersEnqueue';
 
 interface CustomerState {
   customers: Customer[];
@@ -36,6 +41,14 @@ export const useCustomerStore = create<CustomerState>()(
 
       addCustomer: async (customer) => {
         try {
+          if (!window.navigator.onLine) {
+            const offlineCustomer = enqueueOfflineCustomerCreate(customer);
+            set((state) => ({
+              customers: [...state.customers, offlineCustomer],
+            }));
+            return;
+          }
+
           const { data, error } = await supabase
             .from('customers')
             .insert({
@@ -72,6 +85,17 @@ export const useCustomerStore = create<CustomerState>()(
         try {
           const payload = buildCustomerUpdatePayload(updates);
 
+          if (!window.navigator.onLine) {
+            enqueueOfflineCustomerUpdate(id, payload);
+
+            set((state) => ({
+              customers: state.customers.map((c) =>
+                c.id === id ? { ...c, ...updates } : c
+              ),
+            }));
+            return;
+          }
+
           const { error } = await supabase
             .from('customers')
             .update(payload)
@@ -92,6 +116,15 @@ export const useCustomerStore = create<CustomerState>()(
 
       deleteCustomer: async (id) => {
         try {
+          if (!window.navigator.onLine) {
+            enqueueOfflineCustomerDelete(id);
+
+            set((state) => ({
+              customers: state.customers.filter((c) => c.id !== id),
+            }));
+            return;
+          }
+
           const { error } = await supabase
             .from('customers')
             .delete()

@@ -7,24 +7,46 @@ import {
   ExchangeRateHistory,
   DEFAULT_LITER_BREAKPOINTS,
 } from '@/types';
+import {
+  createDefaultMixedPaymentFlags,
+  isMixedPaymentEnabledForModule,
+} from '@/services/payments/paymentSplitFeatureFlag';
+import type {
+  MixedPaymentFeatureFlags,
+  PaymentSplitModule,
+} from '@/types/paymentSplits';
 import supabase from '@/lib/supabaseClient';
 import { defaultProducts } from '@/data/products';
 import { getVenezuelaDate } from '@/services/DateService';
+import {
+  applyOfflineExchangeRateHistory,
+  enqueueOfflineExchangeRateUpsert,
+  enqueueOfflineLiterPricingReplace,
+} from '@/offline/enqueue/configEnqueue';
 
 interface ConfigState {
   config: AppConfig;
   products: Product[];
+  mixedPaymentFlags: MixedPaymentFeatureFlags;
 
   setExchangeRate: (rate: number) => Promise<void>;
   getExchangeRateForDate: (date: string) => number;
   setLiterPricing: (pricing: LiterPricing[]) => Promise<void>;
   getPriceForLiters: (liters: number) => number;
+  setMixedPaymentFlags: (flags: Partial<MixedPaymentFeatureFlags>) => void;
+  isMixedPaymentEnabled: (module: PaymentSplitModule) => boolean;
 
   setConfigData: (
     configUpdates: Partial<AppConfig>,
     products: Product[]
   ) => void;
 }
+
+type LiterPricingRow = {
+  id: string;
+  breakpoint: number | string;
+  price: number | string;
+};
 
 export const useConfigStore = create<ConfigState>()(
   persist(
@@ -36,6 +58,7 @@ export const useConfigStore = create<ConfigState>()(
         exchangeRateHistory: [],
       },
       products: defaultProducts,
+      mixedPaymentFlags: createDefaultMixedPaymentFlags(),
 
       setConfigData: (configUpdates, products) => {
         set((state) => ({
@@ -46,27 +69,16 @@ export const useConfigStore = create<ConfigState>()(
 
       setExchangeRate: async (rate) => {
         const today = getVenezuelaDate();
-        const existingIndex = get().config.exchangeRateHistory.findIndex(
-          (h: ExchangeRateHistory) => h.date === today
-        );
         const newHistoryEntry: ExchangeRateHistory = {
           date: today,
           rate,
           updatedAt: new Date().toISOString(),
         };
 
-        let updatedHistory: ExchangeRateHistory[];
-        if (existingIndex >= 0) {
-          updatedHistory = get().config.exchangeRateHistory.map(
-            (h: ExchangeRateHistory, i: number) =>
-              i === existingIndex ? newHistoryEntry : h
-          );
-        } else {
-          updatedHistory = [
-            ...get().config.exchangeRateHistory,
-            newHistoryEntry,
-          ];
-        }
+        const updatedHistory = applyOfflineExchangeRateHistory(
+          get().config.exchangeRateHistory,
+          newHistoryEntry
+        );
 
         set((state) => ({
           config: {
@@ -76,6 +88,15 @@ export const useConfigStore = create<ConfigState>()(
             exchangeRateHistory: updatedHistory,
           },
         }));
+
+        if (!window.navigator.onLine) {
+          enqueueOfflineExchangeRateUpsert({
+            date: today,
+            rate,
+            updatedAt: newHistoryEntry.updatedAt,
+          });
+          return;
+        }
 
         try {
           const { error } = await supabase.from('exchange_rates').upsert(
@@ -109,6 +130,24 @@ export const useConfigStore = create<ConfigState>()(
       },
 
       setLiterPricing: async (pricing) => {
+        const previousPricing = get().config.literPricing;
+
+        set((state) => ({
+          config: {
+            ...state.config,
+            literPricing: pricing,
+            lastUpdated: new Date().toISOString(),
+          },
+        }));
+
+        if (!window.navigator.onLine) {
+          enqueueOfflineLiterPricingReplace({
+            pricing,
+            previousPricing,
+          });
+          return;
+        }
+
         try {
           const { data: existingPricing, error: fetchError } = await supabase
             .from('liter_pricing')
@@ -117,7 +156,8 @@ export const useConfigStore = create<ConfigState>()(
 
           const payload = pricing.map((p) => {
             const existing = existingPricing?.find(
-              (ep: any) => Number(ep.breakpoint) === Number(p.breakpoint)
+              (ep: LiterPricingRow) =>
+                Number(ep.breakpoint) === Number(p.breakpoint)
             );
             return {
               ...(existing ? { id: existing.id } : {}),
@@ -142,14 +182,6 @@ export const useConfigStore = create<ConfigState>()(
               .insert(inserts);
             if (insertError) throw insertError;
           }
-
-          set((state) => ({
-            config: {
-              ...state.config,
-              literPricing: pricing,
-              lastUpdated: new Date().toISOString(),
-            },
-          }));
         } catch (err) {
           console.error('Failed to persist liter pricing to Supabase', err);
           throw err;
@@ -170,6 +202,20 @@ export const useConfigStore = create<ConfigState>()(
         }
 
         return sortedPricing[sortedPricing.length - 1]?.price || 0;
+      },
+
+      setMixedPaymentFlags: (flags) => {
+        set((state) => ({
+          mixedPaymentFlags: {
+            ...state.mixedPaymentFlags,
+            ...flags,
+          },
+        }));
+      },
+
+      isMixedPaymentEnabled: (module) => {
+        const { mixedPaymentFlags } = get();
+        return isMixedPaymentEnabledForModule(mixedPaymentFlags, module);
       },
     }),
     {

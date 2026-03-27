@@ -105,7 +105,7 @@ export function applyExtensionToRental(
   const hasOriginalValues =
     rental.originalPickupTime && rental.originalPickupDate;
 
-  const updatedRental = {
+  const updatedRental: WasherRental = {
     ...rental,
     originalPickupTime: hasOriginalValues
       ? rental.originalPickupTime
@@ -177,7 +177,7 @@ export function removeExtensionFromRental(
     };
   }
 
-  const baseRental = {
+  const baseRental: WasherRental = {
     ...rental,
     extensions: [],
     pickupTime: rental.originalPickupTime || rental.pickupTime,
@@ -194,10 +194,7 @@ export function removeExtensionFromRental(
 }
 
 export function canExtendRental(rental: WasherRental): boolean {
-  return (
-    rental.status !== 'finalizado' ||
-    (rental.extensions && rental.extensions.length > 0)
-  );
+  return rental.status !== 'finalizado' || Boolean(rental.extensions?.length);
 }
 
 export const EXTENSION_OPTIONS = [

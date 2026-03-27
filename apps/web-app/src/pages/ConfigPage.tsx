@@ -1,43 +1,47 @@
 import { useState, useEffect } from 'react';
-import { Header } from '@/components/layout/Header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
-  DollarSign,
-  Save,
-  RefreshCw,
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import {
   Info,
-  Droplet,
+  Save,
   History,
   Loader2,
+  DollarSign,
+  RefreshCw,
+  Trash2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useConfigStore } from '@/store/useConfigStore';
-import { LiterPricing, DEFAULT_LITER_BREAKPOINTS, AppRoute } from '@/types';
+import { clearLocalAppCache } from '@/services/cache/clearLocalAppCache';
+import { AppRoute } from '@/types';
 
 interface ConfigPageProps {
   onNavigate?: (route: AppRoute) => void;
 }
 
 export function ConfigPage({ onNavigate }: ConfigPageProps) {
-  const { config, setExchangeRate, setLiterPricing } = useConfigStore();
+  const { config, setExchangeRate } = useConfigStore();
   const [rate, setRate] = useState(config.exchangeRate.toString());
-  const [literPrices, setLiterPrices] = useState<LiterPricing[]>(
-    config.literPricing || DEFAULT_LITER_BREAKPOINTS
-  );
   const [isSavingRate, setIsSavingRate] = useState(false);
-  const [isSavingPrices, setIsSavingPrices] = useState(false);
+  const [isClearingCache, setIsClearingCache] = useState(false);
 
   useEffect(() => {
     setRate(config.exchangeRate.toString());
   }, [config.exchangeRate]);
-
-  useEffect(() => {
-    setLiterPrices(config.literPricing || DEFAULT_LITER_BREAKPOINTS);
-  }, [config.literPricing]);
 
   const handleSaveRate = async () => {
     const newRate = Number(rate);
@@ -58,31 +62,17 @@ export function ConfigPage({ onNavigate }: ConfigPageProps) {
     }
   };
 
-  const handleLiterPriceChange = (breakpoint: number, newPrice: string) => {
-    const price = Number(newPrice);
-    if (price < 0) return;
-
-    setLiterPrices((prev) =>
-      prev.map((lp) => (lp.breakpoint === breakpoint ? { ...lp, price } : lp))
-    );
-  };
-
-  const handleSaveLiterPrices = async () => {
-    // Validar que todos los precios sean positivos
-    const hasInvalidPrice = literPrices.some((lp) => lp.price <= 0);
-    if (hasInvalidPrice) {
-      toast.error('Todos los precios deben ser mayores a 0');
-      return;
-    }
-    setIsSavingPrices(true);
+  const handleClearCache = async () => {
+    setIsClearingCache(true);
     try {
-      await setLiterPricing(literPrices);
-      toast.success('Precios por litros actualizados');
+      await clearLocalAppCache();
+      toast.success('Cache local limpiada. Recargando la app...');
+      window.location.reload();
     } catch (err) {
-      console.error('Error saving liter prices', err);
-      toast.error('Error al guardar los precios. Se guardaron localmente');
+      console.error('Error clearing local cache', err);
+      toast.error('No se pudo limpiar la cache local');
     } finally {
-      setIsSavingPrices(false);
+      setIsClearingCache(false);
     }
   };
 
@@ -93,8 +83,6 @@ export function ConfigPage({ onNavigate }: ConfigPageProps) {
 
   return (
     <div className="flex flex-col min-h-screen pb-20">
-      <Header title="Configuración" subtitle="Ajustes de la app" />
-
       <main className="flex-1 px-4 py-4 space-y-4 max-w-lg mx-auto w-full">
         {/* Tasa de cambio */}
         <div className="bg-card rounded-xl p-5 border shadow-card space-y-4">
@@ -153,69 +141,73 @@ export function ConfigPage({ onNavigate }: ConfigPageProps) {
           )}
         </div>
 
-        {/* Precios por Litros */}
         <div className="bg-card rounded-xl p-5 border shadow-card space-y-4">
           <div className="flex items-center gap-3">
-            <div className="p-3 bg-blue-500 rounded-xl">
-              <Droplet className="w-6 h-6 text-white" />
+            <div className="p-3 rounded-xl bg-destructive/10 text-destructive">
+              <Trash2 className="w-5 h-5" />
             </div>
             <div>
               <h2 className="text-base font-bold text-foreground">
-                Precios por Litros
+                Más opciones
               </h2>
               <p className="text-xs text-muted-foreground">
-                Breakpoints de precio según litraje
+                Herramientas de mantenimiento local
               </p>
             </div>
           </div>
 
-          <div className="space-y-3">
-            {literPrices
-              .sort((a, b) => a.breakpoint - b.breakpoint)
-              .map((lp) => (
-                <div key={lp.breakpoint} className="flex items-center gap-3">
-                  <div className="w-16 h-10 bg-muted rounded-lg flex items-center justify-center">
-                    <span className="text-sm font-bold text-foreground">
-                      {lp.breakpoint}L
-                    </span>
-                  </div>
-                  <div className="flex-1">
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-                        Bs
-                      </span>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={lp.price}
-                        onChange={(e) =>
-                          handleLiterPriceChange(lp.breakpoint, e.target.value)
-                        }
-                        className="h-10 pl-10 text-right font-semibold"
-                      />
-                    </div>
-                  </div>
-                </div>
-              ))}
+          <div className="rounded-lg border border-border/70 bg-muted/40 p-3 text-xs text-muted-foreground">
+            Esta acción limpia solo datos locales de AquaGest (cache,
+            almacenamiento local y datos temporales). No elimina información del
+            servidor.
           </div>
 
-          <Button
-            onClick={handleSaveLiterPrices}
-            disabled={isSavingPrices}
-            className="w-full h-12 gradient-primary rounded-xl font-semibold"
-          >
-            {isSavingPrices ? (
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-            ) : (
-              <Save className="w-4 h-4 mr-2" />
-            )}
-            {isSavingPrices ? 'Guardando...' : 'Guardar Precios'}
-          </Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="outline"
+                className="w-full border-destructive/40 text-destructive hover:bg-destructive/10"
+                disabled={isClearingCache}
+              >
+                {isClearingCache ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Trash2 className="w-4 h-4" />
+                )}
+                Limpiar cache
+              </Button>
+            </AlertDialogTrigger>
 
-          <p className="text-xs text-muted-foreground text-center">
-            El precio se asigna al breakpoint superior más cercano
-          </p>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>
+                  Limpiar cache local de AquaGest
+                </AlertDialogTitle>
+                <AlertDialogDescription>
+                  Esta acción eliminará datos locales temporales y reiniciará la
+                  aplicación. Los datos guardados en servidor no se borran.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel disabled={isClearingCache}>
+                  Cancelar
+                </AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={(event) => {
+                    event.preventDefault();
+                    void handleClearCache();
+                  }}
+                  disabled={isClearingCache}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  {isClearingCache ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : null}
+                  Confirmar limpieza
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
 
         {/* Info */}
@@ -238,7 +230,13 @@ export function ConfigPage({ onNavigate }: ConfigPageProps) {
         {/* Versión */}
         <div className="text-center text-xs text-muted-foreground py-4">
           <p>AquaGest v1.0.0</p>
-          <p>Hecho con 💧 para tu negocio</p>
+          <p>
+            Hecho con{' '}
+            <span role="img" aria-label="gota de agua">
+              💧
+            </span>{' '}
+            para tu negocio
+          </p>
         </div>
       </main>
     </div>

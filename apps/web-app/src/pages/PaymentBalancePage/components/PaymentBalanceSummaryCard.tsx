@@ -18,6 +18,14 @@ export function PaymentBalanceSummaryCard({
   getMethodIcon,
   getMethodColor,
 }: PaymentBalanceSummaryCardProps) {
+  const formatMethodAmount = (
+    method: PaymentBalanceSummary['method'],
+    value: number
+  ) =>
+    method === 'divisa'
+      ? `$${(value / exchangeRate).toFixed(2)}`
+      : `Bs ${value.toFixed(2)}`;
+
   return (
     <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10">
       <CardContent className="p-5">
@@ -42,9 +50,7 @@ export function PaymentBalanceSummaryCard({
                   </p>
                   <p className="text-xs text-muted-foreground">
                     Original:{' '}
-                    {summary.method === 'divisa'
-                      ? `$${(summary.originalTotal / exchangeRate).toFixed(2)}`
-                      : `Bs ${summary.originalTotal.toFixed(2)}`}
+                    {formatMethodAmount(summary.method, summary.originalTotal)}
                   </p>
                   {summary.adjustments !== 0 && (
                     <p className="text-xs">
@@ -56,21 +62,21 @@ export function PaymentBalanceSummaryCard({
                         }
                       >
                         Ajuste: {summary.adjustments > 0 ? '+' : ''}
-                        {summary.method === 'divisa'
-                          ? `$${(summary.adjustments / exchangeRate).toFixed(
-                              2
-                            )}`
-                          : `Bs ${summary.adjustments.toFixed(2)}`}
+                        {formatMethodAmount(
+                          summary.method,
+                          summary.adjustments
+                        )}
                       </span>
                     </p>
+                  )}
+                  {summary.adjustments === 0 && (
+                    <p className="text-xs text-muted-foreground">Ajuste: 0</p>
                   )}
                 </div>
               </div>
               <div className="text-right">
                 <p className="font-bold text-lg">
-                  {summary.method === 'divisa'
-                    ? `$${(summary.finalTotal / exchangeRate).toFixed(2)}`
-                    : `Bs ${summary.finalTotal.toFixed(2)}`}
+                  {formatMethodAmount(summary.method, summary.finalTotal)}
                 </p>
                 <Badge
                   variant="outline"

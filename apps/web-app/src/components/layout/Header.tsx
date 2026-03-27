@@ -1,18 +1,30 @@
-import { DollarSign, ArrowLeft } from 'lucide-react';
+import { DollarSign, ArrowLeft, Layers } from 'lucide-react';
 import { useWaterSalesStore } from '@/store/useWaterSalesStore';
 import { useRentalStore } from '@/store/useRentalStore';
 import { useMemo, useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { useConfigStore } from '@/store/useConfigStore';
+import type { ModuleSubItem } from '@/types';
 
 interface HeaderProps {
   title: string;
   subtitle?: string;
   showBack?: boolean;
   onBack?: () => void;
+  /** Submódulos del módulo activo — si se provee, muestra el trigger de submenú */
+  subItems?: ModuleSubItem[];
+  /** Callback al presionar el ícono de submenú */
+  onSubMenuOpen?: () => void;
 }
 
-export function Header({ title, subtitle, showBack, onBack }: HeaderProps) {
+export function Header({
+  title,
+  subtitle,
+  showBack,
+  onBack,
+  subItems,
+  onSubMenuOpen,
+}: HeaderProps) {
   const { sales } = useWaterSalesStore();
   const { config } = useConfigStore();
   const { rentals } = useRentalStore();
@@ -52,16 +64,23 @@ export function Header({ title, subtitle, showBack, onBack }: HeaderProps) {
 
   const todayEarningsUSD = useMemo(() => {
     // Ventas de agua del día
-    const todaySales = sales.filter((sale: import('@/types').Sale) => sale.date === currentDate);
-    const waterToday = todaySales.reduce((sum: number, sale: import('@/types').Sale) => sum + sale.totalBs, 0);
-    
+    const todaySales = sales.filter(
+      (sale: import('@/types').Sale) => sale.date === currentDate
+    );
+    const waterToday = todaySales.reduce(
+      (sum: number, sale: import('@/types').Sale) => sum + sale.totalBs,
+      0
+    );
+
     // Alquileres del día (convertir USD a Bs y luego a USD para el total)
-    const todayRentals = rentals.filter((rental) => rental.date === currentDate);
+    const todayRentals = rentals.filter(
+      (rental) => rental.date === currentDate
+    );
     const rentalTodayBs = todayRentals.reduce(
       (sum, rental) => sum + rental.totalUsd * config.exchangeRate,
       0
     );
-    
+
     // Total combinado en Bs, luego convertir a USD
     const totalToday = waterToday + rentalTodayBs;
     return totalToday / config.exchangeRate;
@@ -86,17 +105,32 @@ export function Header({ title, subtitle, showBack, onBack }: HeaderProps) {
               {title}
             </h1>
             {subtitle && (
-              <span className="text-xs text-muted-foreground truncate">{subtitle}</span>
+              <span className="text-xs text-muted-foreground truncate">
+                {subtitle}
+              </span>
             )}
           </div>
         </div>
 
-        <div className="flex items-center gap-1.5 bg-primary/10 px-3 py-1.5 rounded-full border border-primary/20 shrink-0">
-          <DollarSign className="w-4 h-4 text-primary" />
-          <span className="text-sm font-bold text-primary">
-            ${todayEarningsUSD.toFixed(2)}
-          </span>
-          <span className="text-xs text-muted-foreground">hoy</span>
+        <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-1.5 bg-primary/10 px-3 py-1.5 rounded-full border border-primary/20">
+            <DollarSign className="w-4 h-4 text-primary" />
+            <span className="text-sm font-bold text-primary">
+              ${todayEarningsUSD.toFixed(2)}
+            </span>
+            <span className="text-xs text-muted-foreground">hoy</span>
+          </div>
+          {subItems && subItems.length > 0 && onSubMenuOpen && (
+            <Button
+              variant="default"
+              size="icon"
+              onClick={onSubMenuOpen}
+              className="h-9 w-9 rounded-xl shadow-sm"
+              aria-label="Abrir submenú del módulo"
+            >
+              <Layers className="h-5 w-5" />
+            </Button>
+          )}
         </div>
       </div>
     </header>

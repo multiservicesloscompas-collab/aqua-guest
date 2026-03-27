@@ -65,7 +65,7 @@ export function useExtensionDialogViewModel({
       rental.pickupTime,
       extensionHours
     );
-  }, [extensionHours, rental?.pickupDate, rental?.pickupTime]);
+  }, [extensionHours, rental]);
 
   const resetForm = useCallback(() => {
     setSelectedHours(8);

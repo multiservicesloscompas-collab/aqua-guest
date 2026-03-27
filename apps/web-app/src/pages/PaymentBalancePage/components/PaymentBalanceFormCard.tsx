@@ -10,6 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { PaymentMethod, PaymentMethodLabels } from '@/types';
 import { PaymentBalanceFormData } from '../hooks/usePaymentBalancePageViewModel';
@@ -41,10 +42,9 @@ export function PaymentBalanceFormCard({
   onCancelEdit,
   getMethodIcon,
 }: PaymentBalanceFormCardProps) {
-  const isDivisa =
-    formData.fromMethod === 'divisa' || formData.toMethod === 'divisa';
-  const isDivisaToDivisa =
-    formData.fromMethod === 'divisa' && formData.toMethod === 'divisa';
+  const isAvance = formData.operationType === 'avance';
+  const isOutDivisa = formData.fromMethod === 'divisa';
+  const isInDivisa = formData.toMethod === 'divisa';
 
   return (
     <Card>
@@ -54,6 +54,35 @@ export function PaymentBalanceFormCard({
         </h3>
 
         <div className="space-y-4">
+          <div>
+            <Label id="operationType-label">Tipo de operación</Label>
+            <Tabs
+              value={formData.operationType}
+              onValueChange={(value) =>
+                onFormDataChange((prev) => {
+                  const operationType = value as 'equilibrio' | 'avance';
+                  return {
+                    ...prev,
+                    operationType,
+                    amountIn:
+                      operationType === 'equilibrio'
+                        ? prev.amountOut
+                        : prev.amountIn,
+                  };
+                })
+              }
+              className="mt-2"
+            >
+              <TabsList
+                aria-labelledby="operationType-label"
+                className="grid w-full grid-cols-2 h-11 rounded-lg bg-muted p-1"
+              >
+                <TabsTrigger value="equilibrio">Equilibrio</TabsTrigger>
+                <TabsTrigger value="avance">Avance</TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
+
           <div>
             <Label htmlFor="fromMethod">Desde</Label>
             <Select
@@ -109,28 +138,61 @@ export function PaymentBalanceFormCard({
           </div>
 
           <div>
-            <Label htmlFor="amount">
-              {isDivisa ? 'Monto (USD)' : 'Monto (Bs)'}
+            <Label htmlFor="amountOut">
+              Monto salida ({isOutDivisa ? 'USD' : 'Bs'})
             </Label>
             <Input
-              id="amount"
+              id="amountOut"
               type="number"
               step="0.01"
               min="0.01"
-              placeholder={isDivisa ? '0.00 USD' : '0.00 Bs'}
-              value={formData.amount}
+              placeholder={isOutDivisa ? '0.00 USD' : '0.00 Bs'}
+              value={formData.amountOut}
               onChange={(event) =>
                 onFormDataChange((prev) => ({
                   ...prev,
-                  amount: event.target.value,
+                  amountOut: event.target.value,
+                  amountIn:
+                    prev.operationType === 'equilibrio'
+                      ? event.target.value
+                      : prev.amountIn,
                 }))
               }
             />
-            {isDivisa && (
+            {isOutDivisa && (
               <p className="text-xs text-muted-foreground mt-1">
-                {isDivisaToDivisa
-                  ? 'Transferencia entre divisas'
-                  : `1 USD = ${exchangeRate.toFixed(2)} Bs`}
+                1 USD = {exchangeRate.toFixed(2)} Bs
+              </p>
+            )}
+          </div>
+
+          <div>
+            <Label htmlFor="amountIn">
+              Monto entrada ({isInDivisa ? 'USD' : 'Bs'})
+            </Label>
+            <Input
+              id="amountIn"
+              type="number"
+              step="0.01"
+              min="0.01"
+              placeholder={isInDivisa ? '0.00 USD' : '0.00 Bs'}
+              value={isAvance ? formData.amountIn : formData.amountOut}
+              disabled={!isAvance}
+              onChange={(event) =>
+                onFormDataChange((prev) => ({
+                  ...prev,
+                  amountIn: event.target.value,
+                }))
+              }
+            />
+            {!isAvance && (
+              <p className="text-xs text-muted-foreground mt-1">
+                En equilibrio, salida y entrada usan el mismo monto.
+              </p>
+            )}
+            {isInDivisa && (
+              <p className="text-xs text-muted-foreground mt-1">
+                1 USD = {exchangeRate.toFixed(2)} Bs
               </p>
             )}
           </div>
@@ -181,7 +243,7 @@ export function PaymentBalanceFormCard({
                 ) : (
                   <Plus className="w-4 h-4 mr-2" />
                 )}
-                {isAdding ? 'Agregando...' : 'Agregar Transferencia'}
+                {isAdding ? 'Agregando...' : 'Agregar Operación'}
               </Button>
             )}
           </div>

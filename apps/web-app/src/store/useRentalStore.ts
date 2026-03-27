@@ -1,81 +1,54 @@
+/**
+ * useRentalStore.ts
+ * Thin Zustand store barrel — wires together types from .core and
+ * action implementations from .supabase. All consumers can import
+ * from this file and nothing breaks.
+ */
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import {
-  PaymentMethod,
-  RentalShift,
-  RentalStatus,
-  WasherRental,
-} from '@/types';
-import supabase from '@/lib/supabaseClient';
+import { WasherRental } from '@/types';
 import { rentalsDataService } from '@/services/RentalsDataService';
-import { useCustomerStore } from './useCustomerStore';
+import { tipsDataService } from '@/services/tips/TipDataService';
+import { createCurrencyConverter } from '@/services/CurrencyService';
 
-interface RentalRow {
-  id: string;
-  date: string;
-  customer_id: string;
-  machine_id: string;
-  shift: RentalShift;
-  delivery_time: string;
-  pickup_time: string;
-  pickup_date: string;
-  delivery_fee: number;
-  total_usd: number;
-  payment_method: PaymentMethod;
-  status: RentalStatus;
-  is_paid: boolean;
-  date_paid?: string | null;
-  notes?: string | null;
-  created_at?: string | null;
-  updated_at?: string | null;
-}
+import {
+  type RentalState,
+  type RentalRow,
+  type RentalInsert,
+  type RentalUpdate,
+  type CustomerUpdate,
+  buildRentalWriteContext,
+  mapRentalRowToWasherRental,
+} from './useRentalStore.core';
+import {
+  replaceRentalSplits,
+  fetchRentalSplits,
+} from './useRentalStore.supabase';
+import {
+  addRentalAction,
+  updateRentalAction,
+  deleteRentalAction,
+} from './useRentalStore.actions';
+import { useConfigStore } from './useConfigStore';
+import {
+  enqueueOfflineRentalTipDelete,
+  enqueueOfflineRentalTipUpsert,
+} from '@/offline/enqueue/rentalsEnqueue';
 
-type RentalInsert = {
-  date: string;
-  customer_id: string;
-  machine_id: string;
-  shift: RentalShift;
-  delivery_time: string;
-  pickup_time: string;
-  pickup_date: string;
-  delivery_fee: number;
-  total_usd: number;
-  payment_method: PaymentMethod;
-  status: RentalStatus;
-  is_paid: boolean;
-  date_paid: string | null;
-  notes?: string;
+// Re-export everything so existing import paths continue to work
+export type {
+  RentalState,
+  RentalRow,
+  RentalInsert,
+  RentalUpdate,
+  CustomerUpdate,
 };
-
-type RentalUpdate = Partial<RentalInsert> & {
-  customer_id?: string;
-  updated_at?: string;
+export {
+  buildRentalWriteContext,
+  mapRentalRowToWasherRental,
+  replaceRentalSplits,
+  fetchRentalSplits,
 };
-
-type CustomerUpdate = Partial<{
-  name: string;
-  phone: string;
-  address: string;
-}>;
-
-interface RentalState {
-  rentals: WasherRental[];
-  loadingRentalsByRange: Record<string, boolean>;
-
-  // Acciones de alquileres
-  addRental: (
-    rental: Omit<WasherRental, 'id' | 'createdAt' | 'updatedAt'>
-  ) => Promise<void>;
-  updateRental: (id: string, updates: Partial<WasherRental>) => Promise<void>;
-  deleteRental: (id: string) => Promise<void>;
-
-  getRentalsByDate: (date: string) => WasherRental[];
-  getActiveRentalsForDate: (date: string) => WasherRental[];
-
-  // Utilidades
-  loadRentalsByDate: (date: string) => Promise<WasherRental[]>;
-  loadRentalsByDateRange: (startDate: string, endDate: string) => Promise<void>;
-}
 
 export const useRentalStore = create<RentalState>()(
   persist(
@@ -83,227 +56,79 @@ export const useRentalStore = create<RentalState>()(
       rentals: [],
       loadingRentalsByRange: {},
 
-      addRental: async (rental) => {
-        try {
-          let customerId = rental.customerId;
+      addRental: async (rental, tipInput) => {
+        const createdRental = await addRentalAction(rental, tipInput, set, get);
 
-          if (!customerId) {
-            if (!rental.customerName) {
-              throw new Error(
-                'Nombre de cliente requerido para crear el alquiler'
-              );
-            }
+        if (tipInput && tipInput.amountBs > 0) {
+          const exchangeRateUsed =
+            useConfigStore.getState().config.exchangeRate;
+          const amountUsd = createCurrencyConverter(exchangeRateUsed).toUsd(
+            tipInput.amountBs
+          );
+          await tipsDataService.upsertTipForOrigin({
+            originType: 'rental',
+            originId: createdRental.id,
+            tipDate: createdRental.date,
+            amountBs: tipInput.amountBs,
+            amountUsd,
+            exchangeRateUsed,
+            capturePaymentMethod: tipInput.capturePaymentMethod,
+            notes: tipInput.notes,
+          });
+        }
 
-            const customerState = useCustomerStore.getState();
-            const existingCustomer = customerState.customers.find(
-              (c) => c.name.toLowerCase() === rental.customerName!.toLowerCase()
-            );
+        return createdRental;
+      },
+      updateRental: async (id, updates, tipInput) => {
+        await updateRentalAction(id, updates, tipInput, set, get);
 
-            if (existingCustomer) {
-              customerId = existingCustomer.id;
-            } else {
-              const { data: cdata, error: cerr } = await supabase
-                .from('customers')
-                .insert({
-                  name: rental.customerName,
-                  phone: rental.customerPhone,
-                  address: rental.customerAddress,
-                })
-                .select('*')
-                .single();
-
-              if (cerr) throw cerr;
-              if (!cdata) throw new Error('Error al crear el cliente');
-
-              customerId = cdata.id;
-
-              useCustomerStore.setState((state) => ({
-                customers: [
-                  ...state.customers,
-                  {
-                    id: cdata.id,
-                    name: cdata.name,
-                    phone: cdata.phone,
-                    address: cdata.address,
-                  },
-                ],
-              }));
-            }
+        if (tipInput === null) {
+          if (!window.navigator.onLine) {
+            enqueueOfflineRentalTipDelete(id);
+            return;
           }
 
-          if (!customerId) {
-            throw new Error('Customer ID is required for rental');
+          await tipsDataService.deleteTipByOrigin('rental', id);
+          return;
+        }
+
+        if (tipInput && tipInput.amountBs > 0) {
+          const rental = get().rentals.find((item) => item.id === id);
+          const exchangeRateUsed =
+            useConfigStore.getState().config.exchangeRate;
+          const amountUsd = createCurrencyConverter(exchangeRateUsed).toUsd(
+            tipInput.amountBs
+          );
+
+          if (!window.navigator.onLine) {
+            enqueueOfflineRentalTipUpsert({
+              rentalId: id,
+              tipDate: rental?.date ?? updates.date ?? '',
+              amountBs: tipInput.amountBs,
+              amountUsd,
+              exchangeRateUsed,
+              capturePaymentMethod: tipInput.capturePaymentMethod,
+              notes: tipInput.notes,
+            });
+            return;
           }
 
-          const payload: RentalInsert = {
-            date: rental.date,
-            customer_id: customerId,
-            machine_id: rental.machineId,
-            shift: rental.shift,
-            delivery_time: rental.deliveryTime,
-            pickup_time: rental.pickupTime,
-            pickup_date: rental.pickupDate,
-            delivery_fee: rental.deliveryFee,
-            total_usd: rental.totalUsd,
-            payment_method: rental.paymentMethod,
-            status: rental.status,
-            is_paid: rental.isPaid,
-            date_paid: rental.datePaid || null,
-            notes: rental.notes || undefined,
-          };
-
-          const { data, error } = await supabase
-            .from('washer_rentals')
-            .insert(payload)
-            .select('*')
-            .single();
-
-          if (error) throw error;
-
-          const rentalRow = data as RentalRow | null;
-          if (!rentalRow) {
-            throw new Error('Error al crear el alquiler');
-          }
-
-          const newRental: WasherRental = {
-            id: rentalRow.id,
-            date: rentalRow.date.substring(0, 10),
-            customerId: rentalRow.customer_id,
-            customerName: rental.customerName || '',
-            customerPhone: rental.customerPhone || '',
-            customerAddress: rental.customerAddress || '',
-            machineId: rentalRow.machine_id,
-            shift: rentalRow.shift,
-            deliveryTime: rentalRow.delivery_time,
-            pickupTime: rentalRow.pickup_time,
-            pickupDate: rentalRow.pickup_date,
-            deliveryFee: Number(rentalRow.delivery_fee),
-            totalUsd: Number(rentalRow.total_usd),
-            paymentMethod: rentalRow.payment_method || rental.paymentMethod,
-            status: rentalRow.status,
-            isPaid: rentalRow.is_paid,
-            datePaid: rentalRow.date_paid
-              ? rentalRow.date_paid.substring(0, 10)
-              : undefined,
-            notes: rentalRow.notes || undefined,
-            createdAt: rentalRow.created_at || new Date().toISOString(),
-            updatedAt: rentalRow.updated_at || new Date().toISOString(),
-          };
-
-          set((state) => ({ rentals: [...state.rentals, newRental] }));
-
-          rentalsDataService.invalidateCache(rentalRow.date);
-          if (rentalRow.date_paid) {
-            rentalsDataService.invalidateCache(rentalRow.date_paid);
-          }
-        } catch (err) {
-          console.error('Failed to add rental to Supabase', err);
-          throw err;
+          await tipsDataService.upsertTipForOrigin({
+            originType: 'rental',
+            originId: id,
+            tipDate: rental?.date ?? updates.date ?? '',
+            amountBs: tipInput.amountBs,
+            amountUsd,
+            exchangeRateUsed,
+            capturePaymentMethod: tipInput.capturePaymentMethod,
+            notes: tipInput.notes,
+          });
         }
       },
-
-      updateRental: async (id, updates) => {
-        try {
-          const payload: RentalUpdate = {};
-          if (updates.machineId !== undefined)
-            payload.machine_id = updates.machineId;
-          if (updates.shift !== undefined) payload.shift = updates.shift;
-          if (updates.date !== undefined) payload.date = updates.date;
-          if (updates.deliveryTime !== undefined)
-            payload.delivery_time = updates.deliveryTime;
-          if (updates.pickupTime !== undefined)
-            payload.pickup_time = updates.pickupTime;
-          if (updates.pickupDate !== undefined)
-            payload.pickup_date = updates.pickupDate;
-          if (updates.deliveryFee !== undefined)
-            payload.delivery_fee = updates.deliveryFee;
-          if (updates.totalUsd !== undefined)
-            payload.total_usd = updates.totalUsd;
-          if (updates.paymentMethod !== undefined)
-            payload.payment_method = updates.paymentMethod;
-          if (updates.status !== undefined) payload.status = updates.status;
-          if (updates.isPaid !== undefined) payload.is_paid = updates.isPaid;
-          if ('datePaid' in updates)
-            payload.date_paid = updates.datePaid || null;
-          if (updates.notes !== undefined) payload.notes = updates.notes;
-          if (updates.customerId !== undefined)
-            payload.customer_id = updates.customerId;
-
-          const customerUpdates: CustomerUpdate = {};
-          if (updates.customerName !== undefined)
-            customerUpdates.name = updates.customerName;
-          if (updates.customerPhone !== undefined)
-            customerUpdates.phone = updates.customerPhone;
-          if (updates.customerAddress !== undefined)
-            customerUpdates.address = updates.customerAddress;
-
-          payload.updated_at = new Date().toISOString();
-
-          if (Object.keys(customerUpdates).length > 0 && updates.customerId) {
-            const { error: customerError } = await supabase
-              .from('customers')
-              .update(customerUpdates)
-              .eq('id', updates.customerId);
-            if (customerError) throw customerError;
-          }
-
-          const { error } = await supabase
-            .from('washer_rentals')
-            .update(payload)
-            .eq('id', id);
-          if (error) throw error;
-
-          set((state) => ({
-            rentals: state.rentals.map((rental) =>
-              rental.id === id
-                ? { ...rental, ...updates, updatedAt: new Date().toISOString() }
-                : rental
-            ),
-          }));
-          const updatedRental = get().rentals.find((r) => r.id === id);
-          if (updatedRental) {
-            rentalsDataService.invalidateCache(updatedRental.date);
-            if (updatedRental.datePaid) {
-              rentalsDataService.invalidateCache(updatedRental.datePaid);
-            }
-            if (updates.date && updates.date !== updatedRental.date) {
-              rentalsDataService.invalidateCache(updates.date);
-            }
-            if (
-              updates.datePaid &&
-              updates.datePaid !== updatedRental.datePaid
-            ) {
-              rentalsDataService.invalidateCache(updates.datePaid);
-            }
-          }
-        } catch (err) {
-          console.error('Failed to update rental in Supabase', err);
-          throw err;
-        }
-      },
-
-      deleteRental: async (id) => {
-        const rentalToDelete = get().rentals.find((r) => r.id === id);
-        try {
-          const { error } = await supabase
-            .from('washer_rentals')
-            .delete()
-            .eq('id', id);
-          if (error) throw error;
-          set((state) => ({
-            rentals: state.rentals.filter((rental) => rental.id !== id),
-          }));
-          if (rentalToDelete) {
-            rentalsDataService.invalidateCache(rentalToDelete.date);
-            if (rentalToDelete.datePaid) {
-              rentalsDataService.invalidateCache(rentalToDelete.datePaid);
-            }
-          }
-        } catch (err) {
-          console.error('Failed to delete rental from Supabase', err);
-          throw err;
-        }
-      },
+      deleteRental: (id) =>
+        deleteRentalAction(id, set, get, (originType, originId) =>
+          tipsDataService.deleteTipByOrigin(originType, originId)
+        ),
 
       getRentalsByDate: (date) =>
         get().rentals.filter((rental) => rental.date === date),
@@ -313,7 +138,6 @@ export const useRentalStore = create<RentalState>()(
           (rental) => rental.date === date && rental.status !== 'finalizado'
         ),
 
-      // Cargas
       loadRentalsByDate: async (date) => {
         try {
           const rentals = await rentalsDataService.loadRentalsByDate(date);

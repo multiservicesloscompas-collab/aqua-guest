@@ -1,55 +1,42 @@
+/**
+ * useExpenseStore.ts
+ * Thin Zustand store barrel — imports type definitions from .core
+ * and helpers from .helpers. All consumers can import from this
+ * file and nothing breaks.
+ */
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { Expense, PaymentMethod } from '@/types';
+import { Expense } from '@/types';
 import supabase from '@/lib/supabaseClient';
 import { expensesDataService } from '@/services/ExpensesDataService';
+import {
+  enqueueOfflineExpenseCreate,
+  enqueueOfflineExpenseDelete,
+  enqueueOfflineExpenseUpdate,
+  enqueueOfflineExpensePaymentSplitsReplace,
+} from '@/offline/enqueue/expensesEnqueue';
+import {
+  dedupExpensesByDateRange,
+  insertExpenseSplitsStrict,
+  mapExpenseRowToExpense,
+  type SupabaseCompensatingLike,
+  toExpenseInsertPayload,
+  toExpenseUpdatePayload,
+  updateExpenseWithSplitCompensationStrict,
+} from './useExpenseStore.helpers';
+import {
+  type ExpenseState,
+  type ExpenseInsertPayload,
+  type ExpenseUpdatePayload,
+  type ExpenseRow,
+} from './useExpenseStore.core';
 
-interface ExpenseState {
-  expenses: Expense[];
-
-  // Acciones de egresos
-  addExpense: (expense: Omit<Expense, 'id' | 'createdAt'>) => Promise<void>;
-  updateExpense: (id: string, updates: Partial<Expense>) => Promise<void>;
-  deleteExpense: (id: string) => Promise<void>;
-  getExpensesByDate: (date: string) => Expense[];
-  loadExpensesByDate: (date: string) => Promise<Expense[]>;
-  loadExpensesByDates: (dates: string[]) => Promise<void>;
-  loadExpensesByDateRange: (
-    startDate: string,
-    endDate: string
-  ) => Promise<void>;
-
-  // Inicialización o carga compartida
-  setExpensesData: (expenses: Expense[]) => void;
-}
-
-type ExpenseInsertPayload = {
-  date: string;
-  description: string;
-  amount: number;
-  category: Expense['category'];
-  payment_method: PaymentMethod;
-  notes?: string;
-};
-
-type ExpenseUpdatePayload = {
-  description?: string;
-  amount?: number;
-  category?: Expense['category'];
-  payment_method?: PaymentMethod;
-  notes?: string;
-  date?: string;
-};
-
-type ExpenseRow = {
-  id: string;
-  date: string;
-  description: string;
-  amount: number;
-  category: Expense['category'];
-  payment_method?: PaymentMethod;
-  notes?: string | null;
-  created_at?: string;
+// Re-export types so existing import paths continue to work
+export type {
+  ExpenseState,
+  ExpenseInsertPayload,
+  ExpenseUpdatePayload,
+  ExpenseRow,
 };
 
 const loadingExpenseRanges = new Set<string>();
@@ -59,22 +46,22 @@ export const useExpenseStore = create<ExpenseState>()(
     (set, get) => ({
       expenses: [],
 
-      setExpensesData: (expenses) => {
-        set({
-          expenses,
-        });
-      },
+      setExpensesData: (expenses) => set({ expenses }),
 
       addExpense: async (expense) => {
         try {
-          const payload: ExpenseInsertPayload = {
-            date: expense.date,
-            description: expense.description,
-            amount: expense.amount,
-            category: expense.category,
-            payment_method: expense.paymentMethod,
-            notes: expense.notes,
-          };
+          if (!window.navigator.onLine) {
+            const createdAt = new Date().toISOString();
+            const offlineExpense = enqueueOfflineExpenseCreate(
+              expense,
+              createdAt
+            );
+            set((state) => ({ expenses: [...state.expenses, offlineExpense] }));
+            expensesDataService.invalidateCache(expense.date);
+            return;
+          }
+
+          const payload = toExpenseInsertPayload(expense);
           const { data, error } = await supabase
             .from('expenses')
             .insert(payload)
@@ -82,19 +69,29 @@ export const useExpenseStore = create<ExpenseState>()(
             .single();
           if (error) throw error;
           const row = data as ExpenseRow;
-          const newExpense: Expense = {
-            id: row.id,
-            date: row.date,
-            description: row.description,
-            amount: Number(row.amount),
-            category: row.category,
-            paymentMethod: row.payment_method || 'efectivo',
-            notes: row.notes ?? undefined,
-            createdAt: row.created_at || new Date().toISOString(),
-          };
-          set((state) => ({
-            expenses: [...state.expenses, newExpense],
-          }));
+
+          try {
+            await insertExpenseSplitsStrict(
+              supabase,
+              row.id,
+              expense.paymentSplits
+            );
+          } catch (splitsError) {
+            const { error: rollbackError } = await supabase
+              .from('expenses')
+              .delete()
+              .eq('id', row.id);
+            if (rollbackError) {
+              throw rollbackError;
+            }
+            throw splitsError;
+          }
+
+          const newExpense: Expense = mapExpenseRowToExpense(
+            row,
+            expense.paymentSplits
+          );
+          set((state) => ({ expenses: [...state.expenses, newExpense] }));
           expensesDataService.invalidateCache(row.date);
         } catch (err) {
           console.error('Failed to add expense to Supabase', err);
@@ -104,22 +101,45 @@ export const useExpenseStore = create<ExpenseState>()(
 
       updateExpense: async (id, updates) => {
         try {
-          const payload: ExpenseUpdatePayload = {};
-          if (updates.description !== undefined)
-            payload.description = updates.description;
-          if (updates.amount !== undefined) payload.amount = updates.amount;
-          if (updates.category !== undefined)
-            payload.category = updates.category;
-          if (updates.paymentMethod !== undefined)
-            payload.payment_method = updates.paymentMethod;
-          if (updates.notes !== undefined) payload.notes = updates.notes;
-          if (updates.date !== undefined) payload.date = updates.date;
+          if (!window.navigator.onLine) {
+            enqueueOfflineExpenseUpdate(id, updates);
+            if (updates.paymentSplits !== undefined) {
+              enqueueOfflineExpensePaymentSplitsReplace(
+                id,
+                updates.paymentSplits
+              );
+            }
+            set((state) => ({
+              expenses: state.expenses.map((exp) =>
+                exp.id === id ? { ...exp, ...updates } : exp
+              ),
+            }));
+            const updatedExpense = get().expenses.find((e) => e.id === id);
+            if (updatedExpense) {
+              expensesDataService.invalidateCache(updatedExpense.date);
+              if (updates.date && updates.date !== updatedExpense.date) {
+                expensesDataService.invalidateCache(updates.date);
+              }
+            }
+            return;
+          }
 
-          const { error } = await supabase
-            .from('expenses')
-            .update(payload)
-            .eq('id', id);
-          if (error) throw error;
+          const payload = toExpenseUpdatePayload(updates);
+
+          if (updates.paymentSplits !== undefined) {
+            await updateExpenseWithSplitCompensationStrict(
+              supabase as unknown as SupabaseCompensatingLike,
+              id,
+              payload,
+              updates.paymentSplits
+            );
+          } else if (Object.keys(payload).length > 0) {
+            const { error } = await supabase
+              .from('expenses')
+              .update(payload)
+              .eq('id', id);
+            if (error) throw error;
+          }
 
           set((state) => ({
             expenses: state.expenses.map((exp) =>
@@ -142,6 +162,17 @@ export const useExpenseStore = create<ExpenseState>()(
       deleteExpense: async (id) => {
         const expenseToDelete = get().expenses.find((e) => e.id === id);
         try {
+          if (!window.navigator.onLine) {
+            enqueueOfflineExpenseDelete(id);
+            set((state) => ({
+              expenses: state.expenses.filter((exp) => exp.id !== id),
+            }));
+            if (expenseToDelete) {
+              expensesDataService.invalidateCache(expenseToDelete.date);
+            }
+            return;
+          }
+
           const { error } = await supabase
             .from('expenses')
             .delete()
@@ -169,9 +200,7 @@ export const useExpenseStore = create<ExpenseState>()(
             const existingExpenses = state.expenses.filter(
               (e) => e.date !== date
             );
-            return {
-              expenses: [...existingExpenses, ...expenses],
-            };
+            return { expenses: [...existingExpenses, ...expenses] };
           });
           return expenses;
         } catch (err) {
@@ -192,9 +221,7 @@ export const useExpenseStore = create<ExpenseState>()(
             const kept = state.expenses.filter(
               (e) => !loadedDatesSet.has(e.date)
             );
-            return {
-              expenses: [...kept, ...incoming],
-            };
+            return { expenses: [...kept, ...incoming] };
           });
         } catch (err) {
           console.error('Error loading expenses by dates:', err);
@@ -202,7 +229,7 @@ export const useExpenseStore = create<ExpenseState>()(
         }
       },
 
-      loadExpensesByDateRange: async (startDate: string, endDate: string) => {
+      loadExpensesByDateRange: async (startDate, endDate) => {
         const rangeKey = `loading_expenses_${startDate}_${endDate}`;
         if (loadingExpenseRanges.has(rangeKey)) return;
         loadingExpenseRanges.add(rangeKey);
@@ -230,23 +257,13 @@ export const useExpenseStore = create<ExpenseState>()(
             allExpenses.push(...entries);
           }
 
-          const dedupItems = <T extends { id: string; date: string }>(
-            currentItems: T[],
-            newItems: T[],
-            datesToExclude: Set<string>
-          ): T[] => {
-            const map = new Map<string, T>();
-            currentItems
-              .filter((item) => !datesToExclude.has(item.date))
-              .forEach((item) => map.set(item.id, item));
-            newItems.forEach((item) => map.set(item.id, item));
-            return Array.from(map.values());
-          };
-
           const loadedDatesSet = new Set(dates);
-
           set((state) => ({
-            expenses: dedupItems(state.expenses, allExpenses, loadedDatesSet),
+            expenses: dedupExpensesByDateRange(
+              state.expenses,
+              allExpenses,
+              loadedDatesSet
+            ),
           }));
         } catch (err) {
           console.error('Error loading expenses for date range:', err);

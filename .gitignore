@@ -44,6 +44,8 @@ Thumbs.db
 .github/instructions/nx.instructions.md
 
 test-output
+test-results
+playwright-report
 
 vite.config.*.timestamp*
 vitest.config.*.timestamp*
@@ -51,6 +53,7 @@ vitest.config.*.timestamp*
 .env*
 
 .agent
+.agents
 .cursor
 .kilocode
 .windsurf
@@ -58,3 +61,6 @@ vitest.config.*.timestamp*
 GEMINI.md
 
 testsprite_tests/*
+.temp
+supabase
+supabase

@@ -9,8 +9,10 @@ import {
 } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useExpenseStore } from '@/store/useExpenseStore';
+import { useTipStore } from '@/store/useTipStore';
 import { Expense } from '@/types';
 import { getVenezuelaDate } from '@/services/DateService';
+import { mergeExpensesWithTipPayouts } from '@/services/expenses/expensesWithTipPayouts';
 
 export interface DayGroup {
   date: string;
@@ -69,6 +71,7 @@ const MAX_WEEKS = 12;
 
 export function useWeeklyExpenses(anchorDate: string): UseWeeklyExpensesReturn {
   const { getExpensesByDate, loadExpensesByDates } = useExpenseStore();
+  const { tipPayouts, loadTipsByDateRange } = useTipStore();
   const [loadedWeekStarts, setLoadedWeekStarts] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -94,7 +97,10 @@ export function useWeeklyExpenses(anchorDate: string): UseWeeklyExpensesReturn {
         const weekStartDate = new Date(anchorWeekStart + 'T12:00:00');
         const weekEndDate = endOfWeek(weekStartDate, { weekStartsOn: 1 });
         const dates = getDatesBetween(weekStartDate, weekEndDate);
-        await loadExpensesByDates(dates);
+        await Promise.all([
+          loadExpensesByDates(dates),
+          loadTipsByDateRange(dates[0], dates[dates.length - 1]),
+        ]);
         setLoadedWeekStarts([anchorWeekStart]);
       } catch (err) {
         console.error('Error loading initial week expenses:', err);
@@ -105,7 +111,12 @@ export function useWeeklyExpenses(anchorDate: string): UseWeeklyExpensesReturn {
     };
 
     loadInitialWeek();
-  }, [anchorWeekStart, loadedWeekStarts.length, loadExpensesByDates]);
+  }, [
+    anchorWeekStart,
+    loadedWeekStarts.length,
+    loadExpensesByDates,
+    loadTipsByDateRange,
+  ]);
 
   const hasMore = loadedWeekStarts.length < MAX_WEEKS;
 
@@ -121,7 +132,10 @@ export function useWeeklyExpenses(anchorDate: string): UseWeeklyExpensesReturn {
       const prevWeekEnd = endOfWeek(prevWeekStart, { weekStartsOn: 1 });
       const prevWeekStartStr = format(prevWeekStart, 'yyyy-MM-dd');
       const dates = getDatesBetween(prevWeekStart, prevWeekEnd);
-      await loadExpensesByDates(dates);
+      await Promise.all([
+        loadExpensesByDates(dates),
+        loadTipsByDateRange(dates[0], dates[dates.length - 1]),
+      ]);
       setLoadedWeekStarts((prev) => [...prev, prevWeekStartStr]);
     } catch (err) {
       console.error('Error loading more week expenses:', err);
@@ -129,7 +143,7 @@ export function useWeeklyExpenses(anchorDate: string): UseWeeklyExpensesReturn {
       setIsLoadingMore(false);
       loadingRef.current = false;
     }
-  }, [hasMore, loadedWeekStarts, loadExpensesByDates]);
+  }, [hasMore, loadedWeekStarts, loadExpensesByDates, loadTipsByDateRange]);
 
   const weeks = useMemo<WeekGroup[]>(() => {
     return loadedWeekStarts.map((weekStartStr) => {
@@ -142,7 +156,11 @@ export function useWeeklyExpenses(anchorDate: string): UseWeeklyExpensesReturn {
         .slice()
         .reverse()
         .map((date) => {
-          const expenses = getExpensesByDate(date);
+          const expenses = mergeExpensesWithTipPayouts({
+            date,
+            expenses: getExpensesByDate(date),
+            tipPayouts,
+          });
           return {
             date,
             label: formatDayLabel(date),
@@ -168,7 +186,7 @@ export function useWeeklyExpenses(anchorDate: string): UseWeeklyExpensesReturn {
         monthKey,
       };
     });
-  }, [loadedWeekStarts, getExpensesByDate]);
+  }, [loadedWeekStarts, getExpensesByDate, tipPayouts]);
 
   const monthTotals = useMemo<MonthTotal[]>(() => {
     const monthMap = new Map<string, number>();

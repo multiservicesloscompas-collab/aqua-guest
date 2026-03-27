@@ -1,6 +1,82 @@
 import { supabase } from '@/lib/supabaseClient';
 import { WasherRental } from '@/types';
 import { getSafeTimestamp, normalizeTimestamp } from '@/lib/date-utils';
+import {
+  PAYMENT_SPLIT_SCHEMA,
+  type PaymentSplitRow,
+} from '@/services/payments/paymentSplitSchemaContract';
+import { rentalPaymentSplitAdapter } from '@/services/payments/paymentSplitSupabaseAdapters';
+
+interface RentalDataRow {
+  id: string;
+  date: string;
+  customer_id?: string;
+  customer_name?: string;
+  customer_phone?: string;
+  customer_address?: string;
+  machine_id: string;
+  shift: WasherRental['shift'];
+  delivery_time?: string;
+  pickup_time?: string;
+  pickup_date: string;
+  delivery_fee: number;
+  total_usd: number;
+  payment_method?: WasherRental['paymentMethod'];
+  status: WasherRental['status'];
+  is_paid: boolean;
+  date_paid?: string | null;
+  notes?: string;
+  created_at?: string;
+  createdAt?: string;
+  updated_at?: string;
+  updatedAt?: string;
+  customers?: {
+    name?: string;
+    phone?: string;
+    address?: string;
+  };
+  rental_payment_splits?: PaymentSplitRow[];
+  payment_splits?: PaymentSplitRow[];
+  splits?: PaymentSplitRow[];
+}
+
+const RENTALS_SELECT = `*, customers(name, phone, address), ${PAYMENT_SPLIT_SCHEMA.rentalsSplitsTable}(payment_method, amount_bs, amount_usd, exchange_rate_used)`;
+
+function toRentalRow(r: RentalDataRow): WasherRental {
+  const rawSplits =
+    r.rental_payment_splits ?? r.payment_splits ?? r.splits ?? [];
+  const splits = rentalPaymentSplitAdapter.fromRows(rawSplits);
+
+  return {
+    id: r.id,
+    date: r.date.substring(0, 10),
+    customerId: r.customer_id,
+    customerName: r.customers?.name || r.customer_name || '',
+    customerPhone: r.customers?.phone || r.customer_phone || '',
+    customerAddress: r.customers?.address || r.customer_address || '',
+    machineId: r.machine_id,
+    shift: r.shift,
+    deliveryTime: r.delivery_time ? r.delivery_time.substring(0, 5) : '',
+    pickupTime: r.pickup_time ? r.pickup_time.substring(0, 5) : '',
+    pickupDate: r.pickup_date,
+    deliveryFee: Number(r.delivery_fee),
+    totalUsd: Number(r.total_usd),
+    paymentMethod: r.payment_method || 'efectivo',
+    paymentSplits: splits.length ? splits : undefined,
+    status: r.status,
+    isPaid: r.is_paid,
+    datePaid: r.date_paid ? r.date_paid.substring(0, 10) : undefined,
+    notes: r.notes,
+    createdAt: normalizeTimestamp(
+      r.created_at ?? r.createdAt,
+      getSafeTimestamp()
+    ),
+    updatedAt: normalizeTimestamp(
+      r.updated_at ?? r.updatedAt,
+      getSafeTimestamp()
+    ),
+  };
+}
 
 export interface IRentalsDataService {
   loadRentalsByDate(date: string): Promise<WasherRental[]>;
@@ -64,7 +140,7 @@ export class RentalsDataService implements IRentalsDataService {
 
     const { data, error } = await supabase
       .from('washer_rentals')
-      .select('*, customers(name, phone, address)')
+      .select(RENTALS_SELECT)
       .lte('date', date)
       .gte('pickup_date', date)
       .order('created_at', { ascending: true });
@@ -74,34 +150,9 @@ export class RentalsDataService implements IRentalsDataService {
       throw error;
     }
 
-    const rentals: WasherRental[] = (data || []).map((r: any) => ({
-      id: r.id,
-      date: r.date.substring(0, 10),
-      customerId: r.customer_id,
-      customerName: r.customers?.name || r.customer_name,
-      customerPhone: r.customers?.phone || r.customer_phone,
-      customerAddress: r.customers?.address || r.customer_address,
-      machineId: r.machine_id,
-      shift: r.shift,
-      deliveryTime: r.delivery_time ? r.delivery_time.substring(0, 5) : '',
-      pickupTime: r.pickup_time ? r.pickup_time.substring(0, 5) : '',
-      pickupDate: r.pickup_date,
-      deliveryFee: Number(r.delivery_fee),
-      totalUsd: Number(r.total_usd),
-      paymentMethod: r.payment_method || 'efectivo',
-      status: r.status,
-      isPaid: r.is_paid,
-      datePaid: r.date_paid ? r.date_paid.substring(0, 10) : undefined,
-      notes: r.notes,
-      createdAt: normalizeTimestamp(
-        r.created_at ?? r.createdAt,
-        getSafeTimestamp()
-      ),
-      updatedAt: normalizeTimestamp(
-        r.updated_at ?? r.updatedAt,
-        getSafeTimestamp()
-      ),
-    }));
+    const rentals: WasherRental[] = (data || []).map((r) =>
+      toRentalRow(r as unknown as RentalDataRow)
+    );
 
     this.rentalsCache.set(date, rentals);
 
@@ -143,7 +194,7 @@ export class RentalsDataService implements IRentalsDataService {
     const promises = datesToLoad.map(async (date) => {
       const { data, error } = await supabase
         .from('washer_rentals')
-        .select('*, customers(name, phone, address)')
+        .select(RENTALS_SELECT)
         .eq('date', date)
         .order('created_at', { ascending: true });
 
@@ -152,34 +203,9 @@ export class RentalsDataService implements IRentalsDataService {
         return { date, rentals: [] };
       }
 
-      const rentals: WasherRental[] = (data || []).map((r: any) => ({
-        id: r.id,
-        date: r.date.substring(0, 10),
-        customerId: r.customer_id,
-        customerName: r.customers?.name || r.customer_name,
-        customerPhone: r.customers?.phone || r.customer_phone,
-        customerAddress: r.customers?.address || r.customer_address,
-        machineId: r.machine_id,
-        shift: r.shift,
-        deliveryTime: r.delivery_time ? r.delivery_time.substring(0, 5) : '',
-        pickupTime: r.pickup_time ? r.pickup_time.substring(0, 5) : '',
-        pickupDate: r.pickup_date,
-        deliveryFee: Number(r.delivery_fee),
-        totalUsd: Number(r.total_usd),
-        paymentMethod: r.payment_method || 'efectivo',
-        status: r.status,
-        isPaid: r.is_paid,
-        datePaid: r.date_paid ? r.date_paid.substring(0, 10) : undefined,
-        notes: r.notes,
-        createdAt: normalizeTimestamp(
-          r.created_at ?? r.createdAt,
-          getSafeTimestamp()
-        ),
-        updatedAt: normalizeTimestamp(
-          r.updated_at ?? r.updatedAt,
-          getSafeTimestamp()
-        ),
-      }));
+      const rentals: WasherRental[] = (data || []).map((r) =>
+        toRentalRow(r as unknown as RentalDataRow)
+      );
 
       this.rentalsCache.set(date, rentals);
 
@@ -227,7 +253,7 @@ export class RentalsDataService implements IRentalsDataService {
 
     const { data, error } = await supabase
       .from('washer_rentals')
-      .select('*, customers(name, phone, address)')
+      .select(RENTALS_SELECT)
       .or(
         `and(date.gte.${startDate},date.lte.${endDate}),and(date_paid.gte.${startDate},date_paid.lte.${endDate})`
       )
@@ -246,40 +272,14 @@ export class RentalsDataService implements IRentalsDataService {
       grouped[date] = [];
     }
 
-    (data || []).forEach((r: any) => {
+    (data || []).forEach((item) => {
+      const r = item as unknown as RentalDataRow;
       // Agrupar por fecha de servicio (date)
       const dateKey = r.date.substring(0, 10);
 
       if (!grouped[dateKey]) grouped[dateKey] = [];
 
-      grouped[dateKey].push({
-        id: r.id,
-        date: r.date.substring(0, 10),
-        customerId: r.customer_id,
-        customerName: r.customers?.name || r.customer_name,
-        customerPhone: r.customers?.phone || r.customer_phone,
-        customerAddress: r.customers?.address || r.customer_address,
-        machineId: r.machine_id,
-        shift: r.shift,
-        deliveryTime: r.delivery_time ? r.delivery_time.substring(0, 5) : '',
-        pickupTime: r.pickup_time ? r.pickup_time.substring(0, 5) : '',
-        pickupDate: r.pickup_date,
-        deliveryFee: Number(r.delivery_fee),
-        totalUsd: Number(r.total_usd),
-        paymentMethod: r.payment_method || 'efectivo',
-        status: r.status,
-        isPaid: r.is_paid,
-        datePaid: r.date_paid ? r.date_paid.substring(0, 10) : undefined,
-        notes: r.notes,
-        createdAt: normalizeTimestamp(
-          r.created_at ?? r.createdAt,
-          getSafeTimestamp()
-        ),
-        updatedAt: normalizeTimestamp(
-          r.updated_at ?? r.updatedAt,
-          getSafeTimestamp()
-        ),
-      });
+      grouped[dateKey].push(toRentalRow(r));
     });
 
     for (const date of Object.keys(grouped)) {

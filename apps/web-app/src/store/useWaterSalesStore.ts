@@ -1,78 +1,42 @@
+/**
+ * useWaterSalesStore.ts
+ * Thin Zustand store barrel — wires together types from .core and
+ * action implementations from .actions. All consumers can import
+ * from this file and nothing breaks.
+ */
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { CartItem, PaymentMethod, Sale } from '@/types';
-import supabase from '@/lib/supabaseClient';
-import { getSafeTimestamp, normalizeTimestamp } from '@/lib/date-utils';
+import { Sale } from '@/types';
 import { dateService } from '@/services/DateService';
 import {
   DateFilterStrategy,
   SalesFilterService,
 } from '@/services/SalesFilterService';
 import { salesDataService } from '@/services/SalesDataService';
+import { tipsDataService } from '@/services/tips/TipDataService';
+import { createCurrencyConverter } from '@/services/CurrencyService';
+
+import {
+  type WaterSalesState,
+  type SalesRow,
+  type SaleInsert,
+  type SaleUpdate,
+  generateId,
+} from './useWaterSalesStore.core';
+import {
+  completeSaleAction,
+  updateSaleAction,
+  deleteSaleAction,
+} from './useWaterSalesStore.actions';
 import { useConfigStore } from './useConfigStore';
+import {
+  enqueueOfflineSaleTipDelete,
+  enqueueOfflineSaleTipUpsert,
+} from '@/offline/enqueue/salesEnqueue';
 
-interface WaterSalesState {
-  sales: Sale[];
-  cart: CartItem[];
-  loadingSalesByRange: Record<string, boolean>;
-
-  // Acciones del carrito
-  addToCart: (item: Omit<CartItem, 'id' | 'subtotal'>) => void;
-  updateCartItem: (id: string, updates: Partial<CartItem>) => void;
-  removeFromCart: (id: string) => void;
-  clearCart: () => void;
-
-  // Acciones de ventas
-  completeSale: (
-    paymentMethod: PaymentMethod,
-    selectedDate: string,
-    notes?: string
-  ) => Promise<Sale>;
-  updateSale: (id: string, updates: Partial<Sale>) => Promise<void>;
-  deleteSale: (id: string) => Promise<void>;
-
-  // Utilidades y Carga
-  getSalesByDate: (date: string) => Sale[];
-  loadSalesByDate: (date: string) => Promise<Sale[]>;
-  loadSalesByDateRange: (startDate: string, endDate: string) => Promise<void>;
-  setSales: (sales: Sale[]) => void;
-}
-
-const generateId = () => Math.random().toString(36).substring(2, 15);
-
-interface SalesRow {
-  id: string;
-  daily_number: number;
-  date: string;
-  items: CartItem[];
-  payment_method: PaymentMethod;
-  total_bs: number;
-  total_usd: number;
-  exchange_rate: number;
-  notes?: string | null;
-  created_at?: string | null;
-  updated_at?: string | null;
-}
-
-type SaleInsert = {
-  daily_number: number;
-  date: string;
-  items: CartItem[];
-  payment_method: PaymentMethod;
-  total_bs: number;
-  total_usd: number;
-  exchange_rate: number;
-  notes?: string;
-};
-
-type SaleUpdate = Partial<{
-  payment_method: PaymentMethod;
-  total_bs: number;
-  total_usd: number;
-  notes?: string;
-  items?: CartItem[];
-  updated_at: string;
-}>;
+// Re-export everything so existing import paths continue to work
+export type { WaterSalesState, SalesRow, SaleInsert, SaleUpdate };
+export { generateId };
 
 export const useWaterSalesStore = create<WaterSalesState>()(
   persist(
@@ -83,7 +47,8 @@ export const useWaterSalesStore = create<WaterSalesState>()(
 
       setSales: (sales) => set({ sales }),
 
-      // Carrito
+      // ── Cart ──────────────────────────────────────────────────────────────
+
       addToCart: (item) =>
         set((state) => ({
           cart: [
@@ -107,138 +72,103 @@ export const useWaterSalesStore = create<WaterSalesState>()(
         })),
 
       removeFromCart: (id) =>
-        set((state) => ({
-          cart: state.cart.filter((item) => item.id !== id),
-        })),
+        set((state) => ({ cart: state.cart.filter((item) => item.id !== id) })),
 
       clearCart: () => set({ cart: [] }),
 
-      // Ventas
-      completeSale: async (paymentMethod, selectedDate, notes) => {
-        const state = get();
-        const configState = useConfigStore.getState();
-        const exchangeRate = configState.config.exchangeRate;
+      // ── Sales ─────────────────────────────────────────────────────────────
 
-        const totalBs = state.cart.reduce(
-          (sum, item) => sum + item.subtotal,
-          0
+      completeSale: async (
+        paymentMethod,
+        selectedDate,
+        notes,
+        paymentSplits,
+        tipInput
+      ) => {
+        const sale = await completeSaleAction(
+          paymentMethod,
+          selectedDate,
+          notes,
+          paymentSplits,
+          tipInput,
+          set,
+          get
         );
 
-        const normalizedDate = dateService.normalizeSaleDate(selectedDate);
-        const salesOfDay = state.sales.filter((s) => s.date === normalizedDate);
-        const dailyNumber = salesOfDay.length + 1;
+        if (tipInput && tipInput.amountBs > 0) {
+          const exchangeRateUsed =
+            useConfigStore.getState().config.exchangeRate;
+          const amountUsd = createCurrencyConverter(exchangeRateUsed).toUsd(
+            tipInput.amountBs
+          );
+          await tipsDataService.upsertTipForOrigin({
+            originType: 'sale',
+            originId: sale.id,
+            tipDate: sale.date,
+            amountBs: tipInput.amountBs,
+            amountUsd,
+            exchangeRateUsed,
+            capturePaymentMethod: tipInput.capturePaymentMethod,
+            notes: tipInput.notes,
+          });
+        }
 
-        const safeCreatedAt = getSafeTimestamp();
-        const safeUpdatedAt = getSafeTimestamp();
+        return sale;
+      },
 
-        const newSalePayload: SaleInsert = {
-          daily_number: dailyNumber,
-          date: normalizedDate,
-          items: state.cart,
-          payment_method: paymentMethod,
-          total_bs: totalBs,
-          total_usd: totalBs / exchangeRate,
-          exchange_rate: exchangeRate,
-          notes: notes || undefined,
-        };
+      updateSale: async (id, updates, tipInput) => {
+        await updateSaleAction(id, updates, tipInput, set, get);
 
-        try {
-          const { data, error } = await supabase
-            .from('sales')
-            .insert(newSalePayload)
-            .select('*')
-            .single();
-          if (error) throw error;
-
-          const saleRow = data as SalesRow | null;
-          if (!saleRow) {
-            throw new Error('Error al crear la venta');
+        if (tipInput === null) {
+          if (!window.navigator.onLine) {
+            enqueueOfflineSaleTipDelete(id);
+            return;
           }
 
-          const saleDate = dateService.normalizeSaleDate(
-            saleRow.date || normalizedDate
+          await tipsDataService.deleteTipByOrigin('sale', id);
+          return;
+        }
+
+        if (tipInput && tipInput.amountBs > 0) {
+          const sale = get().sales.find((item) => item.id === id);
+          const exchangeRateUsed =
+            useConfigStore.getState().config.exchangeRate;
+          const amountUsd = createCurrencyConverter(exchangeRateUsed).toUsd(
+            tipInput.amountBs
           );
 
-          const sale: Sale = {
-            id: saleRow.id,
-            dailyNumber: saleRow.daily_number,
-            date: saleDate,
-            items: saleRow.items,
-            paymentMethod: saleRow.payment_method,
-            totalBs: Number(saleRow.total_bs),
-            totalUsd: Number(saleRow.total_usd),
-            exchangeRate: Number(saleRow.exchange_rate),
-            notes: saleRow.notes || undefined,
-            createdAt: normalizeTimestamp(
-              saleRow.created_at ?? undefined,
-              safeCreatedAt
-            ),
-            updatedAt: normalizeTimestamp(
-              saleRow.updated_at ?? undefined,
-              safeUpdatedAt
-            ),
-          };
-
-          set((state) => ({ sales: [...state.sales, sale], cart: [] }));
-          salesDataService.invalidateCache(sale.date);
-          return sale;
-        } catch (err) {
-          console.error('Failed to create sale in Supabase', err);
-          throw err;
-        }
-      },
-
-      updateSale: async (id, updates) => {
-        try {
-          const payload: SaleUpdate = {};
-          if (updates.paymentMethod !== undefined)
-            payload.payment_method = updates.paymentMethod;
-          if (updates.totalBs !== undefined) payload.total_bs = updates.totalBs;
-          if (updates.totalUsd !== undefined)
-            payload.total_usd = updates.totalUsd;
-          if (updates.notes !== undefined) payload.notes = updates.notes;
-          if (updates.items !== undefined) payload.items = updates.items;
-          payload.updated_at = new Date().toISOString();
-
-          const { error } = await supabase
-            .from('sales')
-            .update(payload)
-            .eq('id', id);
-          if (error) throw error;
-
-          set((state) => ({
-            sales: state.sales.map((sale) =>
-              sale.id === id
-                ? { ...sale, ...updates, updatedAt: new Date().toISOString() }
-                : sale
-            ),
-          }));
-          const updatedSale = get().sales.find((s) => s.id === id);
-          if (updatedSale) {
-            salesDataService.invalidateCache(updatedSale.date);
+          if (!window.navigator.onLine) {
+            enqueueOfflineSaleTipUpsert({
+              saleId: id,
+              tipDate: sale?.date ?? updates.date ?? '',
+              amountBs: tipInput.amountBs,
+              amountUsd,
+              exchangeRateUsed,
+              capturePaymentMethod: tipInput.capturePaymentMethod,
+              notes: tipInput.notes,
+            });
+            return;
           }
-        } catch (err) {
-          console.error('Failed to update sale in Supabase', err);
-          throw err;
+
+          await tipsDataService.upsertTipForOrigin({
+            originType: 'sale',
+            originId: id,
+            tipDate: sale?.date ?? updates.date ?? '',
+            amountBs: tipInput.amountBs,
+            amountUsd,
+            exchangeRateUsed,
+            capturePaymentMethod: tipInput.capturePaymentMethod,
+            notes: tipInput.notes,
+          });
         }
       },
 
-      deleteSale: async (id) => {
-        const saleToDelete = get().sales.find((s) => s.id === id);
-        try {
-          const { error } = await supabase.from('sales').delete().eq('id', id);
-          if (error) throw error;
-          set((state) => ({
-            sales: state.sales.filter((sale) => sale.id !== id),
-          }));
-          if (saleToDelete) {
-            salesDataService.invalidateCache(saleToDelete.date);
-          }
-        } catch (err) {
-          console.error('Failed to delete sale from Supabase', err);
-          throw err;
-        }
-      },
+      deleteSale: (id) =>
+        deleteSaleAction(id, set, get, (originType, originId) =>
+          tipsDataService.deleteTipByOrigin(originType, originId)
+        ),
+
+      // ── Query helpers ─────────────────────────────────────────────────────
 
       getSalesByDate: (date) => {
         const normalizedDate = dateService.normalizeSaleDate(date);
@@ -249,7 +179,7 @@ export const useWaterSalesStore = create<WaterSalesState>()(
           .filterSales(get().sales, normalizedDate)
           .sort(
             (a, b) =>
-              new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
           );
       },
 
@@ -301,7 +231,6 @@ export const useWaterSalesStore = create<WaterSalesState>()(
           }
 
           const loadedDatesSet = new Set(dates);
-
           set((state) => {
             const map = new Map<string, Sale>();
             state.sales

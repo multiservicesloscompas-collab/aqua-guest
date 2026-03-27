@@ -1,10 +1,4 @@
 import { ComponentType, useMemo } from 'react';
-import {
-  ArrowLeftRight,
-  Droplets,
-  Receipt,
-  WashingMachine,
-} from 'lucide-react';
 import { useAppStore } from '@/store/useAppStore';
 import { usePrepaidStore } from '@/store/usePrepaidStore';
 import { useWaterSalesStore } from '@/store/useWaterSalesStore';
@@ -12,24 +6,27 @@ import { useExpenseStore } from '@/store/useExpenseStore';
 import { usePaymentBalanceStore } from '@/store/usePaymentBalanceStore';
 import { useConfigStore } from '@/store/useConfigStore';
 import { useRentalStore } from '@/store/useRentalStore';
+import { useTipStore } from '@/store/useTipStore';
 import { createCurrencyConverter } from '@/services/CurrencyService';
-import {
-  AppRoute,
-  PaymentMethod,
-  PaymentMethodLabels,
-  WasherRental,
-} from '@/types';
+import { AppRoute, PaymentMethod, PaymentMethodLabels } from '@/types';
 import {
   PAYMENT_METHOD_CONFIG,
   PAYMENT_METHOD_ORDER,
 } from '../services/paymentMethodDetailConfig';
+import {
+  buildPaymentMethodTransactions,
+  type PaymentMethodDetailTransactionItem,
+  summarizePaymentMethodTransactions,
+} from '../services/paymentMethodDetailTransactions';
 
 interface TransactionViewItem {
   key: string;
   typeLabel: string;
   description: string;
+  linkedReference: string;
   amountText: string;
   amountUsdText?: string;
+  paymentMethodLabel?: string;
   icon: ComponentType<{ className?: string }>;
   containerClass: string;
   iconWrapperClass: string;
@@ -76,20 +73,7 @@ interface PaymentMethodDetailViewModel {
 }
 
 interface TransactionItem {
-  id: string;
-  type:
-    | 'sale'
-    | 'rental'
-    | 'expense'
-    | 'prepaid'
-    | 'balance_in'
-    | 'balance_out';
-  typeLabel: string;
-  description: string;
-  amountBs: number;
-  amountUsd?: number;
-  icon: ComponentType<{ className?: string }>;
-  isNegative?: boolean;
+  type: PaymentMethodDetailTransactionItem['type'];
 }
 
 function formatBs(amount: number) {
@@ -136,24 +120,6 @@ function mapTransactionTone(
   };
 }
 
-function getSummary(rentals: TransactionItem[]) {
-  const income = rentals
-    .filter((t) => ['sale', 'rental', 'prepaid'].includes(t.type))
-    .reduce((sum, t) => sum + t.amountBs, 0);
-  const expenses = rentals
-    .filter((t) => t.type === 'expense')
-    .reduce((sum, t) => sum + t.amountBs, 0);
-  const balanceIn = rentals
-    .filter((t) => t.type === 'balance_in')
-    .reduce((sum, t) => sum + t.amountBs, 0);
-  const balanceOut = rentals
-    .filter((t) => t.type === 'balance_out')
-    .reduce((sum, t) => sum + t.amountBs, 0);
-  const net = income - expenses + balanceIn - balanceOut;
-
-  return { income, expenses, balanceIn, balanceOut, net };
-}
-
 export function usePaymentMethodDetailViewModel(
   paymentMethod: PaymentMethod
 ): PaymentMethodDetailViewModel {
@@ -164,6 +130,7 @@ export function usePaymentMethodDetailViewModel(
   const { paymentBalanceTransactions } = usePaymentBalanceStore();
   const { config } = useConfigStore();
   const { rentals } = useRentalStore();
+  const { tipPayouts } = useTipStore();
 
   const currencyConverter = useMemo(
     () => createCurrencyConverter(config.exchangeRate),
@@ -174,113 +141,34 @@ export function usePaymentMethodDetailViewModel(
   const paymentLabel = getMethodLabel(paymentMethod);
 
   const transactions = useMemo(() => {
-    const items: TransactionItem[] = [];
-
-    const daySales = sales.filter(
-      (s) => s.date === selectedDate && s.paymentMethod === paymentMethod
-    );
-    daySales.forEach((sale) => {
-      items.push({
-        id: sale.id,
-        type: 'sale',
-        typeLabel: 'Venta de Agua',
-        description: `${sale.items.length} producto${
-          sale.items.length > 1 ? 's' : ''
-        }`,
-        amountBs: sale.totalBs,
-        amountUsd: sale.totalUsd,
-        icon: Droplets,
-      });
+    return buildPaymentMethodTransactions({
+      paymentMethod,
+      selectedDate,
+      exchangeRate: config.exchangeRate,
+      sales,
+      rentals,
+      expenses,
+      prepaidOrders,
+      paymentBalanceTransactions,
+      tipPayouts,
+      getMethodLabel,
     });
-
-    const dayRentals = rentals.filter(
-      (r: WasherRental) =>
-        r.isPaid &&
-        r.datePaid === selectedDate &&
-        r.paymentMethod === paymentMethod
-    );
-    dayRentals.forEach((rental) => {
-      items.push({
-        id: rental.id,
-        type: 'rental',
-        typeLabel: 'Alquiler de Lavadora',
-        description: `${rental.customerName} - ${rental.shift}`,
-        amountBs: currencyConverter.toBs(rental.totalUsd),
-        amountUsd: rental.totalUsd,
-        icon: WashingMachine,
-      });
-    });
-
-    const dayExpenses = expenses.filter(
-      (e) => e.date === selectedDate && e.paymentMethod === paymentMethod
-    );
-    dayExpenses.forEach((expense) => {
-      items.push({
-        id: expense.id,
-        type: 'expense',
-        typeLabel: 'Egreso',
-        description: expense.description,
-        amountBs: expense.amount,
-        icon: Receipt,
-        isNegative: true,
-      });
-    });
-
-    const dayPrepaid = prepaidOrders.filter(
-      (p) => p.datePaid === selectedDate && p.paymentMethod === paymentMethod
-    );
-    dayPrepaid.forEach((prepaid) => {
-      items.push({
-        id: prepaid.id,
-        type: 'prepaid',
-        typeLabel: 'Agua Prepagada',
-        description: `${prepaid.customerName} - ${prepaid.liters}L`,
-        amountBs: prepaid.amountBs,
-        amountUsd: prepaid.amountUsd,
-        icon: Droplets,
-      });
-    });
-
-    const dayBalanceTx = paymentBalanceTransactions.filter(
-      (t) => t.date === selectedDate
-    );
-    dayBalanceTx.forEach((tx) => {
-      if (tx.fromMethod === paymentMethod) {
-        items.push({
-          id: tx.id,
-          type: 'balance_out',
-          typeLabel: 'Equilibrio (Salida)',
-          description: `Transferencia a ${getMethodLabel(tx.toMethod)}`,
-          amountBs: tx.amount,
-          icon: ArrowLeftRight,
-          isNegative: true,
-        });
-      }
-      if (tx.toMethod === paymentMethod) {
-        items.push({
-          id: tx.id,
-          type: 'balance_in',
-          typeLabel: 'Equilibrio (Entrada)',
-          description: `Transferencia desde ${getMethodLabel(tx.fromMethod)}`,
-          amountBs: tx.amount,
-          icon: ArrowLeftRight,
-        });
-      }
-    });
-
-    return items;
   }, [
     sales,
     rentals,
     expenses,
     prepaidOrders,
     paymentBalanceTransactions,
+    tipPayouts,
     selectedDate,
     paymentMethod,
-    currencyConverter,
+    config.exchangeRate,
   ]);
 
-  const totals = useMemo(() => getSummary(transactions), [transactions]);
+  const totals = useMemo(
+    () => summarizePaymentMethodTransactions(transactions),
+    [transactions]
+  );
 
   const transactionsView = useMemo<TransactionViewItem[]>(() => {
     return transactions.map((transaction) => {
@@ -291,10 +179,12 @@ export function usePaymentMethodDetailViewModel(
         key: `${transaction.type}-${transaction.id}`,
         typeLabel: transaction.typeLabel,
         description: transaction.description,
+        linkedReference: transaction.linkedReference,
         amountText,
         amountUsdText: transaction.amountUsd
           ? `$${transaction.amountUsd.toFixed(2)}`
           : undefined,
+        paymentMethodLabel: transaction.paymentMethodLabel,
         icon: transaction.icon,
         containerClass: tone.containerClass,
         iconWrapperClass: tone.iconWrapperClass,

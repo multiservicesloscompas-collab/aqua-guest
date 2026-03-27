@@ -1,89 +1,102 @@
+/**
+ * usePaymentBalanceStore.ts
+ * Thin Zustand store barrel — imports type definitions from .core.
+ * All consumers can import from this file and nothing breaks.
+ */
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import {
-  PaymentBalanceTransaction,
-  PaymentBalanceSummary,
-  PaymentMethod,
-} from '@/types';
+import { calculatePaymentBalanceSummary } from '@/services/payments/paymentBalanceSummary';
 import supabase from '@/lib/supabaseClient';
+import {
+  enqueueOfflinePaymentBalanceCreate,
+  enqueueOfflinePaymentBalanceDelete,
+  enqueueOfflinePaymentBalanceUpdate,
+} from '@/offline/enqueue/paymentBalanceEnqueue';
 import { useConfigStore } from './useConfigStore';
 import { useRentalStore } from './useRentalStore';
 import { useWaterSalesStore } from './useWaterSalesStore';
 import { usePrepaidStore } from './usePrepaidStore';
+import {
+  type PaymentBalanceState,
+  type PaymentBalanceInsertPayload,
+  type PaymentBalanceUpdatePayload,
+  type PaymentBalanceRow,
+  rowToTransaction,
+} from './usePaymentBalanceStore.core';
+import {
+  hasAmountUpdates,
+  normalizeTransactionDraft,
+} from './paymentBalanceDraft';
+import {
+  applyLocalTransactionUpdate,
+  assignUpdatePayloadFromNormalized,
+  assignUpdatePayloadFromUpdates,
+  toDraftInput,
+} from './paymentBalanceStoreHelpers';
 
-interface PaymentBalanceState {
-  paymentBalanceTransactions: PaymentBalanceTransaction[];
-
-  // Acciones de equilibrio de pagos
-  addPaymentBalanceTransaction: (
-    transaction: Omit<
-      PaymentBalanceTransaction,
-      'id' | 'createdAt' | 'updatedAt'
-    >
-  ) => Promise<void>;
-  updatePaymentBalanceTransaction: (
-    id: string,
-    updates: Partial<PaymentBalanceTransaction>
-  ) => Promise<void>;
-  deletePaymentBalanceTransaction: (id: string) => Promise<void>;
-  getPaymentBalanceSummary: (date: string) => PaymentBalanceSummary[];
-  loadPaymentBalanceTransactions: () => Promise<void>;
-
-  // Inicialización compartida
-  setPaymentBalanceData: (
-    paymentBalanceTransactions: PaymentBalanceTransaction[]
-  ) => void;
-}
-
-type PaymentBalanceInsertPayload = {
-  date: string;
-  from_method: PaymentMethod;
-  to_method: PaymentMethod;
-  amount: number;
-  notes?: string;
+// Re-export types so existing import paths continue to work
+export type {
+  PaymentBalanceState,
+  PaymentBalanceInsertPayload,
+  PaymentBalanceUpdatePayload,
+  PaymentBalanceRow,
 };
-
-type PaymentBalanceUpdatePayload = {
-  from_method?: PaymentMethod;
-  to_method?: PaymentMethod;
-  amount?: number;
-  notes?: string;
-  date?: string;
-  updated_at: string;
-};
-
-type PaymentBalanceRow = {
-  id: string;
-  date: string;
-  from_method: PaymentMethod;
-  to_method: PaymentMethod;
-  amount: number;
-  amount_bs?: number | null;
-  amount_usd?: number | null;
-  notes?: string | null;
-  created_at?: string | null;
-  updated_at?: string | null;
-};
+export { rowToTransaction };
 
 export const usePaymentBalanceStore = create<PaymentBalanceState>()(
   persist(
     (set, get) => ({
       paymentBalanceTransactions: [],
 
-      setPaymentBalanceData: (paymentBalanceTransactions) => {
-        set({
-          paymentBalanceTransactions,
-        });
-      },
+      setPaymentBalanceData: (paymentBalanceTransactions) =>
+        set({ paymentBalanceTransactions }),
 
       addPaymentBalanceTransaction: async (transaction) => {
         try {
+          const normalized = normalizeTransactionDraft(transaction);
+
+          if (!window.navigator.onLine) {
+            const now = new Date().toISOString();
+            const offlineTransaction = enqueueOfflinePaymentBalanceCreate(
+              {
+                ...transaction,
+                operationType: normalized.operation_type,
+                amount: normalized.amount,
+                amountBs: normalized.amount_bs,
+                amountUsd: normalized.amount_usd,
+                amountOutBs: normalized.amount_out_bs,
+                amountOutUsd: normalized.amount_out_usd,
+                amountInBs: normalized.amount_in_bs,
+                amountInUsd: normalized.amount_in_usd,
+                differenceBs: normalized.difference_bs,
+                differenceUsd: normalized.difference_usd,
+              },
+              { createdAt: now, updatedAt: now }
+            );
+            set((state) => ({
+              paymentBalanceTransactions: [
+                ...state.paymentBalanceTransactions,
+                offlineTransaction,
+              ],
+            }));
+            return;
+          }
+
           const payload: PaymentBalanceInsertPayload = {
             date: transaction.date,
+            operation_type: normalized.operation_type,
             from_method: transaction.fromMethod,
             to_method: transaction.toMethod,
-            amount: transaction.amount,
-            notes: transaction.notes,
+            amount: normalized.amount,
+            amount_bs: normalized.amount_bs,
+            amount_usd: normalized.amount_usd,
+            amount_out_bs: normalized.amount_out_bs,
+            amount_out_usd: normalized.amount_out_usd,
+            amount_in_bs: normalized.amount_in_bs,
+            amount_in_usd: normalized.amount_in_usd,
+            difference_bs: normalized.difference_bs,
+            difference_usd: normalized.difference_usd,
+            notes: normalized.notes,
           };
           const { data, error } = await supabase
             .from('payment_balance_transactions')
@@ -92,18 +105,7 @@ export const usePaymentBalanceStore = create<PaymentBalanceState>()(
             .single();
           if (error) throw error;
 
-          const row = data as PaymentBalanceRow;
-          const newTransaction: PaymentBalanceTransaction = {
-            id: row.id,
-            date: row.date,
-            fromMethod: row.from_method,
-            toMethod: row.to_method,
-            amount: Number(row.amount),
-            notes: row.notes || undefined,
-            createdAt: row.created_at || new Date().toISOString(),
-            updatedAt: row.updated_at || new Date().toISOString(),
-          };
-
+          const newTransaction = rowToTransaction(data as PaymentBalanceRow);
           set((state) => ({
             paymentBalanceTransactions: [
               ...state.paymentBalanceTransactions,
@@ -121,16 +123,59 @@ export const usePaymentBalanceStore = create<PaymentBalanceState>()(
 
       updatePaymentBalanceTransaction: async (id, updates) => {
         try {
+          const updatedAt = new Date().toISOString();
+          const current = get().paymentBalanceTransactions.find(
+            (transaction) => transaction.id === id
+          );
+          const resetDifference = hasAmountUpdates(updates);
+          const merged = current
+            ? {
+                ...current,
+                ...updates,
+                ...(resetDifference && updates.differenceBs === undefined
+                  ? { differenceBs: undefined }
+                  : {}),
+                ...(resetDifference && updates.differenceUsd === undefined
+                  ? { differenceUsd: undefined }
+                  : {}),
+              }
+            : undefined;
+          const normalized = merged
+            ? normalizeTransactionDraft(toDraftInput(merged))
+            : undefined;
+
+          if (!window.navigator.onLine) {
+            enqueueOfflinePaymentBalanceUpdate(
+              id,
+              updates,
+              updatedAt,
+              'paymentBalance/updatePaymentBalanceTransaction',
+              current
+            );
+            set((state) => ({
+              paymentBalanceTransactions: state.paymentBalanceTransactions.map(
+                (t) =>
+                  t.id === id
+                    ? applyLocalTransactionUpdate(
+                        t,
+                        updates,
+                        normalized,
+                        updatedAt
+                      )
+                    : t
+              ),
+            }));
+            return;
+          }
+
           const payload: PaymentBalanceUpdatePayload = {
-            updated_at: new Date().toISOString(),
+            updated_at: updatedAt,
           };
-          if (updates.fromMethod !== undefined)
-            payload.from_method = updates.fromMethod;
-          if (updates.toMethod !== undefined)
-            payload.to_method = updates.toMethod;
-          if (updates.amount !== undefined) payload.amount = updates.amount;
-          if (updates.notes !== undefined) payload.notes = updates.notes;
-          if (updates.date !== undefined) payload.date = updates.date;
+          assignUpdatePayloadFromUpdates(payload, updates);
+
+          if (normalized !== undefined && hasAmountUpdates(updates)) {
+            assignUpdatePayloadFromNormalized(payload, normalized);
+          }
 
           const { error } = await supabase
             .from('payment_balance_transactions')
@@ -140,14 +185,15 @@ export const usePaymentBalanceStore = create<PaymentBalanceState>()(
 
           set((state) => ({
             paymentBalanceTransactions: state.paymentBalanceTransactions.map(
-              (transaction) =>
-                transaction.id === id
-                  ? {
-                      ...transaction,
-                      ...updates,
-                      updatedAt: new Date().toISOString(),
-                    }
-                  : transaction
+              (t) =>
+                t.id === id
+                  ? applyLocalTransactionUpdate(
+                      t,
+                      updates,
+                      normalized,
+                      updatedAt
+                    )
+                  : t
             ),
           }));
         } catch (err) {
@@ -161,6 +207,15 @@ export const usePaymentBalanceStore = create<PaymentBalanceState>()(
 
       deletePaymentBalanceTransaction: async (id) => {
         try {
+          if (!window.navigator.onLine) {
+            enqueueOfflinePaymentBalanceDelete(id);
+            set((state) => ({
+              paymentBalanceTransactions:
+                state.paymentBalanceTransactions.filter((t) => t.id !== id),
+            }));
+            return;
+          }
+
           const { error } = await supabase
             .from('payment_balance_transactions')
             .delete()
@@ -168,7 +223,7 @@ export const usePaymentBalanceStore = create<PaymentBalanceState>()(
           if (error) throw error;
           set((state) => ({
             paymentBalanceTransactions: state.paymentBalanceTransactions.filter(
-              (transaction) => transaction.id !== id
+              (t) => t.id !== id
             ),
           }));
         } catch (err) {
@@ -182,82 +237,17 @@ export const usePaymentBalanceStore = create<PaymentBalanceState>()(
 
       getPaymentBalanceSummary: (date) => {
         const { paymentBalanceTransactions } = get();
-        // Dependencias externas
         const sales = useWaterSalesStore.getState().sales;
         const prepaidOrders = usePrepaidStore.getState().prepaidOrders;
-
-        const configStoreState = useConfigStore.getState();
-        const config = configStoreState.config;
-
+        const config = useConfigStore.getState().config;
         const rentals = useRentalStore.getState().rentals;
-
-        const salesOfDay = sales.filter((s) => s.date === date);
-        const prepaidOfDay = prepaidOrders.filter((p) => p.datePaid === date);
-        const rentalsOfDay = rentals.filter(
-          (r) => r.datePaid === date || r.date === date
-        );
-
-        const calculateOriginalTotal = (method: PaymentMethod) => {
-          const salesTotal = salesOfDay
-            .filter((s) => s.paymentMethod === method)
-            .reduce((sum, s) => sum + s.totalBs, 0);
-          const prepaidTotal = prepaidOfDay
-            .filter((p) => p.paymentMethod === method)
-            .reduce((sum, p) => sum + p.amountBs, 0);
-
-          const rentalsTotal = rentalsOfDay
-            .filter((r) => r.paymentMethod === method && r.isPaid)
-            .reduce((sum, r) => sum + r.totalUsd * config.exchangeRate, 0);
-
-          return salesTotal + rentalsTotal + prepaidTotal;
-        };
-
-        const balanceTransactionsOfDay = paymentBalanceTransactions.filter(
-          (t) => t.date === date
-        );
-
-        const calculateAdjustments = (method: PaymentMethod) => {
-          return balanceTransactionsOfDay.reduce((adjustment, transaction) => {
-            if (transaction.fromMethod === method) {
-              if (method === 'divisa') {
-                const usdAmount =
-                  transaction.amountUsd ||
-                  transaction.amount / config.exchangeRate;
-                return adjustment - usdAmount * config.exchangeRate;
-              } else {
-                return adjustment - transaction.amount;
-              }
-            } else if (transaction.toMethod === method) {
-              if (method === 'divisa') {
-                const usdAmount =
-                  transaction.amountUsd ||
-                  transaction.amount / config.exchangeRate;
-                return adjustment + usdAmount * config.exchangeRate;
-              } else {
-                return adjustment + transaction.amount;
-              }
-            }
-            return adjustment;
-          }, 0);
-        };
-
-        const methods: PaymentMethod[] = [
-          'efectivo',
-          'pago_movil',
-          'punto_venta',
-          'divisa',
-        ];
-        return methods.map((method) => {
-          const originalTotal = calculateOriginalTotal(method);
-          const adjustments = calculateAdjustments(method);
-          const finalTotal = originalTotal + adjustments;
-
-          return {
-            method,
-            originalTotal,
-            adjustments,
-            finalTotal,
-          } as PaymentBalanceSummary;
+        return calculatePaymentBalanceSummary({
+          date,
+          exchangeRate: config.exchangeRate,
+          sales,
+          prepaidOrders,
+          rentals,
+          paymentBalanceTransactions,
         });
       },
 
@@ -270,29 +260,10 @@ export const usePaymentBalanceStore = create<PaymentBalanceState>()(
 
           if (error) throw error;
 
-          const rows = (data || []) as PaymentBalanceRow[];
-          const transactions = rows.map((row) => ({
-            id: row.id,
-            date: row.date,
-            fromMethod: row.from_method,
-            toMethod: row.to_method,
-            amount: Number(row.amount),
-            amountBs:
-              row.amount_bs !== null && row.amount_bs !== undefined
-                ? Number(row.amount_bs)
-                : Number(row.amount),
-            amountUsd:
-              row.amount_usd !== null && row.amount_usd !== undefined
-                ? Number(row.amount_usd)
-                : undefined,
-            notes: row.notes || undefined,
-            createdAt: row.created_at || new Date().toISOString(),
-            updatedAt: row.updated_at || new Date().toISOString(),
-          }));
-
-          set((state) => ({
-            paymentBalanceTransactions: transactions,
-          }));
+          const transactions = ((data || []) as PaymentBalanceRow[]).map(
+            rowToTransaction
+          );
+          set(() => ({ paymentBalanceTransactions: transactions }));
         } catch (err) {
           console.error(
             'Error loading payment balance transactions from Supabase',

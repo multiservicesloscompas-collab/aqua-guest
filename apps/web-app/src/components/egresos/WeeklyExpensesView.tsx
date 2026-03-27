@@ -2,7 +2,7 @@ import { useEffect, useRef, useCallback, useMemo } from 'react';
 import { Wallet, Loader2, CalendarDays, TrendingDown } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { useWeeklyExpenses, WeekGroup, MonthTotal } from '@/hooks/useWeeklyExpenses';
+import { useWeeklyExpenses, WeekGroup } from '@/hooks/useWeeklyExpenses';
 import { ExpenseCard } from '@/components/egresos/ExpenseCard';
 import { Expense } from '@/types';
 
@@ -49,7 +49,11 @@ function MonthSummaryCard({ monthGroup }: { monthGroup: MonthGroup }) {
 function WeekHeader({ week }: { week: WeekGroup }) {
   const start = new Date(week.weekStart + 'T12:00:00');
   const end = new Date(week.weekEnd + 'T12:00:00');
-  const label = `${format(start, "d MMM", { locale: es })} – ${format(end, "d MMM", { locale: es })}`;
+  const label = `${format(start, 'd MMM', { locale: es })} – ${format(
+    end,
+    'd MMM',
+    { locale: es }
+  )}`;
 
   return (
     <div className="flex items-center justify-between bg-primary/5 border border-primary/10 rounded-xl px-4 py-3">
@@ -119,7 +123,7 @@ export function WeeklyExpensesView({
   // Group weeks by month
   const monthGroups: MonthGroup[] = useMemo(() => {
     const monthMap = new Map<string, WeekGroup[]>();
-    
+
     weeks.forEach((week) => {
       const existing = monthMap.get(week.monthKey) || [];
       existing.push(week);
@@ -170,7 +174,7 @@ export function WeeklyExpensesView({
         <div key={monthGroup.monthKey} className="space-y-2">
           {/* Card del mes */}
           <MonthSummaryCard monthGroup={monthGroup} />
-          
+
           {/* Semanas del mes */}
           {monthGroup.weeks.map((week: WeekGroup) => (
             <div key={week.weekStart} className="space-y-1">

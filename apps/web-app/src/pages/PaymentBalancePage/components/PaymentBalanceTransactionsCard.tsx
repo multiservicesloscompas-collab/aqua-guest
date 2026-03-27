@@ -7,6 +7,45 @@ import {
   PaymentMethod,
 } from '@/types';
 
+const formatCurrency = (value: number, currency: 'USD' | 'Bs') =>
+  currency === 'USD' ? `$${value.toFixed(2)}` : `Bs ${value.toFixed(2)}`;
+
+const getDisplayAmounts = (transaction: PaymentBalanceTransaction) => {
+  const outValue =
+    transaction.fromMethod === 'divisa'
+      ? transaction.amountOutUsd ?? transaction.amountUsd ?? 0
+      : transaction.amountOutBs ?? transaction.amountBs ?? transaction.amount;
+
+  const inValue =
+    transaction.toMethod === 'divisa'
+      ? transaction.amountInUsd ?? transaction.amountUsd ?? 0
+      : transaction.amountInBs ?? transaction.amountBs ?? transaction.amount;
+
+  const outCurrency: 'USD' | 'Bs' =
+    transaction.fromMethod === 'divisa' ? 'USD' : 'Bs';
+  const inCurrency: 'USD' | 'Bs' =
+    transaction.toMethod === 'divisa' ? 'USD' : 'Bs';
+
+  const differenceBs =
+    transaction.differenceBs ??
+    (transaction.amountInBs ?? transaction.amountBs ?? transaction.amount) -
+      (transaction.amountOutBs ?? transaction.amountBs ?? transaction.amount);
+
+  const differenceUsd =
+    transaction.differenceUsd ??
+    (transaction.amountInUsd !== undefined &&
+    transaction.amountOutUsd !== undefined
+      ? transaction.amountInUsd - transaction.amountOutUsd
+      : undefined);
+
+  return {
+    outText: formatCurrency(outValue, outCurrency),
+    inText: formatCurrency(inValue, inCurrency),
+    differenceBs,
+    differenceUsd,
+  };
+};
+
 interface PaymentBalanceTransactionsCardProps {
   transactions: PaymentBalanceTransaction[];
   isDeleting: boolean;
@@ -42,33 +81,51 @@ export function PaymentBalanceTransactionsCard({
                 key={transaction.id}
                 className="flex items-center justify-between p-3 rounded-lg border"
               >
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-1">
-                    <span className="text-lg">
-                      {getMethodIcon(transaction.fromMethod)}
-                    </span>
-                    <ArrowLeftRight className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-lg">
-                      {getMethodIcon(transaction.toMethod)}
-                    </span>
-                  </div>
-                  <div>
-                    <p className="font-medium">
-                      {PaymentMethodLabels[transaction.fromMethod]} →{' '}
-                      {PaymentMethodLabels[transaction.toMethod]}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {transaction.amountUsd
-                        ? `$${transaction.amountUsd.toFixed(2)}`
-                        : `Bs ${transaction.amount.toFixed(2)}`}
-                    </p>
-                    {transaction.notes && (
-                      <p className="text-xs text-muted-foreground">
-                        {transaction.notes}
-                      </p>
-                    )}
-                  </div>
-                </div>
+                {(() => {
+                  const operationType =
+                    transaction.operationType ?? 'equilibrio';
+                  const display = getDisplayAmounts(transaction);
+                  const differenceLabel =
+                    display.differenceUsd !== undefined
+                      ? `${
+                          display.differenceUsd >= 0 ? '+' : ''
+                        }$${display.differenceUsd.toFixed(2)}`
+                      : `${
+                          display.differenceBs >= 0 ? '+' : ''
+                        }Bs ${display.differenceBs.toFixed(2)}`;
+
+                  return (
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-1">
+                        <span className="text-lg">
+                          {getMethodIcon(transaction.fromMethod)}
+                        </span>
+                        <ArrowLeftRight className="w-4 h-4 text-muted-foreground" />
+                        <span className="text-lg">
+                          {getMethodIcon(transaction.toMethod)}
+                        </span>
+                      </div>
+                      <div>
+                        <p className="font-medium">
+                          {PaymentMethodLabels[transaction.fromMethod]} →{' '}
+                          {PaymentMethodLabels[transaction.toMethod]}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {operationType === 'avance' ? 'Avance' : 'Equilibrio'}{' '}
+                          · Salida {display.outText} · Entrada {display.inText}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Diferencia: {differenceLabel}
+                        </p>
+                        {transaction.notes && (
+                          <p className="text-xs text-muted-foreground">
+                            {transaction.notes}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
                 <div className="flex gap-1">
                   <Button
                     size="sm"

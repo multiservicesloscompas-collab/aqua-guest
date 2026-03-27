@@ -92,7 +92,7 @@ export function useWashingMachinesViewModel() {
     try {
       await deleteWashingMachine(machineToDeleteId);
       toast.success('Lavadora eliminada');
-    } catch (err) {
+    } catch {
       toast.error('Error eliminando la lavadora');
     } finally {
       setIsDeleting(false);
@@ -136,7 +136,7 @@ export function useWashingMachinesViewModel() {
       }
       setSheetOpen(false);
       resetForm();
-    } catch (err) {
+    } catch {
       toast.error('Error guardando la lavadora');
     } finally {
       setIsSaving(false);

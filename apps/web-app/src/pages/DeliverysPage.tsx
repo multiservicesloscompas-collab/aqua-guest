@@ -1,56 +1,38 @@
-import { useState, useMemo, useEffect } from 'react';
-import { Header } from '@/components/layout/Header';
-import { useAppStore } from '@/store/useAppStore';
-import { useRentalStore } from '@/store/useRentalStore';
-import { useMachineStore } from '@/store/useMachineStore';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Calendar } from '@/components/ui/calendar';
+import { useEffect, useMemo, useState } from 'react';
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  Truck,
-  CalendarIcon,
-  MapPin,
-  Clock,
-  User,
-  Phone,
-  WashingMachine,
-} from 'lucide-react';
-import { RentalShiftConfig, RentalStatusLabels } from '@/types';
-import { cn } from '@/lib/utils';
-import {
-  format,
-  startOfWeek,
-  endOfWeek,
-  startOfMonth,
   endOfMonth,
+  endOfWeek,
+  format,
   isWithinInterval,
   parseISO,
+  startOfMonth,
+  startOfWeek,
 } from 'date-fns';
-import { es } from 'date-fns/locale';
 
-type TimeFilter = 'dia' | 'semana' | 'mes';
+import { AppPageContainer } from '@/components/layout/AppPageContainer';
+import { TabletSplitLayout } from '@/components/layout/TabletSplitLayout';
+import { useViewportMode } from '@/hooks/responsive/useViewportMode';
+import { useAppStore } from '@/store/useAppStore';
+import { useMachineStore } from '@/store/useMachineStore';
+import { useRentalStore } from '@/store/useRentalStore';
+import {
+  TABLET_PRIMARY_COLUMN_COMPACT_CLASS,
+  TABLET_SECONDARY_COMPLEMENTARY_CLASS,
+  TABLET_SPLIT_LAYOUT_CLASS,
+} from '@/lib/responsive/tabletLayoutPatterns';
+import { DateSelector } from '@/components/ventas/DateSelector';
 
-const TimeFilterLabels: Record<TimeFilter, string> = {
-  dia: 'Día específico',
-  semana: 'Esta semana',
-  mes: 'Este mes',
-};
+import {
+  DeliveryFiltersCard,
+  type TimeFilter,
+} from './DeliverysPage/components/DeliveryFiltersCard';
+import { DeliveryListSection } from './DeliverysPage/components/DeliveryListSection';
+import { DeliveryStatsGrid } from './DeliverysPage/components/DeliveryStatsGrid';
 
 export function DeliverysPage() {
-  const { selectedDate: selectedDateStr, setSelectedDate: setSelectedDateStr } = useAppStore();
+  const { isTabletViewport } = useViewportMode();
+  const { selectedDate: selectedDateStr, setSelectedDate: setSelectedDateStr } =
+    useAppStore();
   const { rentals } = useRentalStore();
   const { washingMachines } = useMachineStore();
   const [timeFilter, setTimeFilter] = useState<TimeFilter>('dia');
@@ -58,10 +40,6 @@ export function DeliverysPage() {
   const selectedDate = useMemo(() => {
     return parseISO(selectedDateStr);
   }, [selectedDateStr]);
-
-  const setSelectedDate = (date: Date) => {
-    setSelectedDateStr(format(date, 'yyyy-MM-dd'));
-  };
 
   useEffect(() => {
     const load = async () => {
@@ -79,7 +57,6 @@ export function DeliverysPage() {
 
     return rentals
       .filter((rental) => {
-        // Only include rentals that have delivery service (deliveryFee > 0)
         if (!rental.deliveryFee || rental.deliveryFee <= 0) return false;
 
         const rentalDate = parseISO(rental.date);
@@ -90,26 +67,27 @@ export function DeliverysPage() {
               format(rentalDate, 'yyyy-MM-dd') ===
               format(selectedDate, 'yyyy-MM-dd')
             );
-          case 'semana':
+          case 'semana': {
             const weekStart = startOfWeek(now, { weekStartsOn: 1 });
             const weekEnd = endOfWeek(now, { weekStartsOn: 1 });
             return isWithinInterval(rentalDate, {
               start: weekStart,
               end: weekEnd,
             });
-          case 'mes':
+          }
+          case 'mes': {
             const monthStart = startOfMonth(now);
             const monthEnd = endOfMonth(now);
             return isWithinInterval(rentalDate, {
               start: monthStart,
               end: monthEnd,
             });
+          }
           default:
             return true;
         }
       })
       .sort((a, b) => {
-        // Sort by date descending, then by delivery time
         const dateCompare = b.date.localeCompare(a.date);
         if (dateCompare !== 0) return dateCompare;
         return b.deliveryTime.localeCompare(a.deliveryTime);
@@ -165,210 +143,69 @@ export function DeliverysPage() {
     }
   };
 
-  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
-
   return (
     <div className="pb-24">
-      <Header
-        title="Entregas"
-        subtitle="Historial de entregas con servicio de delivery"
-      />
+      <AppPageContainer>
+        {isTabletViewport ? (
+          <>
+            <TabletSplitLayout
+              className={TABLET_SPLIT_LAYOUT_CLASS}
+              primary={
+                <div
+                  className={`${TABLET_PRIMARY_COLUMN_COMPACT_CLASS} space-y-4`}
+                  data-testid="delivery-primary-column"
+                >
+                  <DateSelector
+                    selectedDate={selectedDateStr}
+                    onDateChange={setSelectedDateStr}
+                  />
+                  <DeliveryFiltersCard
+                    timeFilter={timeFilter}
+                    onTimeFilterChange={setTimeFilter}
+                  />
+                </div>
+              }
+              secondary={
+                <aside
+                  className={TABLET_SECONDARY_COMPLEMENTARY_CLASS}
+                  data-testid="delivery-secondary-column"
+                >
+                  <DeliveryStatsGrid stats={stats} />
+                </aside>
+              }
+            />
 
-      <main className="flex-1 px-4 py-4 space-y-4 max-w-lg mx-auto w-full">
-        {/* Filtros */}
-        <Card>
-          <CardContent className="p-4 space-y-4">
-            <div className="flex items-center gap-2">
-              <Truck className="w-5 h-5 text-primary" />
-              <span className="font-medium">Filtrar por período</span>
-            </div>
+            <DeliveryListSection
+              rentals={filteredRentals}
+              timeFilter={timeFilter}
+              selectedDate={selectedDate}
+              getMachineName={getMachineName}
+              getStatusColor={getStatusColor}
+            />
+          </>
+        ) : (
+          <div className="space-y-4">
+            <DateSelector
+              selectedDate={selectedDateStr}
+              onDateChange={setSelectedDateStr}
+            />
+            <DeliveryFiltersCard
+              timeFilter={timeFilter}
+              onTimeFilterChange={setTimeFilter}
+            />
 
-            <div className="flex gap-2">
-              <Select
-                value={timeFilter}
-                onValueChange={(v) => setTimeFilter(v as TimeFilter)}
-              >
-                <SelectTrigger className="flex-1">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(TimeFilterLabels).map(([key, label]) => (
-                    <SelectItem key={key} value={key}>
-                      {label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <DeliveryStatsGrid stats={stats} />
 
-              {timeFilter === 'dia' && (
-                <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="gap-2">
-                      <CalendarIcon className="w-4 h-4" />
-                      {format(selectedDate, 'dd/MM/yy')}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="end">
-                    <Calendar
-                      mode="single"
-                      selected={selectedDate}
-                      onSelect={(date) => {
-                        if (date) {
-                          setSelectedDate(date);
-                          setIsCalendarOpen(false);
-                        }
-                      }}
-                      locale={es}
-                      className="pointer-events-auto"
-                    />
-                  </PopoverContent>
-                </Popover>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Estadísticas */}
-        <div className="grid grid-cols-2 gap-3">
-          <Card>
-            <CardContent className="p-4 text-center">
-              <p className="text-2xl font-bold text-primary">{stats.total}</p>
-              <p className="text-sm text-muted-foreground">Total entregas</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 text-center">
-              <p className="text-2xl font-bold text-green-600">
-                ${stats.totalRevenue.toFixed(2)}
-              </p>
-              <p className="text-sm text-muted-foreground">Ingresos</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 text-center">
-              <p className="text-2xl font-bold text-red-600">{stats.unpaid}</p>
-              <p className="text-sm text-muted-foreground">
-                Entregas no pagadas
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 text-center">
-              <p className="text-2xl font-bold text-red-600">
-                ${stats.unpaidAmount.toFixed(2)}
-              </p>
-              <p className="text-sm text-muted-foreground">Monto no pagado</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Lista de entregas */}
-        <div className="space-y-3">
-          <h3 className="font-semibold text-lg">
-            {timeFilter === 'dia' &&
-              `Entregas del ${format(selectedDate, "d 'de' MMMM", {
-                locale: es,
-              })}`}
-            {timeFilter === 'semana' && 'Entregas de esta semana'}
-            {timeFilter === 'mes' && 'Entregas de este mes'}
-          </h3>
-
-          {filteredRentals.length === 0 ? (
-            <Card>
-              <CardContent className="p-8 text-center">
-                <Truck className="w-12 h-12 mx-auto text-muted-foreground/50 mb-3" />
-                <p className="text-muted-foreground">
-                  No hay entregas en este período
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            filteredRentals.map((rental) => (
-              <Card key={rental.id} className="overflow-hidden">
-                <CardContent className="p-4 space-y-3">
-                  {/* Header */}
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                        <WashingMachine className="w-5 h-5 text-primary" />
-                      </div>
-                      <div>
-                        <p className="font-medium">
-                          {getMachineName(rental.machineId)}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {RentalShiftConfig[rental.shift].label}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <Badge
-                        className={cn('border', getStatusColor(rental.status))}
-                      >
-                        {RentalStatusLabels[rental.status]}
-                      </Badge>
-                      <p className="text-sm font-semibold text-primary mt-1">
-                        ${(rental.deliveryFee || 0).toFixed(2)}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Cliente */}
-                  <div className="flex items-center gap-4 text-sm">
-                    <div className="flex items-center gap-1.5">
-                      <User className="w-4 h-4 text-muted-foreground" />
-                      <span>{rental.customerName}</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <Phone className="w-4 h-4 text-muted-foreground" />
-                      <span>{rental.customerPhone}</span>
-                    </div>
-                  </div>
-
-                  {/* Dirección */}
-                  <div className="flex items-start gap-1.5 text-sm">
-                    <MapPin className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
-                    <span className="text-muted-foreground">
-                      {rental.customerAddress}
-                    </span>
-                  </div>
-
-                  {/* Horarios */}
-                  <div className="flex items-center gap-4 text-sm bg-accent/50 rounded-lg p-2">
-                    <div className="flex items-center gap-1.5">
-                      <Clock className="w-4 h-4 text-muted-foreground" />
-                      <span>
-                        Entrega: <strong>{rental.deliveryTime}</strong>
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <Clock className="w-4 h-4 text-muted-foreground" />
-                      <span>
-                        Recogida: <strong>{rental.pickupTime}</strong>
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Fecha */}
-                  <div className="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t">
-                    <span>
-                      {format(parseISO(rental.date), "EEEE d 'de' MMMM, yyyy", {
-                        locale: es,
-                      })}
-                    </span>
-                    <Badge
-                      variant={rental.isPaid ? 'default' : 'destructive'}
-                      className="text-xs"
-                    >
-                      {rental.isPaid ? 'Pagado' : 'No pagado'}
-                    </Badge>
-                  </div>
-                </CardContent>
-              </Card>
-            ))
-          )}
-        </div>
-      </main>
+            <DeliveryListSection
+              rentals={filteredRentals}
+              timeFilter={timeFilter}
+              selectedDate={selectedDate}
+              getMachineName={getMachineName}
+              getStatusColor={getStatusColor}
+            />
+          </div>
+        )}
+      </AppPageContainer>
     </div>
   );
 }
