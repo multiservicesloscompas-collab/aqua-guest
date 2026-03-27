@@ -42,7 +42,7 @@ export function ExpensesPage({ autoOpenAdd }: ExpensesPageProps = {}) {
     updateExpense,
     deleteExpense,
   } = useExpenseStore();
-  const { tipPayouts, loadTipsByDateRange } = useTipStore();
+  const { tipPayouts, loadPaidTipsByDateRange } = useTipStore();
   const { selectedDate, setSelectedDate } = useAppStore();
   const { config, mixedPaymentFlags } = useConfigStore();
 
@@ -111,8 +111,8 @@ export function ExpensesPage({ autoOpenAdd }: ExpensesPageProps = {}) {
   const totalExpenses = visibleExpenses.reduce((sum, e) => sum + e.amount, 0);
 
   useEffect(() => {
-    void loadTipsByDateRange(selectedDate, selectedDate);
-  }, [loadTipsByDateRange, selectedDate]);
+    void loadPaidTipsByDateRange(selectedDate, selectedDate);
+  }, [loadPaidTipsByDateRange, selectedDate]);
 
   const handleSubmit = async () => {
     if (!description || !amount) return;

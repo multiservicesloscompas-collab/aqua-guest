@@ -88,22 +88,25 @@ export const validatePaymentBalanceForm = (
     formData.toMethod === 'divisa'
       ? amountInInput * exchangeRate
       : amountInInput;
+
   const amountOutUsd =
-    formData.fromMethod === 'divisa' ? amountOutInput : undefined;
+    formData.fromMethod === 'divisa'
+      ? amountOutInput
+      : amountOutInput / exchangeRate;
   const amountInUsd =
-    formData.toMethod === 'divisa' ? amountInInput : undefined;
+    formData.toMethod === 'divisa'
+      ? amountInInput
+      : amountInInput / exchangeRate;
+
   const differenceBs = amountInBs - amountOutBs;
-  const differenceUsd =
-    amountOutUsd !== undefined && amountInUsd !== undefined
-      ? amountInUsd - amountOutUsd
-      : undefined;
+  const differenceUsd = amountInUsd - amountOutUsd;
 
   return {
     payload: {
       operationType: formData.operationType,
       amount: amountOutBs,
       amountBs: amountOutBs,
-      amountUsd: amountOutUsd ?? amountInUsd,
+      amountUsd: amountOutUsd, // Use the "out" value as the principal reference
       amountOutBs,
       amountOutUsd,
       amountInBs,

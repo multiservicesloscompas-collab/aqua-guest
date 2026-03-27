@@ -123,7 +123,10 @@ export function TipsPage() {
   };
 
   // Execute payment using the selected method
-  const handleConfirmPayment = async (paymentMethod: PaymentMethod) => {
+  const handleConfirmPayment = async (
+    paymentMethod: PaymentMethod,
+    paidAt: string
+  ) => {
     if (!payingTipAction) return;
 
     setIsProcessingPayment(true);
@@ -138,6 +141,7 @@ export function TipsPage() {
           tipId,
           tipDate: selectedDate,
           paymentMethod,
+          paidAt: `${paidAt}T12:00:00Z`, // Use mid-day to avoid TZ issues
         });
         toast.success('Propina pagada correctamente');
       } else if (payingTipAction.type === 'all') {
@@ -150,6 +154,7 @@ export function TipsPage() {
               tipId: tip.id,
               tipDate: selectedDate,
               paymentMethod,
+              paidAt: `${paidAt}T12:00:00Z`,
             })
           )
         );
@@ -230,6 +235,12 @@ export function TipsPage() {
         title={drawerTitle}
         description={drawerDescription}
         confirmLoading={isProcessingPayment}
+        originDate={
+          payingTipAction?.type === 'single'
+            ? tipsForDay.find((t) => t.id === payingTipAction.tipId)?.tipDate ||
+              selectedDate
+            : selectedDate
+        }
         onConfirm={handleConfirmPayment}
       />
     </div>

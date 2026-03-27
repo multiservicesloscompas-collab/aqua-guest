@@ -226,7 +226,8 @@ describe('TipsPage', () => {
       expect(tipStoreState.paySingleTip).toHaveBeenCalledWith({
         tipId: 'tip-pay-1',
         tipDate: '2026-03-13',
-        paymentMethod: 'efectivo', // defaults to efectivo instead of pago_movil
+        paymentMethod: 'efectivo',
+        paidAt: expect.stringMatching(/^2026-03-13T12:00:00Z$/),
       });
     });
   });
@@ -276,6 +277,7 @@ describe('TipsPage', () => {
         tipId: 'tip-pay-all-1',
         tipDate: '2026-03-13',
         paymentMethod: 'divisa',
+        paidAt: expect.stringMatching(/^2026-03-13T12:00:00Z$/),
       });
     });
 
@@ -283,6 +285,7 @@ describe('TipsPage', () => {
       tipId: 'tip-pay-all-2',
       tipDate: '2026-03-13',
       paymentMethod: 'divisa',
+      paidAt: expect.stringMatching(/^2026-03-13T12:00:00Z$/),
     });
   });
 });

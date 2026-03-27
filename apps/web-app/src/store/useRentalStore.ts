@@ -30,6 +30,7 @@ import {
   deleteRentalAction,
 } from './useRentalStore.actions';
 import { useConfigStore } from './useConfigStore';
+import { useTipStore } from './useTipStore';
 import {
   enqueueOfflineRentalTipDelete,
   enqueueOfflineRentalTipUpsert,
@@ -89,6 +90,7 @@ export const useRentalStore = create<RentalState>()(
           }
 
           await tipsDataService.deleteTipByOrigin('rental', id);
+          useTipStore.getState().removeTipByOrigin('rental', id);
           return;
         }
 
