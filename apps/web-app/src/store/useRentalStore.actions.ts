@@ -19,6 +19,7 @@ import {
   replaceRentalSplits,
   fetchRentalSplits,
 } from './useRentalStore.supabase';
+import { useTipStore } from './useTipStore';
 import type { TipCaptureInput } from '@/types/tips';
 import {
   calculateFinalRentalTotals,
@@ -183,6 +184,7 @@ export async function deleteRentalAction(
 
     if (deleteTipByOrigin) {
       await deleteTipByOrigin('rental', id);
+      useTipStore.getState().removeTipByOrigin('rental', id);
     }
 
     const { error } = await supabase

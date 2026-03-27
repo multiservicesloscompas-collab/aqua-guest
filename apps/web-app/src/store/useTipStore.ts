@@ -1,7 +1,6 @@
 import { create } from 'zustand';
 import type { PaymentMethod } from '@/types';
 import type { Tip, TipPayout } from '@/types/tips';
-import { normalizeToVenezuelaDate } from '@/services/DateService';
 import { tipsDataService } from '@/services/tips/TipDataService';
 
 interface TipState {
@@ -10,12 +9,15 @@ interface TipState {
   loadingByRange: Record<string, boolean>;
   setTips: (tips: Tip[]) => void;
   loadTipsByDateRange: (startDate: string, endDate: string) => Promise<void>;
+  loadPaidTipsByDateRange: (startDate: string, endDate: string) => Promise<void>;
   updateTipNote: (tipId: string, notes?: string) => Promise<void>;
   paySingleTip: (input: {
     tipId: string;
     tipDate: string;
     paymentMethod: PaymentMethod;
+    paidAt?: string;
   }) => Promise<void>;
+  removeTipByOrigin: (originType: string, originId: string) => void;
 }
 
 export const useTipStore = create<TipState>()((set, get) => ({
@@ -49,17 +51,52 @@ export const useTipStore = create<TipState>()((set, get) => ({
       );
 
       set((state) => {
-        const loadedDates = new Set<string>();
-        loadedTips.forEach((tip) => {
-          loadedDates.add(normalizeToVenezuelaDate(tip.tipDate));
-        });
+        const nextTipsMap = new Map<string, Tip>();
+        state.tips.forEach((t) => nextTipsMap.set(t.id, t));
+        loadedTips.forEach((t) => nextTipsMap.set(t.id, t));
 
-        const nextTips = [
-          ...state.tips.filter(
-            (tip) => !loadedDates.has(normalizeToVenezuelaDate(tip.tipDate))
-          ),
-          ...loadedTips,
-        ];
+        const nextTips = Array.from(nextTipsMap.values());
+
+        return {
+          tips: nextTips,
+          tipPayouts: tipsDataService.toTipPayoutReadModel(nextTips),
+        };
+      });
+    } finally {
+      set((state) => ({
+        loadingByRange: {
+          ...state.loadingByRange,
+          [rangeKey]: false,
+        },
+      }));
+    }
+  },
+
+  loadPaidTipsByDateRange: async (startDate, endDate) => {
+    const rangeKey = `paid_${startDate}_${endDate}`;
+    if (get().loadingByRange[rangeKey]) {
+      return;
+    }
+
+    set((state) => ({
+      loadingByRange: {
+        ...state.loadingByRange,
+        [rangeKey]: true,
+      },
+    }));
+
+    try {
+      const loadedTips = await tipsDataService.loadPaidTipsByDateRange(
+        startDate,
+        endDate
+      );
+
+      set((state) => {
+        const nextTipsMap = new Map<string, Tip>();
+        state.tips.forEach((t) => nextTipsMap.set(t.id, t));
+        loadedTips.forEach((t) => nextTipsMap.set(t.id, t));
+
+        const nextTips = Array.from(nextTipsMap.values());
 
         return {
           tips: nextTips,
@@ -91,14 +128,37 @@ export const useTipStore = create<TipState>()((set, get) => ({
     });
   },
 
-  paySingleTip: async ({ tipId, tipDate, paymentMethod }) => {
+  paySingleTip: async ({ tipId, tipDate, paymentMethod, paidAt }) => {
     const idempotencyKey = `tip-single:${tipId}:${paymentMethod}:${Date.now()}`;
     await tipsDataService.paySingleTip({
       tipId,
       paymentMethod,
       idempotencyKey,
+      paidAt,
+      tipDate,
     });
 
-    await get().loadTipsByDateRange(tipDate, tipDate);
+    const reloadPromises = [get().loadTipsByDateRange(tipDate, tipDate)];
+
+    if (paidAt) {
+      const paidDateOnly = paidAt.split('T')[0];
+      reloadPromises.push(get().loadPaidTipsByDateRange(paidDateOnly, paidDateOnly));
+    } else {
+      reloadPromises.push(get().loadPaidTipsByDateRange(tipDate, tipDate));
+    }
+
+    await Promise.all(reloadPromises);
+  },
+
+  removeTipByOrigin: (originType, originId) => {
+    set((state) => {
+      const nextTips = state.tips.filter(
+        (t) => !(t.originType === originType && t.originId === originId)
+      );
+      return {
+        tips: nextTips,
+        tipPayouts: tipsDataService.toTipPayoutReadModel(nextTips),
+      };
+    });
   },
 }));

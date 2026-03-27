@@ -53,12 +53,15 @@ export interface TipDailyPayoutRequest {
   tipDate: string;
   paymentMethod: PaymentMethod;
   idempotencyKey: string;
+  paidAt?: string;
 }
 
 export interface TipSinglePayoutRequest {
   tipId: string;
   paymentMethod: PaymentMethod;
   idempotencyKey: string;
+  paidAt?: string;
+  tipDate?: string;
 }
 
 export interface TipCaptureInput {

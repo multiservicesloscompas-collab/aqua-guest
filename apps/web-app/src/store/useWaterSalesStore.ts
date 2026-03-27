@@ -29,6 +29,7 @@ import {
   deleteSaleAction,
 } from './useWaterSalesStore.actions';
 import { useConfigStore } from './useConfigStore';
+import { useTipStore } from './useTipStore';
 import {
   enqueueOfflineSaleTipDelete,
   enqueueOfflineSaleTipUpsert,
@@ -126,6 +127,7 @@ export const useWaterSalesStore = create<WaterSalesState>()(
           }
 
           await tipsDataService.deleteTipByOrigin('sale', id);
+          useTipStore.getState().removeTipByOrigin('sale', id);
           return;
         }
 
@@ -164,9 +166,10 @@ export const useWaterSalesStore = create<WaterSalesState>()(
       },
 
       deleteSale: (id) =>
-        deleteSaleAction(id, set, get, (originType, originId) =>
-          tipsDataService.deleteTipByOrigin(originType, originId)
-        ),
+        deleteSaleAction(id, set, get, async (originType, originId) => {
+          await tipsDataService.deleteTipByOrigin(originType, originId);
+          useTipStore.getState().removeTipByOrigin(originType, originId);
+        }),
 
       // ── Query helpers ─────────────────────────────────────────────────────
 
