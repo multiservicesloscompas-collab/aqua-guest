@@ -206,7 +206,7 @@ describe('TipsPage', () => {
         originId: 'sale-1',
         tipDate: '2026-03-13',
         amountBs: 35,
-        capturePaymentMethod: 'efectivo',
+        capturePaymentMethod: 'pago_movil', // original method
         status: 'pending',
         createdAt: '2026-03-13T10:00:00.000Z',
         updatedAt: '2026-03-13T10:00:00.000Z',
@@ -216,13 +216,17 @@ describe('TipsPage', () => {
 
     render(<TipsPage />);
 
+    // Click "Pagar" on the card
     fireEvent.click(screen.getByRole('button', { name: 'Pagar' }));
+
+    // Drawer opens, click "Confirmar Pago" (it defaults to efectivo)
+    fireEvent.click(screen.getByRole('button', { name: 'Confirmar Pago' }));
 
     await waitFor(() => {
       expect(tipStoreState.paySingleTip).toHaveBeenCalledWith({
         tipId: 'tip-pay-1',
         tipDate: '2026-03-13',
-        paymentMethod: 'efectivo',
+        paymentMethod: 'efectivo', // defaults to efectivo instead of pago_movil
       });
     });
   });
@@ -256,22 +260,29 @@ describe('TipsPage', () => {
 
     render(<TipsPage />);
 
+    // Click pay all button
     fireEvent.click(
       screen.getByRole('button', { name: 'Pagar Todas del Dia' })
     );
+
+    // Click another method in the drawer, e.g. Divisa
+    fireEvent.click(screen.getByTestId('tip-payment-method-divisa'));
+    
+    // Confirm payment
+    fireEvent.click(screen.getByRole('button', { name: 'Confirmar Pago' }));
 
     await waitFor(() => {
       expect(tipStoreState.paySingleTip).toHaveBeenCalledWith({
         tipId: 'tip-pay-all-1',
         tipDate: '2026-03-13',
-        paymentMethod: 'efectivo',
+        paymentMethod: 'divisa',
       });
     });
 
     expect(tipStoreState.paySingleTip).toHaveBeenCalledWith({
       tipId: 'tip-pay-all-2',
       tipDate: '2026-03-13',
-      paymentMethod: 'pago_movil',
+      paymentMethod: 'divisa',
     });
   });
 });

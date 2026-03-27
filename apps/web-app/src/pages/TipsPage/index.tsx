@@ -7,9 +7,17 @@ import { useRentalStore } from '@/store/useRentalStore';
 import { useTipStore } from '@/store/useTipStore';
 import { useWaterSalesStore } from '@/store/useWaterSalesStore';
 import { normalizeToVenezuelaDate } from '@/services/DateService';
+import type { PaymentMethod } from '@/types';
+
 import { TipCard } from './components/TipCard';
 import { TipDaySummaryCard } from './components/TipDaySummaryCard';
+import { TipPaymentMethodDrawer } from './components/TipPaymentMethodDrawer';
 import { resolveTipOriginLabel } from './utils';
+
+type PayingTipAction =
+  | { type: 'single'; tipId: string }
+  | { type: 'all' }
+  | null;
 
 export function TipsPage() {
   const selectedDate = useAppStore((state) => state.selectedDate);
@@ -20,11 +28,14 @@ export function TipsPage() {
   const loadSalesByDate = useWaterSalesStore((state) => state.loadSalesByDate);
   const rentals = useRentalStore((state) => state.rentals);
   const loadRentalsByDate = useRentalStore((state) => state.loadRentalsByDate);
+
   const [editingTipId, setEditingTipId] = useState<string | null>(null);
   const [noteDraft, setNoteDraft] = useState('');
   const [savingNote, setSavingNote] = useState(false);
-  const [payingTipId, setPayingTipId] = useState<string | null>(null);
-  const [payingAll, setPayingAll] = useState(false);
+  
+  // Drawer state mapping
+  const [payingTipAction, setPayingTipAction] = useState<PayingTipAction>(null);
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
 
   useEffect(() => {
     loadTipsByDateRange(selectedDate, selectedDate);
@@ -101,53 +112,68 @@ export function TipsPage() {
     }
   };
 
-  const payTip = async (tipId: string) => {
-    const tip = tipsForDay.find((item) => item.id === tipId);
-    if (!tip || tip.status === 'paid') {
-      return;
-    }
-
-    setPayingTipId(tipId);
-    try {
-      await paySingleTip({
-        tipId,
-        tipDate: selectedDate,
-        paymentMethod: tip.capturePaymentMethod,
-      });
-      toast.success('Propina pagada correctamente');
-    } catch {
-      toast.error('No se pudo pagar la propina');
-    } finally {
-      setPayingTipId(null);
-    }
+  // Open the drawer for a single tip
+  const handlePayTipClick = (tipId: string) => {
+    setPayingTipAction({ type: 'single', tipId });
   };
 
-  const payAllTipsForDay = async () => {
-    const pendingTips = tipsForDay.filter((tip) => tip.status === 'pending');
-    if (pendingTips.length === 0) {
-      return;
-    }
+  // Open the drawer for all tips
+  const handlePayAllTipsClick = () => {
+    setPayingTipAction({ type: 'all' });
+  };
 
-    setPayingAll(true);
+  // Execute payment using the selected method
+  const handleConfirmPayment = async (paymentMethod: PaymentMethod) => {
+    if (!payingTipAction) return;
+
+    setIsProcessingPayment(true);
+
     try {
-      await Promise.all(
-        pendingTips.map((tip) =>
-          paySingleTip({
-            tipId: tip.id,
-            tipDate: selectedDate,
-            paymentMethod: tip.capturePaymentMethod,
-          })
-        )
-      );
-      toast.success('Se pagaron todas las propinas del día');
+      if (payingTipAction.type === 'single') {
+        const tipId = payingTipAction.tipId;
+        const tip = tipsForDay.find((item) => item.id === tipId);
+        if (!tip || tip.status === 'paid') return;
+
+        await paySingleTip({
+          tipId,
+          tipDate: selectedDate,
+          paymentMethod,
+        });
+        toast.success('Propina pagada correctamente');
+      } else if (payingTipAction.type === 'all') {
+        const pendingTips = tipsForDay.filter((tip) => tip.status === 'pending');
+        if (pendingTips.length === 0) return;
+
+        await Promise.all(
+          pendingTips.map((tip) =>
+            paySingleTip({
+              tipId: tip.id,
+              tipDate: selectedDate,
+              paymentMethod,
+            })
+          )
+        );
+        toast.success('Se pagaron todas las propinas del día');
+      }
+      setPayingTipAction(null);
     } catch {
-      toast.error('No se pudieron pagar las propinas del día');
+      toast.error('Ocurrió un error al procesar el pago');
     } finally {
-      setPayingAll(false);
+      setIsProcessingPayment(false);
     }
   };
 
   const hasPendingTips = pendingTipsCount > 0;
+  
+  // Drawer configuration based on the current action
+  const drawerTitle =
+    payingTipAction?.type === 'all'
+      ? 'Pagar Todas las Propinas'
+      : 'Pagar Propina';
+  const drawerDescription =
+    payingTipAction?.type === 'all'
+      ? 'Selecciona la forma de pago para todas las propinas pendientes de este día.'
+      : 'Selecciona la forma de pago mediante la cual entregarás esta propina.';
 
   return (
     <div className="space-y-4 px-4 pb-28 pt-2">
@@ -163,8 +189,8 @@ export function TipsPage() {
         pendingTipsCount={pendingTipsCount}
         paidTipsCount={paidTipsCount}
         hasPendingTips={hasPendingTips}
-        payingAll={payingAll}
-        onPayAllTips={payAllTipsForDay}
+        payingAll={isProcessingPayment && payingTipAction?.type === 'all'}
+        onPayAllTips={handlePayAllTipsClick}
       />
 
       {tipsForDay.length === 0 ? (
@@ -186,16 +212,26 @@ export function TipsPage() {
               isEditing={editingTipId === tip.id}
               noteDraft={noteDraft}
               savingNote={savingNote}
-              isPaying={payingTipId === tip.id}
+              isPaying={isProcessingPayment && payingTipAction?.type === 'single' && payingTipAction.tipId === tip.id}
               onStartEditing={startEditing}
               onNoteChange={setNoteDraft}
               onSaveNote={saveNote}
               onCancelEditing={cancelEditing}
-              onPayTip={payTip}
+              onPayTip={handlePayTipClick}
             />
           ))}
         </div>
       )}
+
+      {/* Drawer for selecting payment method */}
+      <TipPaymentMethodDrawer
+        isOpen={payingTipAction !== null}
+        onOpenChange={(open) => !open && setPayingTipAction(null)}
+        title={drawerTitle}
+        description={drawerDescription}
+        confirmLoading={isProcessingPayment}
+        onConfirm={handleConfirmPayment}
+      />
     </div>
   );
 }
