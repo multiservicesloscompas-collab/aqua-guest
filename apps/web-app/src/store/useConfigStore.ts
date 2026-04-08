@@ -7,7 +7,7 @@ import {
   ExchangeRateHistory,
   DEFAULT_LITER_BREAKPOINTS,
 } from '@/types';
-import supabase from '@/lib/supabaseClient';
+import { getTenantClient } from '@/lib/supabaseClient';
 import { defaultProducts } from '@/data/products';
 import { getVenezuelaDate } from '@/services/DateService';
 
@@ -110,6 +110,7 @@ export const useConfigStore = create<ConfigState>()(
 
       setLiterPricing: async (pricing) => {
         try {
+          const supabase = getTenantClient();
           const { data: existingPricing, error: fetchError } = await supabase
             .from('liter_pricing')
             .select('id, breakpoint, price');

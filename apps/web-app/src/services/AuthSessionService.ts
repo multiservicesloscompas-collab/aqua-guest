@@ -1,10 +1,10 @@
-import supabase from '@/lib/supabaseClient';
+import { getTenantClient } from '@/lib/supabaseClient';
 import { UserProfile } from '@/types/auth';
 
 interface ProfileDataFromDB {
   id: string;
   email: string;
-  role: 'admin' | 'client' | 'employee';
+  role: 'admin' | 'owner' | 'employee';
   full_name?: string;
   company_id?: string;
   company_name: string;
@@ -27,6 +27,7 @@ export class AuthSessionService {
    */
   static async loadUserProfile(userId: string): Promise<UserProfile | null> {
     try {
+      const supabase = getTenantClient();
       const { data: profileData, error } = await supabase
         .from('user_profiles_with_company')
         .select('*')

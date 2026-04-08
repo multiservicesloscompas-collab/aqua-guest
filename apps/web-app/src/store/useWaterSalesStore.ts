@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { CartItem, PaymentMethod, Sale } from '@/types';
-import supabase from '@/lib/supabaseClient';
+import { getTenantClient } from '@/lib/supabaseClient';
 import { getSafeTimestamp, normalizeTimestamp } from '@/lib/date-utils';
 import { dateService } from '@/services/DateService';
 import {
@@ -143,6 +143,7 @@ export const useWaterSalesStore = create<WaterSalesState>()(
         };
 
         try {
+          const supabase = getTenantClient();
           const { data, error } = await supabase
             .from('sales')
             .insert(newSalePayload)
@@ -190,6 +191,7 @@ export const useWaterSalesStore = create<WaterSalesState>()(
 
       updateSale: async (id, updates) => {
         try {
+          const supabase = getTenantClient();
           const payload: SaleUpdate = {};
           if (updates.paymentMethod !== undefined)
             payload.payment_method = updates.paymentMethod;
@@ -226,6 +228,7 @@ export const useWaterSalesStore = create<WaterSalesState>()(
       deleteSale: async (id) => {
         const saleToDelete = get().sales.find((s) => s.id === id);
         try {
+          const supabase = getTenantClient();
           const { error } = await supabase.from('sales').delete().eq('id', id);
           if (error) throw error;
           set((state) => ({

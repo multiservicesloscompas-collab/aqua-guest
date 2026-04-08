@@ -5,7 +5,7 @@ import {
   PaymentBalanceSummary,
   PaymentMethod,
 } from '@/types';
-import supabase from '@/lib/supabaseClient';
+import { getTenantClient } from '@/lib/supabaseClient';
 import { useConfigStore } from './useConfigStore';
 import { useRentalStore } from './useRentalStore';
 import { useWaterSalesStore } from './useWaterSalesStore';
@@ -78,6 +78,7 @@ export const usePaymentBalanceStore = create<PaymentBalanceState>()(
 
       addPaymentBalanceTransaction: async (transaction) => {
         try {
+          const supabase = getTenantClient();
           const payload: PaymentBalanceInsertPayload = {
             date: transaction.date,
             from_method: transaction.fromMethod,
@@ -121,6 +122,7 @@ export const usePaymentBalanceStore = create<PaymentBalanceState>()(
 
       updatePaymentBalanceTransaction: async (id, updates) => {
         try {
+          const supabase = getTenantClient();
           const payload: PaymentBalanceUpdatePayload = {
             updated_at: new Date().toISOString(),
           };
@@ -161,6 +163,7 @@ export const usePaymentBalanceStore = create<PaymentBalanceState>()(
 
       deletePaymentBalanceTransaction: async (id) => {
         try {
+          const supabase = getTenantClient();
           const { error } = await supabase
             .from('payment_balance_transactions')
             .delete()
@@ -263,6 +266,7 @@ export const usePaymentBalanceStore = create<PaymentBalanceState>()(
 
       loadPaymentBalanceTransactions: async () => {
         try {
+          const supabase = getTenantClient();
           const { data, error } = await supabase
             .from('payment_balance_transactions')
             .select('*')

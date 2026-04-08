@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { Customer } from '@/types';
-import supabase from '@/lib/supabaseClient';
+import { getTenantClient } from '@/lib/supabaseClient';
 
 interface CustomerState {
   customers: Customer[];
@@ -36,6 +36,7 @@ export const useCustomerStore = create<CustomerState>()(
 
       addCustomer: async (customer) => {
         try {
+          const supabase = getTenantClient();
           const { data, error } = await supabase
             .from('customers')
             .insert({
@@ -70,6 +71,7 @@ export const useCustomerStore = create<CustomerState>()(
 
       updateCustomer: async (id, updates) => {
         try {
+          const supabase = getTenantClient();
           const payload = buildCustomerUpdatePayload(updates);
 
           const { error } = await supabase
@@ -92,6 +94,7 @@ export const useCustomerStore = create<CustomerState>()(
 
       deleteCustomer: async (id) => {
         try {
+          const supabase = getTenantClient();
           const { error } = await supabase
             .from('customers')
             .delete()

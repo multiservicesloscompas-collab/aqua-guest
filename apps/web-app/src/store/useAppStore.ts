@@ -1,10 +1,15 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import supabase from '@/lib/supabaseClient';
+import { 
+  centralClient, 
+  getTenantClient, 
+  initTenantClient, 
+  clearTenantClient 
+} from '@/lib/supabaseClient';
 import { defaultProducts } from '@/data/products';
 import { getVenezuelaDate } from '@/services/DateService';
 import { ExchangeRateHistory } from '@/types';
-import { AuthState, UserProfile } from '@/types/auth';
+import { AuthState, UserProfile, CentralUserProfile, TenantCredentials } from '@/types/auth';
 import { Session } from '@supabase/supabase-js';
 
 import { useCustomerStore } from './useCustomerStore';
@@ -65,68 +70,153 @@ export const useAppStore = create<AppState>()(
       signIn: async (emailOrUsername, password) => {
         try {
           set({ isLoading: true });
+          console.log('🔐 useAppStore - signIn called', { emailOrUsername });
 
           let email = emailOrUsername;
 
-          // Si no contiene @, buscar username en user_profiles
+          // Si no contiene @, buscar username en BD Central
           if (!emailOrUsername.includes('@')) {
-            const { data: profile, error: profileError } = await supabase
-              .from('user_profiles')
+            console.log('🔍 Buscando username en BD Central:', emailOrUsername);
+            const { data: profile, error: profileError } = await centralClient
+              .from('tenant_users')
               .select('email')
               .eq('username', emailOrUsername)
               .single();
 
             if (profileError || !profile) {
+              console.error('❌ Usuario no encontrado:', profileError);
               throw new Error('Usuario no encontrado');
             }
 
             email = profile.email;
+            console.log('✅ Email encontrado:', email);
           }
 
-          const { data, error } = await supabase.auth.signInWithPassword({
+          // 1. Autenticar en BD Central
+          console.log('🔑 Autenticando en BD Central...');
+          const { data, error } = await centralClient.auth.signInWithPassword({
             email,
             password,
           });
 
-          if (error) throw error;
+          if (error) {
+            console.error('❌ Error de autenticación:', error);
+            throw error;
+          }
+
+          console.log('✅ Autenticado en BD Central', { userId: data.user?.id });
 
           if (data.user) {
-            const { data: profileData, error: profileError } = await supabase
-              .from('user_profiles_with_company')
-              .select('*')
+            // 2. Obtener perfil del usuario de BD Central
+            console.log('📋 Obteniendo perfil de BD Central...');
+            const { data: centralProfile, error: profileError } = await centralClient
+              .from('tenant_users')
+              .select(`
+                *,
+                tenant:tenants(*)
+              `)
               .eq('id', data.user.id)
               .single();
 
-            if (profileError) throw profileError;
+            if (profileError) {
+              console.error('❌ Error obteniendo perfil:', profileError);
+              throw profileError;
+            }
 
-            const userProfile: UserProfile = {
-              id: profileData.id,
-              email: profileData.email,
-              username: profileData.username,
-              role: profileData.role,
-              fullName: profileData.full_name,
-              companyId: profileData.company_id,
-              company: profileData.company_id ? {
-                id: profileData.company_id,
-                name: profileData.company_name,
-                rif: profileData.company_rif,
-                address: profileData.address,
-                phone: profileData.phone,
-                isActive: profileData.company_is_active,
-                createdAt: profileData.created_at,
-                updatedAt: profileData.updated_at,
-              } : undefined,
-              createdBy: profileData.created_by,
-              createdAt: profileData.created_at,
-              updatedAt: profileData.updated_at,
-            };
+            console.log('✅ Perfil obtenido:', { role: centralProfile.role, tenantId: centralProfile.tenant_id });
 
-            set({
-              user: userProfile,
-              session: data.session,
-              isAuthenticated: true,
-              isLoading: false,
-            });
+            const centralUserProfile = centralProfile as CentralUserProfile & { tenant?: any };
+
+            // 3. Si el usuario tiene tenant, obtener credenciales e inicializar cliente
+            if (centralUserProfile.tenant_id) {
+              console.log('🏢 Usuario tiene tenant, obteniendo credenciales...');
+              const { data: credentials, error: credError } = await centralClient
+                .from('tenant_credentials')
+                .select('supabase_url, supabase_anon_key')
+                .eq('tenant_id', centralUserProfile.tenant_id)
+                .single();
+
+              if (credError) {
+                console.error('❌ Error obteniendo credenciales del tenant:', credError);
+                throw credError;
+              }
+
+              console.log('✅ Credenciales del tenant obtenidas');
+
+              const tenantCreds = credentials as TenantCredentials;
+
+              // 4. Inicializar cliente del tenant
+              console.log('🔧 Inicializando cliente del tenant...');
+              initTenantClient(tenantCreds.supabase_url, tenantCreds.supabase_anon_key);
+
+              // 5. Obtener perfil del usuario en BD del tenant
+              console.log('👤 Obteniendo perfil del tenant...');
+              const tenantClient = getTenantClient();
+              const { data: tenantProfile, error: tenantProfileError } = await tenantClient
+                .from('user_profiles_with_company')
+                .select('*')
+                .eq('id', data.user.id)
+                .single();
+
+              if (tenantProfileError) {
+                console.warn('⚠️ No se encontró perfil en BD del tenant:', tenantProfileError);
+              } else {
+                console.log('✅ Perfil del tenant obtenido:', { role: tenantProfile.role, companyId: tenantProfile.company_id });
+              }
+
+              // 6. Combinar datos de ambas BDs
+              const userProfile: UserProfile = {
+                id: centralUserProfile.id,
+                email: centralUserProfile.email,
+                username: centralUserProfile.username || undefined,
+                role: centralUserProfile.role,
+                fullName: centralUserProfile.full_name || undefined,
+                tenantId: centralUserProfile.tenant_id,
+                companyId: tenantProfile?.company_id,
+                company: tenantProfile?.company_id ? {
+                  id: tenantProfile.company_id,
+                  name: tenantProfile.company_name,
+                  rif: tenantProfile.company_rif,
+                  address: tenantProfile.address,
+                  phone: tenantProfile.phone,
+                  isActive: tenantProfile.company_is_active,
+                  createdAt: tenantProfile.created_at,
+                  updatedAt: tenantProfile.updated_at,
+                } : undefined,
+                createdBy: centralUserProfile.created_by || undefined,
+                createdAt: centralUserProfile.created_at,
+                updatedAt: centralUserProfile.updated_at,
+              };
+
+              console.log('✅ Login exitoso - Usuario con tenant:', userProfile);
+              set({
+                user: userProfile,
+                session: data.session,
+                isAuthenticated: true,
+                isLoading: false,
+              });
+            } else {
+              // Usuario admin sin tenant - solo usa BD Central
+              console.log('✅ Login exitoso - Usuario admin sin tenant');
+              const userProfile: UserProfile = {
+                id: centralUserProfile.id,
+                email: centralUserProfile.email,
+                username: centralUserProfile.username || undefined,
+                role: centralUserProfile.role,
+                fullName: centralUserProfile.full_name || undefined,
+                tenantId: null,
+                createdBy: centralUserProfile.created_by || undefined,
+                createdAt: centralUserProfile.created_at,
+                updatedAt: centralUserProfile.updated_at,
+              };
+
+              set({
+                user: userProfile,
+                session: data.session,
+                isAuthenticated: true,
+                isLoading: false,
+              });
+            }
           }
         } catch (error) {
           set({ isLoading: false });
@@ -138,10 +228,10 @@ export const useAppStore = create<AppState>()(
         try {
           set({ isLoading: true });
 
-          const { error } = await supabase.auth.signInWithOAuth({
+          const { error } = await centralClient.auth.signInWithOAuth({
             provider: 'google',
             options: {
-              redirectTo: `${window.location.origin}/login`,
+              redirectTo: `${window.location.origin}/auth/callback`,
               queryParams: {
                 access_type: 'offline',
                 prompt: 'consent',
@@ -152,7 +242,7 @@ export const useAppStore = create<AppState>()(
           if (error) throw error;
 
           // La redirección se maneja automáticamente por Supabase
-          // El perfil se cargará cuando regrese de Google OAuth
+          // El perfil se cargará en checkSession cuando regrese de Google OAuth
         } catch (error) {
           set({ isLoading: false });
           throw error;
@@ -161,8 +251,12 @@ export const useAppStore = create<AppState>()(
 
       signOut: async () => {
         try {
-          const { error } = await supabase.auth.signOut();
+          // Cerrar sesión en BD Central
+          const { error } = await centralClient.auth.signOut();
           if (error) throw error;
+
+          // Limpiar cliente del tenant
+          clearTenantClient();
 
           set({
             user: null,
@@ -180,10 +274,11 @@ export const useAppStore = create<AppState>()(
         try {
           set({ isLoading: true });
 
+          // Verificar sesión en BD Central
           const {
             data: { session },
             error,
-          } = await supabase.auth.getSession();
+          } = await centralClient.auth.getSession();
 
           console.log('useAppStore - checkSession result', { session, error });
 
@@ -191,13 +286,19 @@ export const useAppStore = create<AppState>()(
 
           if (session?.user) {
             console.log('useAppStore - Session found, loading profile for user:', session.user.id);
-            const { data: profileData, error: profileError } = await supabase
-              .from('user_profiles_with_company')
-              .select('*')
+            
+            // Obtener perfil de BD Central
+            const { data: centralProfile, error: profileError } = await centralClient
+              .from('tenant_users')
+              .select(`
+                *,
+                tenant:tenants(*)
+              `)
               .eq('id', session.user.id)
               .single();
 
             if (profileError) {
+              console.error('Error loading central profile:', profileError);
               set({
                 user: null,
                 session: null,
@@ -207,34 +308,78 @@ export const useAppStore = create<AppState>()(
               return;
             }
 
-            const userProfile: UserProfile = {
-              id: profileData.id,
-              email: profileData.email,
-              username: profileData.username,
-              role: profileData.role,
-              fullName: profileData.full_name,
-              companyId: profileData.company_id,
-              company: profileData.company_id ? {
-                id: profileData.company_id,
-                name: profileData.company_name,
-                rif: profileData.company_rif,
-                address: profileData.address,
-                phone: profileData.phone,
-                isActive: profileData.company_is_active,
-                createdAt: profileData.created_at,
-                updatedAt: profileData.updated_at,
-              } : undefined,
-              createdBy: profileData.created_by,
-              createdAt: profileData.created_at,
-              updatedAt: profileData.updated_at,
-            };
+            const centralUserProfile = centralProfile as CentralUserProfile & { tenant?: any };
 
-            set({
-              user: userProfile,
-              session,
-              isAuthenticated: true,
-              isLoading: false,
-            });
+            // Si tiene tenant, inicializar cliente y obtener perfil
+            if (centralUserProfile.tenant_id) {
+              const { data: credentials } = await centralClient
+                .from('tenant_credentials')
+                .select('supabase_url, supabase_anon_key')
+                .eq('tenant_id', centralUserProfile.tenant_id)
+                .single();
+
+              if (credentials) {
+                const tenantCreds = credentials as TenantCredentials;
+                initTenantClient(tenantCreds.supabase_url, tenantCreds.supabase_anon_key);
+
+                const tenantClient = getTenantClient();
+                const { data: tenantProfile } = await tenantClient
+                  .from('user_profiles_with_company')
+                  .select('*')
+                  .eq('id', session.user.id)
+                  .single();
+
+                const userProfile: UserProfile = {
+                  id: centralUserProfile.id,
+                  email: centralUserProfile.email,
+                  username: centralUserProfile.username || undefined,
+                  role: centralUserProfile.role,
+                  fullName: centralUserProfile.full_name || undefined,
+                  tenantId: centralUserProfile.tenant_id,
+                  companyId: tenantProfile?.company_id,
+                  company: tenantProfile?.company_id ? {
+                    id: tenantProfile.company_id,
+                    name: tenantProfile.company_name,
+                    rif: tenantProfile.company_rif,
+                    address: tenantProfile.address,
+                    phone: tenantProfile.phone,
+                    isActive: tenantProfile.company_is_active,
+                    createdAt: tenantProfile.created_at,
+                    updatedAt: tenantProfile.updated_at,
+                  } : undefined,
+                  createdBy: centralUserProfile.created_by || undefined,
+                  createdAt: centralUserProfile.created_at,
+                  updatedAt: centralUserProfile.updated_at,
+                };
+
+                set({
+                  user: userProfile,
+                  session,
+                  isAuthenticated: true,
+                  isLoading: false,
+                });
+              }
+            } else {
+              // Admin sin tenant
+              const userProfile: UserProfile = {
+                id: centralUserProfile.id,
+                email: centralUserProfile.email,
+                username: centralUserProfile.username || undefined,
+                role: centralUserProfile.role,
+                fullName: centralUserProfile.full_name || undefined,
+                tenantId: null,
+                createdBy: centralUserProfile.created_by || undefined,
+                createdAt: centralUserProfile.created_at,
+                updatedAt: centralUserProfile.updated_at,
+              };
+
+              set({
+                user: userProfile,
+                session,
+                isAuthenticated: true,
+                isLoading: false,
+              });
+            }
           } else {
             set({
               user: null,
@@ -257,6 +402,8 @@ export const useAppStore = create<AppState>()(
       // Load data from Supabase - Optimizado para cargar solo datos necesarios
       loadFromSupabase: async () => {
         try {
+          const supabase = getTenantClient();
+          
           const [
             customersRes,
             productsRes,

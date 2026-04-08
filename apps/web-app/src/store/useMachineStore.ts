@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { WashingMachine } from '@/types';
-import supabase from '@/lib/supabaseClient';
+import { getTenantClient } from '@/lib/supabaseClient';
 
 interface MachineState {
   washingMachines: WashingMachine[];
@@ -23,6 +23,7 @@ export const useMachineStore = create<MachineState>()(
 
       addWashingMachine: async (machine) => {
         try {
+          const supabase = getTenantClient();
           const { data, error } = await supabase
             .from('washing_machines')
             .insert({
@@ -56,6 +57,7 @@ export const useMachineStore = create<MachineState>()(
 
       updateWashingMachine: async (id, updates) => {
         try {
+          const supabase = getTenantClient();
           const payload: any = {};
           if (updates.name !== undefined) payload.name = updates.name;
           if (updates.kg !== undefined) payload.kg = updates.kg;
@@ -83,6 +85,7 @@ export const useMachineStore = create<MachineState>()(
 
       deleteWashingMachine: async (id) => {
         try {
+          const supabase = getTenantClient();
           const { error } = await supabase
             .from('washing_machines')
             .delete()
@@ -99,6 +102,7 @@ export const useMachineStore = create<MachineState>()(
 
       loadWashingMachines: async () => {
         try {
+          const supabase = getTenantClient();
           const { data, error } = await supabase
             .from('washing_machines')
             .select('*');

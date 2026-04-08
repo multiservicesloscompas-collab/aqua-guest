@@ -11,7 +11,7 @@ interface MenuSheetProps {
   onNavigate: (route: AppRoute) => void;
 }
 
-const menuItems: { route: AppRoute; label: string; description: string; icon: typeof Users; allowedRoles?: ('admin' | 'client' | 'employee')[] }[] = [
+const menuItems: { route: AppRoute; label: string; description: string; icon: typeof Users; allowedRoles?: ('admin' | 'owner' | 'employee')[] }[] = [
   //{ 
   //route: 'equilibrio-pagos', 
   //label: 'Equilibrar Pagos', 
@@ -29,7 +29,7 @@ const menuItems: { route: AppRoute; label: string; description: string; icon: ty
     label: 'Usuarios',
     description: 'Gestionar usuarios y empleados',
     icon: UserCog,
-    allowedRoles: ['admin', 'client'] // Solo admin y client pueden ver usuarios
+    allowedRoles: ['admin', 'owner'] // Solo admin y owner pueden ver usuarios
   },
   {
     route: 'seguimiento',

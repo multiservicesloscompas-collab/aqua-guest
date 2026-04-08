@@ -6,7 +6,7 @@ import {
   RentalStatus,
   WasherRental,
 } from '@/types';
-import supabase from '@/lib/supabaseClient';
+import { getTenantClient } from '@/lib/supabaseClient';
 import { rentalsDataService } from '@/services/RentalsDataService';
 import { useCustomerStore } from './useCustomerStore';
 
@@ -85,6 +85,7 @@ export const useRentalStore = create<RentalState>()(
 
       addRental: async (rental) => {
         try {
+          const supabase = getTenantClient();
           let customerId = rental.customerId;
 
           if (!customerId) {
@@ -204,6 +205,7 @@ export const useRentalStore = create<RentalState>()(
 
       updateRental: async (id, updates) => {
         try {
+          const supabase = getTenantClient();
           const payload: RentalUpdate = {};
           if (updates.machineId !== undefined)
             payload.machine_id = updates.machineId;
@@ -285,6 +287,7 @@ export const useRentalStore = create<RentalState>()(
       deleteRental: async (id) => {
         const rentalToDelete = get().rentals.find((r) => r.id === id);
         try {
+          const supabase = getTenantClient();
           const { error } = await supabase
             .from('washer_rentals')
             .delete()

@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { AuthChangeEvent, Session } from '@supabase/supabase-js';
-import supabase from '@/lib/supabaseClient';
+import { centralClient } from '@/lib/supabaseClient';
 import { useAppStore } from '@/store/useAppStore';
 import { AuthSessionService } from '@/services/AuthSessionService';
 
@@ -80,7 +80,7 @@ export const useAuthStateListener = () => {
     };
 
     // Suscribirse a cambios de autenticación
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(handleAuthStateChange);
+    const { data: { subscription } } = centralClient.auth.onAuthStateChange(handleAuthStateChange);
 
     // Marcar que la verificación inicial está completa
     isInitialCheckCompleteRef.current = true;

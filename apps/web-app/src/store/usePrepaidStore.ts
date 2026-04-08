@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { PrepaidOrder, PrepaidStatus } from '@/types';
-import supabase from '@/lib/supabaseClient';
+import { getTenantClient } from '@/lib/supabaseClient';
 import { getVenezuelaDate } from '@/services/DateService';
 
 interface PrepaidState {
@@ -31,6 +31,7 @@ export const usePrepaidStore = create<PrepaidState>()(
 
       addPrepaidOrder: async (order) => {
         try {
+          const supabase = getTenantClient();
           const payload = {
             customer_name: order.customerName,
             customer_phone: order.customerPhone,
@@ -82,6 +83,7 @@ export const usePrepaidStore = create<PrepaidState>()(
 
       updatePrepaidOrder: async (id, updates) => {
         try {
+          const supabase = getTenantClient();
           const payload: any = {};
           if (updates.customerName !== undefined)
             payload.customer_name = updates.customerName;
@@ -126,6 +128,7 @@ export const usePrepaidStore = create<PrepaidState>()(
 
       deletePrepaidOrder: async (id) => {
         try {
+          const supabase = getTenantClient();
           const { error } = await supabase
             .from('prepaid_orders')
             .delete()
@@ -148,6 +151,7 @@ export const usePrepaidStore = create<PrepaidState>()(
         const dateDelivered = getVenezuelaDate();
         const updatedAt = new Date().toISOString();
         try {
+          const supabase = getTenantClient();
           const { error } = await supabase
             .from('prepaid_orders')
             .update({

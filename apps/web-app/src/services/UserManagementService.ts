@@ -1,4 +1,4 @@
-import supabase from '@/lib/supabaseClient';
+import { getTenantClient } from '@/lib/supabaseClient';
 import { UserProfile, UserRole, Company } from '@/types/auth';
 
 export interface CreateUserData {
@@ -6,7 +6,7 @@ export interface CreateUserData {
   username?: string;
   password: string;
   fullName?: string;
-  role: 'client' | 'employee';
+  role: 'owner' | 'employee';
   companyId?: string;
   companyData?: {
     name: string;
@@ -40,14 +40,15 @@ class UserManagementService {
    */
   async listUsers(currentUser: UserProfile, filters?: UserFilters): Promise<UserProfile[]> {
     try {
+      const supabase = getTenantClient();
       let query = supabase
         .from('user_profiles_with_company')
         .select('*')
         .order('created_at', { ascending: false });
 
       // Filtrar según el rol del usuario actual
-      if (currentUser.role === 'client') {
-        // Cliente solo ve empleados de su empresa
+      if (currentUser.role === 'owner') {
+        // Owner solo ve empleados de su empresa
         query = query
           .eq('company_id', currentUser.companyId!)
           .eq('role', 'employee');
@@ -101,6 +102,7 @@ class UserManagementService {
    */
   async getUserById(userId: string): Promise<UserProfile | null> {
     try {
+      const supabase = getTenantClient();
       const { data, error } = await supabase
         .from('user_profiles_with_company')
         .select('*')
@@ -142,6 +144,7 @@ class UserManagementService {
    */
   async updateUser(userId: string, userData: UpdateUserData): Promise<void> {
     try {
+      const supabase = getTenantClient();
       const updateData: any = {};
 
       if (userData.email) updateData.email = userData.email;
@@ -182,6 +185,7 @@ class UserManagementService {
    */
   async listCompanies(): Promise<Company[]> {
     try {
+      const supabase = getTenantClient();
       const { data, error } = await supabase
         .from('companies')
         .select('*')
@@ -216,6 +220,7 @@ class UserManagementService {
     phone?: string;
   }): Promise<Company> {
     try {
+      const supabase = getTenantClient();
       const { data, error } = await supabase
         .from('companies')
         .insert({
@@ -250,6 +255,7 @@ class UserManagementService {
    */
   async isUsernameAvailable(username: string, excludeUserId?: string): Promise<boolean> {
     try {
+      const supabase = getTenantClient();
       let query = supabase
         .from('user_profiles')
         .select('id')
@@ -275,6 +281,7 @@ class UserManagementService {
    */
   async isEmailAvailable(email: string, excludeUserId?: string): Promise<boolean> {
     try {
+      const supabase = getTenantClient();
       let query = supabase
         .from('user_profiles')
         .select('id')

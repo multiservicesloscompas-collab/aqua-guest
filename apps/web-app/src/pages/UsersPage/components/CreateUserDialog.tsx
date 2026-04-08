@@ -8,7 +8,7 @@ import { Loader2, Building2, Plus } from 'lucide-react';
 import { UserProfile, Company } from '@/types/auth';
 import { userManagementService } from '@/services/UserManagementService';
 import { toast } from 'sonner';
-import supabase from '@/lib/supabaseClient';
+import { getTenantClient } from '@/lib/supabaseClient';
 
 interface CreateUserDialogProps {
   open: boolean;
@@ -27,7 +27,7 @@ export function CreateUserDialog({ open, onOpenChange, onUserCreated, currentUse
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
-  const [selectedRole, setSelectedRole] = useState<'client' | 'admin'>('client');
+  const [selectedRole, setSelectedRole] = useState<'owner' | 'admin'>('owner');
   const [selectedCompanyId, setSelectedCompanyId] = useState('');
 
   // Datos de nueva empresa
@@ -57,7 +57,7 @@ export function CreateUserDialog({ open, onOpenChange, onUserCreated, currentUse
     setUsername('');
     setPassword('');
     setFullName('');
-    setSelectedRole('client');
+    setSelectedRole('owner');
     setSelectedCompanyId('');
     setCompanyName('');
     setCompanyRif('');
@@ -74,9 +74,9 @@ export function CreateUserDialog({ open, onOpenChange, onUserCreated, currentUse
       return;
     }
 
-    // Solo validar empresa si el rol seleccionado es 'client'
-    if (currentUser.role === 'admin' && selectedRole === 'client' && !selectedCompanyId && !showNewCompany) {
-      toast.error('Debes seleccionar o crear una empresa para un cliente');
+    // Solo validar empresa si el rol seleccionado es 'owner'
+    if (currentUser.role === 'admin' && selectedRole === 'owner' && !selectedCompanyId && !showNewCompany) {
+      toast.error('Debes seleccionar o crear una empresa para un dueño');
       return;
     }
 
@@ -101,8 +101,8 @@ export function CreateUserDialog({ open, onOpenChange, onUserCreated, currentUse
         companyId = newCompany.id;
       }
 
-      // Si es cliente quien crea, usar su empresa
-      if (currentUser.role === 'client') {
+      // Si es owner quien crea, usar su empresa
+      if (currentUser.role === 'owner') {
         companyId = currentUser.companyId!;
       }
 
@@ -112,6 +112,7 @@ export function CreateUserDialog({ open, onOpenChange, onUserCreated, currentUse
       }
 
       // Crear usuario en auth.users usando signUp
+      const supabase = getTenantClient();
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password,
@@ -248,7 +249,7 @@ export function CreateUserDialog({ open, onOpenChange, onUserCreated, currentUse
               <Label htmlFor="role">Tipo de Usuario *</Label>
               <Select
                 value={selectedRole}
-                onValueChange={(value: 'client' | 'admin') => {
+                onValueChange={(value: 'owner' | 'admin') => {
                   setSelectedRole(value);
                   // Si cambia a admin, limpiar empresa seleccionada
                   if (value === 'admin') {
@@ -262,15 +263,15 @@ export function CreateUserDialog({ open, onOpenChange, onUserCreated, currentUse
                   <SelectValue placeholder="Seleccionar tipo" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="client">Cliente</SelectItem>
+                  <SelectItem value="owner">Dueño</SelectItem>
                   <SelectItem value="admin">Administrador</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           )}
 
-          {/* Empresa (solo para admin creando cliente) */}
-          {currentUser.role === 'admin' && selectedRole === 'client' && (
+          {/* Empresa (solo para admin creando owner) */}
+          {currentUser.role === 'admin' && selectedRole === 'owner' && (
             <>
               <div className="space-y-2">
                 <Label>Empresa *</Label>
@@ -351,8 +352,8 @@ export function CreateUserDialog({ open, onOpenChange, onUserCreated, currentUse
             </>
           )}
 
-          {/* Info para cliente */}
-          {currentUser.role === 'client' && currentUser.company && (
+          {/* Info para owner */}
+          {currentUser.role === 'owner' && currentUser.company && (
             <div className="p-3 bg-muted rounded-lg">
               <p className="text-sm text-muted-foreground">
                 El empleado será asignado a: <strong>{currentUser.company.name}</strong>

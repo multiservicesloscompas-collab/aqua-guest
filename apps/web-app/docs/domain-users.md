@@ -2,7 +2,7 @@
 
 ## Roles
 - **Admin**: Super administrador sin compañía
-- **Client**: Administrador de compañía  
+- **Owner**: Administrador/dueño de compañía  
 - **Employee**: Empleado de compañía
 
 ## Login
@@ -11,14 +11,14 @@
 - Detección automática en `useAppStore.ts`
 
 ## Gestión (Menú "Más" → Usuarios)
-- **Admin**: Crea clientes y gestiona empresas
-- **Client**: Crea empleados de su empresa
+- **Admin**: Crea owners y gestiona empresas
+- **Owner**: Crea empleados de su empresa
 - **Employee**: Sin acceso
 
 ## Componentes
 
 ### `UsersPage/index.tsx`
-Página principal con lista y botón crear. Solo admin y client.
+Página principal con lista y botón crear. Solo admin y owner.
 
 ### `UsersPage/components/UsersList.tsx`
 Cards con: nombre, email, username, rol, empresa.

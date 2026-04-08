@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { Expense, PaymentMethod } from '@/types';
-import supabase from '@/lib/supabaseClient';
+import { getTenantClient } from '@/lib/supabaseClient';
 import { expensesDataService } from '@/services/ExpensesDataService';
 
 interface ExpenseState {
@@ -67,6 +67,7 @@ export const useExpenseStore = create<ExpenseState>()(
 
       addExpense: async (expense) => {
         try {
+          const supabase = getTenantClient();
           const payload: ExpenseInsertPayload = {
             date: expense.date,
             description: expense.description,
@@ -104,7 +105,8 @@ export const useExpenseStore = create<ExpenseState>()(
 
       updateExpense: async (id, updates) => {
         try {
-          const payload: ExpenseUpdatePayload = {};
+          const supabase = getTenantClient();
+          const payload: ExpenseUpdatePayload = {}
           if (updates.description !== undefined)
             payload.description = updates.description;
           if (updates.amount !== undefined) payload.amount = updates.amount;
@@ -142,6 +144,7 @@ export const useExpenseStore = create<ExpenseState>()(
       deleteExpense: async (id) => {
         const expenseToDelete = get().expenses.find((e) => e.id === id);
         try {
+          const supabase = getTenantClient();
           const { error } = await supabase
             .from('expenses')
             .delete()
