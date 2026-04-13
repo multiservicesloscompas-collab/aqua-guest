@@ -44,34 +44,32 @@ export const useAuthStateListener = () => {
         if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session?.user) {
           console.log('useAuthStateListener - Processing sign in event');
           await handleSignIn(session);
+          // checkSession ya maneja setLoading(false) internamente
         } else if (event === 'SIGNED_OUT') {
           console.log('useAuthStateListener - Processing sign out event');
           handleSignOut();
+          setLoading(false);
         } else if (event === 'TOKEN_REFRESHED' && session) {
           console.log('useAuthStateListener - Processing token refresh');
           setSession(session);
+          setLoading(false);
         } else {
           console.log('useAuthStateListener - No session found, clearing state');
           handleSignOut();
+          setLoading(false);
         }
-      } finally {
+      } catch (error) {
+        console.error('useAuthStateListener - Error handling auth state change:', error);
         setLoading(false);
       }
     };
 
     const handleSignIn = async (session: Session) => {
       console.log('useAuthStateListener - handleSignIn called', { userId: session.user.id });
-      const userProfile = await AuthSessionService.loadUserProfile(session.user.id);
-      console.log('useAuthStateListener - userProfile loaded', { userProfile });
-      
-      if (userProfile) {
-        setUser(userProfile);
-        setSession(session);
-        console.log('useAuthStateListener - User and session set');
-      } else {
-        console.log('useAuthStateListener - No profile found, signing out');
-        handleSignOut();
-      }
+      // Usar checkSession del store que maneja correctamente admin y owner
+      const checkSession = useAppStore.getState().checkSession;
+      await checkSession();
+      console.log('useAuthStateListener - Session checked via store');
     };
 
     const handleSignOut = () => {

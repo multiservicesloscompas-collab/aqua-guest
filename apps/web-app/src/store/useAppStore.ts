@@ -280,13 +280,14 @@ export const useAppStore = create<AppState>()(
             error,
           } = await centralClient.auth.getSession();
 
-          console.log('useAppStore - checkSession result', { session, error });
+          console.log('🔍 useAppStore - checkSession result', { session, error });
 
           if (error) throw error;
 
           if (session?.user) {
-            console.log('useAppStore - Session found, loading profile for user:', session.user.id);
-            
+            console.log('✅ useAppStore - Session found, loading profile for user:', session.user.id);
+            console.log('📧 User email:', session.user.email);
+
             // Obtener perfil de BD Central
             const { data: centralProfile, error: profileError } = await centralClient
               .from('tenant_users')
@@ -298,7 +299,8 @@ export const useAppStore = create<AppState>()(
               .single();
 
             if (profileError) {
-              console.error('Error loading central profile:', profileError);
+              console.error('❌ Error loading central profile:', profileError);
+              console.log('⚠️ Usuario no existe en tenant_users. Necesita ser creado.');
               set({
                 user: null,
                 session: null,
@@ -307,6 +309,8 @@ export const useAppStore = create<AppState>()(
               });
               return;
             }
+
+            console.log('✅ Central profile loaded:', centralProfile);
 
             const centralUserProfile = centralProfile as CentralUserProfile & { tenant?: any };
 
