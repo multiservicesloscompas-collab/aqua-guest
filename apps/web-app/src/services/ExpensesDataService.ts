@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabaseClient';
+import { getTenantClient } from '@/lib/supabaseClient';
 import { Expense } from '@/types';
 import { getSafeTimestamp, normalizeTimestamp } from '@/lib/date-utils';
 
@@ -61,7 +61,7 @@ export class ExpensesDataService implements IExpensesDataService {
       return cached;
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await getTenantClient()
       .from('expenses')
       .select('*')
       .eq('date', date)
@@ -122,7 +122,7 @@ export class ExpensesDataService implements IExpensesDataService {
     }
 
     const promises = datesToLoad.map(async (date) => {
-      const { data, error } = await supabase
+      const { data, error } = await getTenantClient()
         .from('expenses')
         .select('*')
         .eq('date', date)
@@ -191,7 +191,7 @@ export class ExpensesDataService implements IExpensesDataService {
       return results;
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await getTenantClient()
       .from('expenses')
       .select('*')
       .gte('date', startDate)

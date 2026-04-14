@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabaseClient';
+import { getTenantClient } from '@/lib/supabaseClient';
 import { CartItem, PaymentMethod, Sale } from '@/types';
 import { getSafeTimestamp, normalizeTimestamp } from '@/lib/date-utils';
 
@@ -104,7 +104,7 @@ export class SalesDataService implements ISalesDataService {
       return cached;
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await getTenantClient()
       .from('sales')
       .select('*')
       .eq('date', date)
@@ -155,7 +155,7 @@ export class SalesDataService implements ISalesDataService {
     }
 
     const promises = datesToLoad.map(async (date) => {
-      const { data, error } = await supabase
+      const { data, error } = await getTenantClient()
         .from('sales')
         .select('*')
         .eq('date', date)
@@ -212,7 +212,7 @@ export class SalesDataService implements ISalesDataService {
       return results;
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await getTenantClient()
       .from('sales')
       .select('*')
       .gte('date', startDate)

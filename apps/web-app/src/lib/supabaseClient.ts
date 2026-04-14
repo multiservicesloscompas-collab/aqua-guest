@@ -20,7 +20,10 @@ export const centralClient = createClient(centralUrl, centralAnonKey);
 let tenantClientInstance: SupabaseClient | null = null;
 
 // Inicializar cliente del tenant con credenciales dinámicas
-export const initTenantClient = (url: string, anonKey: string): SupabaseClient => {
+export const initTenantClient = (
+  url: string,
+  anonKey: string
+): SupabaseClient => {
   console.log('[Supabase] Initializing tenant client:', { url });
   tenantClientInstance = createClient(url, anonKey);
   return tenantClientInstance;
@@ -29,17 +32,9 @@ export const initTenantClient = (url: string, anonKey: string): SupabaseClient =
 // Obtener cliente del tenant (lanza error si no está inicializado)
 export const getTenantClient = (): SupabaseClient => {
   if (!tenantClientInstance) {
-    // Fallback: usar credenciales por defecto para desarrollo
-    const defaultUrl = import.meta.env.VITE_SUPABASE_URL as string;
-    const defaultKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
-    
-    if (defaultUrl && defaultKey) {
-      console.warn('[Supabase] Tenant client not initialized, using default credentials');
-      tenantClientInstance = createClient(defaultUrl, defaultKey);
-      return tenantClientInstance;
-    }
-    
-    throw new Error('Tenant client not initialized. Please login first.');
+    throw new Error(
+      'Tenant client not initialized. Please login first to initialize tenant connection.'
+    );
   }
   return tenantClientInstance;
 };
@@ -59,6 +54,7 @@ export const clearTenantClient = (): void => {
 // EXPORTACIONES PARA COMPATIBILIDAD
 // ============================================
 // Para compatibilidad con código existente que importa 'supabase'
-// Ahora apunta a getTenantClient() que se inicializa dinámicamente
-export const supabase = getTenantClient();
+// IMPORTANTE: No exportar como constante porque getTenantClient() 
+// se llama en tiempo de importación antes del login
+// Los archivos que usen 'supabase' deben cambiarse a usar getTenantClient()
 export default getTenantClient;

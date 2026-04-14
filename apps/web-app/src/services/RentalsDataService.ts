@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabaseClient';
+import { getTenantClient } from '@/lib/supabaseClient';
 import { WasherRental } from '@/types';
 import { getSafeTimestamp, normalizeTimestamp } from '@/lib/date-utils';
 
@@ -62,7 +62,7 @@ export class RentalsDataService implements IRentalsDataService {
       return cached;
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await getTenantClient()
       .from('washer_rentals')
       .select('*, customers(name, phone, address)')
       .lte('date', date)
@@ -141,7 +141,7 @@ export class RentalsDataService implements IRentalsDataService {
     }
 
     const promises = datesToLoad.map(async (date) => {
-      const { data, error } = await supabase
+      const { data, error } = await getTenantClient()
         .from('washer_rentals')
         .select('*, customers(name, phone, address)')
         .eq('date', date)
@@ -225,7 +225,7 @@ export class RentalsDataService implements IRentalsDataService {
       return results;
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await getTenantClient()
       .from('washer_rentals')
       .select('*, customers(name, phone, address)')
       .or(
