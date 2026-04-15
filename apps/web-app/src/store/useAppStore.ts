@@ -149,22 +149,7 @@ export const useAppStore = create<AppState>()(
               console.log('🔧 Inicializando cliente del tenant...');
               initTenantClient(tenantCreds.supabase_url, tenantCreds.supabase_anon_key);
 
-              // 5. Obtener perfil del usuario en BD del tenant
-              console.log('👤 Obteniendo perfil del tenant...');
-              const tenantClient = getTenantClient();
-              const { data: tenantProfile, error: tenantProfileError } = await tenantClient
-                .from('user_profiles_with_company')
-                .select('*')
-                .eq('id', data.user.id)
-                .single();
-
-              if (tenantProfileError) {
-                console.warn('⚠️ No se encontró perfil en BD del tenant:', tenantProfileError);
-              } else {
-                console.log('✅ Perfil del tenant obtenido:', { role: tenantProfile.role, companyId: tenantProfile.company_id });
-              }
-
-              // 6. Combinar datos de ambas BDs
+              // 5. Crear perfil del usuario usando solo datos de Agua-Guest
               const userProfile: UserProfile = {
                 id: centralUserProfile.id,
                 email: centralUserProfile.email,
@@ -172,17 +157,6 @@ export const useAppStore = create<AppState>()(
                 role: centralUserProfile.role,
                 fullName: centralUserProfile.full_name || undefined,
                 tenantId: centralUserProfile.tenant_id,
-                companyId: tenantProfile?.company_id,
-                company: tenantProfile?.company_id ? {
-                  id: tenantProfile.company_id,
-                  name: tenantProfile.company_name,
-                  rif: tenantProfile.company_rif,
-                  address: tenantProfile.address,
-                  phone: tenantProfile.phone,
-                  isActive: tenantProfile.company_is_active,
-                  createdAt: tenantProfile.created_at,
-                  updatedAt: tenantProfile.updated_at,
-                } : undefined,
                 createdBy: centralUserProfile.created_by || undefined,
                 createdAt: centralUserProfile.created_at,
                 updatedAt: centralUserProfile.updated_at,
