@@ -4,6 +4,7 @@ import { render, screen } from '@testing-library/react';
 
 import type { PaymentDisplayModel } from '@/services/payments/paymentDisplayModel';
 import type { Sale } from '@/types';
+import type { Tip } from '@/types/tips';
 
 import { SalePaymentBreakdown } from './SalePaymentBreakdown';
 
@@ -30,6 +31,57 @@ const baseSale: Sale = {
 };
 
 describe('SalePaymentBreakdown', () => {
+  it('prefers linked tip amount and method over inferred values', () => {
+    const paymentDisplay: PaymentDisplayModel = {
+      kind: 'single',
+      label: 'Efectivo',
+      primaryMethod: 'efectivo',
+      lines: [],
+      totalBs: 560,
+      totalUsd: 11.2,
+    };
+
+    const linkedTip: Tip = {
+      id: 'tip-1',
+      originType: 'sale',
+      originId: 'sale-1',
+      tipDate: '2026-03-10',
+      amountBs: 200,
+      capturePaymentMethod: 'pago_movil',
+      status: 'pending',
+      createdAt: '2026-03-10T10:00:00.000Z',
+      updatedAt: '2026-03-10T10:00:00.000Z',
+    };
+
+    render(
+      <SalePaymentBreakdown
+        sale={{
+          ...baseSale,
+          totalBs: 560,
+          totalUsd: 11.2,
+          items: [
+            {
+              ...baseSale.items[0],
+              subtotal: 300,
+              unitPrice: 300,
+            },
+          ],
+        }}
+        tip={linkedTip}
+        paymentDisplay={paymentDisplay}
+        timeLabel="10:00"
+        paymentIcon={Banknote}
+      />
+    );
+
+    expect(
+      screen.getByText('Subtotal Bs 360.00 + Propina Bs 200.00')
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('Método principal: Efectivo · Captura propina: Pago Móvil')
+    ).toBeInTheDocument();
+  });
+
   it('renders mixed split lines with Bs and USD amounts', () => {
     const paymentDisplay: PaymentDisplayModel = {
       kind: 'mixed',

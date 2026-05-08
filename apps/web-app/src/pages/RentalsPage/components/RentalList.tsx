@@ -18,6 +18,7 @@ import { RentalCardHeader } from './RentalCardHeader';
 import { buildRentalPaymentDisplayModel } from '@/services/payments/paymentDisplayModel';
 import { hasValidMixedPaymentSplits } from '@/services/payments/paymentSplitValidity';
 import { useConfigStore } from '@/store/useConfigStore';
+import { useTipStore } from '@/store/useTipStore';
 
 interface RentalListProps {
   rentals: WasherRental[];
@@ -127,6 +128,11 @@ function RentalListItem({
   onExtend,
 }: RentalListItemProps) {
   const exchangeRate = useConfigStore((state) => state.config.exchangeRate);
+  const linkedTip = useTipStore((state) =>
+    state.tips.find(
+      (tip) => tip.originType === 'rental' && tip.originId === rental.id
+    )
+  );
   const {
     machine,
     shiftConfig,
@@ -187,6 +193,7 @@ function RentalListItem({
 
         <RentalCardDetails
           rental={rental}
+          tip={linkedTip}
           paymentIcon={PaymentIcon}
           paymentDisplay={paymentDisplay}
         />

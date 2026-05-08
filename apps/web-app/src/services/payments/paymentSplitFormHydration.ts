@@ -35,7 +35,7 @@ function toAmountInput(amountBs: number): string {
 export function resolveSplitFormHydrationState(
   input: ResolveSplitFormHydrationInput
 ): SplitFormHydrationState {
-  const { paymentMethod, paymentSplits, totalBs } = input;
+  const { paymentMethod, paymentSplits } = input;
 
   if (hasValidMixedPaymentSplits(paymentSplits)) {
     const sortedSplits = sortSplitsByPriority(paymentSplits);
@@ -57,7 +57,7 @@ export function resolveSplitFormHydrationState(
 
   return {
     paymentMethod: fallbackPrimaryMethod,
-    split1Amount: toAmountInput(totalBs),
+    split1Amount: '',
     split2Method: pickAlternativeMethod(fallbackPrimaryMethod),
     isMixedPayment: false,
   };

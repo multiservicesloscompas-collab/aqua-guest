@@ -47,6 +47,7 @@ export function useEditSaleSheetViewModel({
     useState<PaymentMethod>('efectivo');
   const [tipNotes, setTipNotes] = useState('');
   const hydrationTokenRef = useRef(0);
+  const tipRequestKeyRef = useRef<string | null>(null);
 
   const tipAmountBs = tipEnabled ? Number(tipAmount) || 0 : 0;
   const finalTotals = useMemo(
@@ -68,7 +69,7 @@ export function useEditSaleSheetViewModel({
       totalBs: sale.totalBs,
     });
 
-    setIsMixedPayment(splitState.split1Amount !== '');
+    setIsMixedPayment(splitState.isMixedPayment);
     setPaymentMethod(splitState.paymentMethod);
     setSplit1Amount(splitState.split1Amount);
     setSplit2Method(splitState.split2Method);
@@ -84,6 +85,7 @@ export function useEditSaleSheetViewModel({
   useEffect(() => {
     if (!open || !sale) {
       hydrationTokenRef.current += 1;
+      tipRequestKeyRef.current = null;
       return;
     }
 
@@ -103,11 +105,19 @@ export function useEditSaleSheetViewModel({
     const cachedTip = tips.find(
       (tip) => tip.originType === 'sale' && tip.originId === sale.id
     );
+    const requestKey = `${sale.id}:${sale.date}`;
 
     if (cachedTip) {
+      tipRequestKeyRef.current = requestKey;
       applyHydrationFromTips(tips);
       return;
     }
+
+    if (tipRequestKeyRef.current === requestKey) {
+      return;
+    }
+
+    tipRequestKeyRef.current = requestKey;
 
     const token = hydrationTokenRef.current + 1;
     hydrationTokenRef.current = token;

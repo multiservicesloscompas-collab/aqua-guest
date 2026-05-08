@@ -163,6 +163,35 @@ describe('useEditRentalTipHydration', () => {
     expect(tipCapture.hydrateTipCapture).not.toHaveBeenCalled();
   });
 
+  it('loads tips only once for the same rental when no linked tip exists', async () => {
+    const tipCapture = {
+      hydrateTipCapture: vi.fn(),
+      resetTipCapture: vi.fn(),
+    };
+    const rental = buildRental('rental-2');
+
+    loadTipsByDateRangeMock.mockImplementation(async () => {
+      setCurrentTips([
+        {
+          ...buildTip('rental-other', 15),
+          tipDate: rental.date,
+        },
+      ]);
+    });
+
+    const { rerender } = render(
+      <Harness open={true} rental={rental} tipCapture={tipCapture} />
+    );
+
+    await waitFor(() => {
+      expect(loadTipsByDateRangeMock).toHaveBeenCalledTimes(1);
+    });
+
+    rerender(<Harness open={true} rental={rental} tipCapture={tipCapture} />);
+
+    expect(loadTipsByDateRangeMock).toHaveBeenCalledTimes(1);
+  });
+
   it('prevents stale hydration when switching rentals A to B', async () => {
     const tipCapture = {
       hydrateTipCapture: vi.fn(),

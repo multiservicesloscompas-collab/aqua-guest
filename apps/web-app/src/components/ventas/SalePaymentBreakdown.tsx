@@ -4,9 +4,11 @@ import type { PaymentDisplayModel } from '@/services/payments/paymentDisplayMode
 import type { Sale } from '@/types';
 import { PaymentMethodLabels } from '@/types';
 import { deriveSaleTipAmountBs } from '@/services/transactions/transactionTotals';
+import type { Tip } from '@/types/tips';
 
 interface SalePaymentBreakdownProps {
   sale: Sale;
+  tip?: Tip;
   paymentDisplay: PaymentDisplayModel;
   timeLabel: string;
   paymentIcon: LucideIcon;
@@ -14,17 +16,22 @@ interface SalePaymentBreakdownProps {
 
 export function SalePaymentBreakdown({
   sale,
+  tip,
   paymentDisplay,
   timeLabel,
   paymentIcon: PaymentIcon,
 }: SalePaymentBreakdownProps) {
-  const subtotalBs = (sale.items || []).reduce(
+  const itemSubtotalBs = (sale.items || []).reduce(
     (sum, item) => sum + Number(item.subtotal || 0),
     0
   );
-  const tipAmountBs = deriveSaleTipAmountBs(sale.totalBs, subtotalBs);
+  const tipAmountBs =
+    tip?.amountBs ?? deriveSaleTipAmountBs(sale.totalBs, itemSubtotalBs);
+  const subtotalBs = Math.max(0, Number(sale.totalBs || 0) - tipAmountBs);
   const inferredTipMethod =
-    paymentDisplay.kind === 'mixed'
+    tip?.capturePaymentMethod
+      ? PaymentMethodLabels[tip.capturePaymentMethod]
+      : paymentDisplay.kind === 'mixed'
       ? paymentDisplay.lines.find((line) => line.method !== sale.paymentMethod)
           ?.label ?? PaymentMethodLabels[sale.paymentMethod]
       : PaymentMethodLabels[sale.paymentMethod];

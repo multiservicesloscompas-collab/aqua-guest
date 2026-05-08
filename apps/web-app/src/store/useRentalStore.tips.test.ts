@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useRentalStore } from './useRentalStore';
 import { useConfigStore } from './useConfigStore';
+import { useTipStore } from './useTipStore';
 
 const {
   addRentalActionMock,
@@ -9,12 +10,14 @@ const {
   updateRentalActionMock,
   upsertTipForOriginMock,
   deleteTipByOriginMock,
+  toTipPayoutReadModelMock,
 } = vi.hoisted(() => ({
   addRentalActionMock: vi.fn(),
   deleteRentalActionMock: vi.fn(),
   updateRentalActionMock: vi.fn(),
   upsertTipForOriginMock: vi.fn(),
   deleteTipByOriginMock: vi.fn(),
+  toTipPayoutReadModelMock: vi.fn(),
 }));
 
 vi.mock('./useRentalStore.actions', () => ({
@@ -27,6 +30,7 @@ vi.mock('@/services/tips/TipDataService', () => ({
   tipsDataService: {
     deleteTipByOrigin: deleteTipByOriginMock,
     upsertTipForOrigin: upsertTipForOriginMock,
+    toTipPayoutReadModel: toTipPayoutReadModelMock,
   },
 }));
 
@@ -57,6 +61,8 @@ describe('useRentalStore tip integration', () => {
     updateRentalActionMock.mockReset();
     deleteTipByOriginMock.mockReset();
     upsertTipForOriginMock.mockReset();
+    toTipPayoutReadModelMock.mockReset();
+    toTipPayoutReadModelMock.mockReturnValue([]);
 
     useRentalStore.setState({
       rentals: [
@@ -90,9 +96,30 @@ describe('useRentalStore tip integration', () => {
         exchangeRate: 50,
       },
     }));
+
+    useTipStore.setState({
+      tips: [],
+      tipPayouts: [],
+      loadingByRange: {},
+    });
   });
 
   it('creates rental tip linked to new rental origin', async () => {
+    upsertTipForOriginMock.mockResolvedValueOnce({
+      id: 'tip-created',
+      originType: 'rental',
+      originId: 'rental-new-1',
+      tipDate: '2026-03-13',
+      amountBs: 10,
+      amountUsd: 0.2,
+      exchangeRateUsed: 50,
+      capturePaymentMethod: 'pago_movil',
+      status: 'pending',
+      notes: 'bono extra',
+      createdAt: '2026-03-13T09:00:00.000Z',
+      updatedAt: '2026-03-13T09:00:00.000Z',
+    });
+
     addRentalActionMock.mockResolvedValueOnce({
       id: 'rental-new-1',
       date: '2026-03-13',
@@ -149,9 +176,25 @@ describe('useRentalStore tip integration', () => {
       capturePaymentMethod: 'pago_movil',
       notes: 'bono extra',
     });
+    expect(useTipStore.getState().tips).toHaveLength(1);
+    expect(useTipStore.getState().tips[0]?.originId).toBe('rental-new-1');
   });
 
   it('updates rental tip preserving mandatory rental origin link', async () => {
+    upsertTipForOriginMock.mockResolvedValueOnce({
+      id: 'tip-updated',
+      originType: 'rental',
+      originId: 'rental-1',
+      tipDate: '2026-03-13',
+      amountBs: 15,
+      amountUsd: 0.3,
+      exchangeRateUsed: 50,
+      capturePaymentMethod: 'efectivo',
+      status: 'pending',
+      createdAt: '2026-03-13T08:00:00.000Z',
+      updatedAt: '2026-03-13T08:05:00.000Z',
+    });
+
     updateRentalActionMock.mockResolvedValueOnce(undefined);
 
     await useRentalStore.getState().updateRental(
@@ -173,6 +216,8 @@ describe('useRentalStore tip integration', () => {
       capturePaymentMethod: 'efectivo',
       notes: undefined,
     });
+    expect(useTipStore.getState().tips).toHaveLength(1);
+    expect(useTipStore.getState().tips[0]?.amountBs).toBe(15);
   });
 
   it('deletes rental tip by origin when deleting a rental', async () => {

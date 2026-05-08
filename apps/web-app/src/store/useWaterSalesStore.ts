@@ -34,6 +34,18 @@ import {
   enqueueOfflineSaleTipDelete,
   enqueueOfflineSaleTipUpsert,
 } from '@/offline/enqueue/salesEnqueue';
+import type { Tip } from '@/types/tips';
+
+function upsertSaleTipInStore(nextTip: Tip) {
+  const tipStore = useTipStore.getState();
+  const nextTips = tipStore.tips.filter(
+    (tip) =>
+      tip.id !== nextTip.id &&
+      !(tip.originType === 'sale' && tip.originId === nextTip.originId)
+  );
+
+  tipStore.setTips([...nextTips, nextTip]);
+}
 
 // Re-export everything so existing import paths continue to work
 export type { WaterSalesState, SalesRow, SaleInsert, SaleUpdate };
@@ -102,7 +114,7 @@ export const useWaterSalesStore = create<WaterSalesState>()(
           const amountUsd = createCurrencyConverter(exchangeRateUsed).toUsd(
             tipInput.amountBs
           );
-          await tipsDataService.upsertTipForOrigin({
+          const tip = await tipsDataService.upsertTipForOrigin({
             originType: 'sale',
             originId: sale.id,
             tipDate: sale.date,
@@ -112,6 +124,7 @@ export const useWaterSalesStore = create<WaterSalesState>()(
             capturePaymentMethod: tipInput.capturePaymentMethod,
             notes: tipInput.notes,
           });
+          upsertSaleTipInStore(tip);
         }
 
         return sale;
@@ -152,7 +165,7 @@ export const useWaterSalesStore = create<WaterSalesState>()(
             return;
           }
 
-          await tipsDataService.upsertTipForOrigin({
+          const tip = await tipsDataService.upsertTipForOrigin({
             originType: 'sale',
             originId: id,
             tipDate: sale?.date ?? updates.date ?? '',
@@ -162,6 +175,7 @@ export const useWaterSalesStore = create<WaterSalesState>()(
             capturePaymentMethod: tipInput.capturePaymentMethod,
             notes: tipInput.notes,
           });
+          upsertSaleTipInStore(tip);
         }
       },
 

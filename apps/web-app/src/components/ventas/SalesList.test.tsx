@@ -3,13 +3,23 @@ import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 
 import type { Sale } from '@/types';
+import type { Tip } from '@/types/tips';
 
 import { SalesList } from './SalesList';
+
+const tipState = {
+  tips: [] as Tip[],
+};
 
 vi.mock('@/store/useWaterSalesStore', () => ({
   useWaterSalesStore: () => ({
     deleteSale: vi.fn(),
   }),
+}));
+
+vi.mock('@/store/useTipStore', () => ({
+  useTipStore: (selector?: (state: typeof tipState) => unknown) =>
+    selector ? selector(tipState) : tipState,
 }));
 
 vi.mock('@/services/payments/paymentDisplayModel', () => ({
@@ -89,7 +99,46 @@ const baseSale: Sale = {
 };
 
 describe('SalesList', () => {
+  it('renders linked tip amount instead of inferring from stale item subtotal', () => {
+    tipState.tips = [
+      {
+        id: 'tip-1',
+        originType: 'sale',
+        originId: 'sale-1',
+        tipDate: '2026-03-13',
+        amountBs: 200,
+        capturePaymentMethod: 'efectivo',
+        status: 'pending',
+        createdAt: '2026-03-13T10:00:00.000Z',
+        updatedAt: '2026-03-13T10:00:00.000Z',
+      },
+    ];
+
+    render(
+      <SalesList
+        sales={[
+          {
+            ...baseSale,
+            totalBs: 560,
+            totalUsd: 11.2,
+            items: [
+              {
+                ...baseSale.items[0],
+                unitPrice: 300,
+                subtotal: 300,
+              },
+            ],
+          },
+        ]}
+      />
+    );
+
+    expect(screen.getByText('Propina Bs 200.00')).toBeInTheDocument();
+    expect(screen.queryByText('Propina Bs 260.00')).not.toBeInTheDocument();
+  });
+
   it('renders tip badge label when sale includes tip', () => {
+    tipState.tips = [];
     render(<SalesList sales={[baseSale]} />);
 
     expect(screen.getByText('1x Recarga de Agua (19L)')).toBeInTheDocument();
@@ -101,6 +150,7 @@ describe('SalesList', () => {
   });
 
   it('does not render tip badge when tip is zero', () => {
+    tipState.tips = [];
     render(
       <SalesList
         sales={[

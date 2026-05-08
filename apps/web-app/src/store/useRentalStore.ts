@@ -35,6 +35,18 @@ import {
   enqueueOfflineRentalTipDelete,
   enqueueOfflineRentalTipUpsert,
 } from '@/offline/enqueue/rentalsEnqueue';
+import type { Tip } from '@/types/tips';
+
+function upsertRentalTipInStore(nextTip: Tip) {
+  const tipStore = useTipStore.getState();
+  const nextTips = tipStore.tips.filter(
+    (tip) =>
+      tip.id !== nextTip.id &&
+      !(tip.originType === 'rental' && tip.originId === nextTip.originId)
+  );
+
+  tipStore.setTips([...nextTips, nextTip]);
+}
 
 // Re-export everything so existing import paths continue to work
 export type {
@@ -66,7 +78,7 @@ export const useRentalStore = create<RentalState>()(
           const amountUsd = createCurrencyConverter(exchangeRateUsed).toUsd(
             tipInput.amountBs
           );
-          await tipsDataService.upsertTipForOrigin({
+          const tip = await tipsDataService.upsertTipForOrigin({
             originType: 'rental',
             originId: createdRental.id,
             tipDate: createdRental.date,
@@ -76,6 +88,7 @@ export const useRentalStore = create<RentalState>()(
             capturePaymentMethod: tipInput.capturePaymentMethod,
             notes: tipInput.notes,
           });
+          upsertRentalTipInStore(tip);
         }
 
         return createdRental;
@@ -115,7 +128,7 @@ export const useRentalStore = create<RentalState>()(
             return;
           }
 
-          await tipsDataService.upsertTipForOrigin({
+          const tip = await tipsDataService.upsertTipForOrigin({
             originType: 'rental',
             originId: id,
             tipDate: rental?.date ?? updates.date ?? '',
@@ -125,6 +138,7 @@ export const useRentalStore = create<RentalState>()(
             capturePaymentMethod: tipInput.capturePaymentMethod,
             notes: tipInput.notes,
           });
+          upsertRentalTipInStore(tip);
         }
       },
       deleteRental: (id) =>

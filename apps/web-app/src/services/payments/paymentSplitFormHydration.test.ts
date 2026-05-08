@@ -19,7 +19,7 @@ describe('resolveSplitFormHydrationState', () => {
     expect(state.isMixedPayment).toBe(true);
   });
 
-  it('uses total as primary amount for non-mixed fallback state', () => {
+  it('keeps the secondary amount empty for non-mixed fallback state', () => {
     const state = resolveSplitFormHydrationState({
       paymentMethod: 'punto_venta',
       paymentSplits: [{ method: 'punto_venta', amountBs: 200, amountUsd: 4 }],
@@ -27,7 +27,7 @@ describe('resolveSplitFormHydrationState', () => {
     });
 
     expect(state.paymentMethod).toBe('punto_venta');
-    expect(state.split1Amount).toBe('200');
+    expect(state.split1Amount).toBe('');
     expect(state.split2Method).toBe('efectivo');
     expect(state.isMixedPayment).toBe(false);
   });
@@ -39,7 +39,7 @@ describe('resolveSplitFormHydrationState', () => {
     });
 
     expect(state.paymentMethod).toBe('efectivo');
-    expect(state.split1Amount).toBe('75');
+    expect(state.split1Amount).toBe('');
     expect(state.split2Method).toBe('pago_movil');
     expect(state.isMixedPayment).toBe(false);
   });

@@ -5,15 +5,18 @@ import { WasherRental } from '@/types';
 import type { PaymentDisplayModel } from '@/services/payments/paymentDisplayModel';
 import { deriveRentalTipAmountBs } from '@/services/transactions/transactionTotals';
 import { useConfigStore } from '@/store/useConfigStore';
+import type { Tip } from '@/types/tips';
 
 interface RentalCardDetailsProps {
   rental: WasherRental;
+  tip?: Tip;
   paymentIcon: React.ComponentType<{ className?: string }>;
   paymentDisplay: PaymentDisplayModel;
 }
 
 export function RentalCardDetails({
   rental,
+  tip,
   paymentIcon: PaymentIcon,
   paymentDisplay,
 }: RentalCardDetailsProps) {
@@ -27,10 +30,13 @@ export function RentalCardDetails({
       ? 6
       : 12;
   const subtotalUsd = baseUsd + Number(rental.deliveryFee || 0);
-  const tipAmountBs = deriveRentalTipAmountBs(
-    rental.totalUsd,
-    subtotalUsd,
-    exchangeRate
+  const tipAmountBs =
+    tip?.amountBs ??
+    deriveRentalTipAmountBs(rental.totalUsd, subtotalUsd, exchangeRate);
+  const displaySubtotalUsd = Math.max(
+    0,
+    Number(rental.totalUsd || 0) -
+      (exchangeRate > 0 ? tipAmountBs / exchangeRate : 0)
   );
 
   return (
@@ -83,7 +89,7 @@ export function RentalCardDetails({
       )}
       {tipAmountBs > 0 && (
         <p className="text-xs text-muted-foreground">
-          Subtotal ${subtotalUsd.toFixed(2)} + Propina Bs{' '}
+          Subtotal ${displaySubtotalUsd.toFixed(2)} + Propina Bs{' '}
           {tipAmountBs.toFixed(2)}
         </p>
       )}

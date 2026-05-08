@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTipStore } from '@/store/useTipStore';
 import type { PaymentMethod, WasherRental } from '@/types';
 import {
@@ -29,18 +29,22 @@ export function useEditRentalTipHydration({
   const { tips, loadTipsByDateRange } = useTipStore();
   const [controller] = useState(() => createTipHydrationController());
   const { hydrateTipCapture, resetTipCapture } = tipCapture;
+  const requestKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!open || !rental) {
       controller.close();
+      requestKeyRef.current = null;
       resetTipCapture();
       return;
     }
 
     const ticket = controller.begin(rental.id);
     const cachedTip = findTipByRentalOrigin(tips, rental.id);
+    const requestKey = `${rental.id}:${rental.date}`;
 
     if (cachedTip) {
+      requestKeyRef.current = requestKey;
       hydrateTipCapture({
         amountBs: cachedTip.amountBs,
         paymentMethod: cachedTip.capturePaymentMethod,
@@ -48,6 +52,12 @@ export function useEditRentalTipHydration({
       });
       return;
     }
+
+    if (requestKeyRef.current === requestKey) {
+      return;
+    }
+
+    requestKeyRef.current = requestKey;
 
     resetTipCapture();
     let cancelled = false;

@@ -4,6 +4,7 @@ import { Banknote } from 'lucide-react';
 
 import type { PaymentDisplayModel } from '@/services/payments/paymentDisplayModel';
 import type { WasherRental } from '@/types';
+import type { Tip } from '@/types/tips';
 
 import { RentalCardDetails } from './RentalCardDetails';
 
@@ -34,6 +35,45 @@ const baseRental: WasherRental = {
 };
 
 describe('RentalCardDetails', () => {
+  it('prefers linked rental tip and derives display subtotal from total', () => {
+    const paymentDisplay: PaymentDisplayModel = {
+      kind: 'single',
+      label: 'Efectivo',
+      primaryMethod: 'efectivo',
+      lines: [],
+      totalBs: 0,
+      totalUsd: 6,
+    };
+
+    const linkedTip: Tip = {
+      id: 'tip-1',
+      originType: 'rental',
+      originId: 'rental-1',
+      tipDate: '2026-03-10',
+      amountBs: 50,
+      capturePaymentMethod: 'pago_movil',
+      status: 'pending',
+      createdAt: '2026-03-10T10:00:00.000Z',
+      updatedAt: '2026-03-10T10:00:00.000Z',
+    };
+
+    render(
+      <RentalCardDetails
+        rental={{
+          ...baseRental,
+          totalUsd: 6,
+        }}
+        tip={linkedTip}
+        paymentIcon={Banknote}
+        paymentDisplay={paymentDisplay}
+      />
+    );
+
+    expect(
+      screen.getByText('Subtotal $5.00 + Propina Bs 50.00')
+    ).toBeInTheDocument();
+  });
+
   it('renders mixed split lines with Bs and USD amounts', () => {
     const paymentDisplay: PaymentDisplayModel = {
       kind: 'mixed',

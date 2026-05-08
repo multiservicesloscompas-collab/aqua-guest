@@ -1,88 +1,95 @@
-# AquaGest - Master Agent Routing & Guidelines
+# AGENTS.md
 
-**CONTEXT:** AquaGest is a comprehensive management system for water sales, washing machine rentals, and related administrative tasks.
+> [!IMPORTANT]
+> This is the root router for AquaGuest. Load only the nearest `AGENTS.md` and the smallest set of supporting docs needed for the current task. Do not read the whole documentation tree by default.
 
-**CRITICAL CONSTRAINT:** This is the root routing file. AquaGest is a monorepo. Depending on your task, you MUST route to the specific application's `AGENTS.md` file for detailed domain context, rules, and workflows.
+## Project Mission
 
-## 🚦 Project Routing (START HERE)
+AquaGuest is evolving into a modular, configurable management system for small businesses.
 
-If you are assigned a task, **IMMEDIATELY** read the corresponding `AGENTS.md` file for that workspace before writing any code:
+Current commercial modules:
 
-- **▶️ Frontend Application (React/Vite/Zustand):** Go to [`apps/web-app/AGENTS.md`](apps/web-app/AGENTS.md). This is where all the business logic, UI components, and Supabase integrations live. It contains the **Domain Context Map** to route you to the specific feature (Sales, Rentals, Prepaid, etc.).
+- Water sales
+- Washer rentals
 
-## 🧾 Definiciones de Modulos Comerciales (Regla de Dominio)
+The codebase should be shaped so these modules can be extracted into `libs/` later without rewriting core business rules.
 
-- Cuando el usuario mencione "modulos comerciales", se refiere explicitamente a:
-  - Modulo de "Alquiler de lavadoras"
-  - Modulo de "Ventas de agua"
-- Cualquier record nuevo o modificacion de records en estos modulos puede afectar multiples submodulos o partes de la app, incluyendo:
-  - Dashboard en metricas generales
-  - Resumen de pagos por tipo de pago
-  - Transacciones generales
-  - Transacciones por tipo de pago
-- Reglas especiales para pagos y propinas:
-  - Si el pago es mixto, distribuir y reflejar los montos correctamente por tipo de pago
-  - Las propinas impactan el modulo de Propinas
-  - Las propinas impactan el modulo de Egresos solo cuando la propina esta pagada
+## Quick Commands
 
----
+```bash
+npx nx serve web-app
+npx nx build web-app
+npx nx test web-app
+npx nx lint web-app
+npx nx typecheck web-app
+```
 
-## Global Build, Lint, and Test Commands
+## Project Map
 
-- `npx nx serve web-app` - Starts the frontend development server (http://localhost:4200)
-- `npx nx build web-app` - Builds the frontend (output: dist/apps/web-app)
-- `npx nx test web-app` - Runs all frontend tests (Vitest)
-- `npx nx lint web-app` - Runs the linter on the frontend
-- `npx nx typecheck web-app` - Runs typechecking on the frontend
+| Area | Location | Purpose |
+| :--- | :------- | :------ |
+| Frontend app | `apps/web-app` | Main React + Vite application and current product surface |
+| Frontend domain docs | `apps/web-app/docs` | Business-domain reference for dashboard, water sales, rentals, finance, prepaid, and transactions |
+| Shared agent docs | `docs/agents` | Cross-cutting routing docs for architecture, business rules, frontend patterns, and Supabase |
+| Future shared modules | `libs/*` | Target location for stable domain logic, shared services, and reusable packages |
 
-## Architecture Principles
+## Operating Mindset
 
-- Follow Single Responsibility Principles (SRP)
-- Separation of concerns: UI, Services, State
-- Keep business logic outside of components when possible (use services or hooks)
+- Think like a software architect, not a ticket processor.
+- Challenge coupling, hidden side effects, and changes that make future modularization harder.
+- Keep root guidance high-level and task routing focused.
+- When a pattern changes, update the relevant agent documentation as part of the same task.
 
-## 🧠 Critical Thinking & Architecture Decision Making
+## Non-Negotiable Rules
 
-- **ALWAYS question proposed decisions**, challenge assumptions, and provide alternatives when you identify potential issues or suboptimal approaches
-- For every recommendation, clearly explain the "why" - the reasoning, trade-offs, and consequences
-- Propose improvements even when not explicitly requested; this demonstrates architectural expertise
-- When questioned or challenged on your decisions, provide rationale backed by industry best practices, design patterns, and project-specific context
-- Never accept requirements at face value without analyzing their implications on the system
+- Keep files under 300 lines of code. If a change pushes a file beyond that limit, refactor before continuing.
+- Never print, log, or expose `.env` contents or credentials.
+- Do not introduce Supabase Edge Functions or database-side business logic unless the user explicitly requests an architecture change.
+- Keep business logic out of presentational UI components whenever practical.
+- Prefer module boundaries that make future extraction into `libs/` straightforward.
 
-## 📏 File Size & Refactoring Mandate
+## Engineering Standards
 
-**CRITICAL RULE:** No file should exceed 300 lines of code.
+- Write full TypeScript and keep code type-safe. Do not use `any`.
+- Prefer existing interfaces, types, helpers, hooks, services, use cases, and other reusable code before creating new abstractions.
+- Use dependency injection for services, use cases, and other logic that depends on external collaborators.
+- Respect SOLID principles, but keep the implementation simple and pragmatic under KISS.
+- Avoid duplication. Search the codebase first and reuse what already exists when it fits the task.
+- Default to TDD when implementing or fixing behavior.
+- Structure tests with the Arrange, Act, Assert pattern.
+- For this repository, the expected test runner is the one already used by the target workspace. In `apps/web-app`, write and run Jest-style unit tests using the existing Vitest stack instead of introducing a second test framework.
 
-- If you analyze an existing file and it exceeds 300 lines, you MUST proactively suggest a refactoring plan to split it into smaller, single-responsibility modules.
-- If you are writing or modifying a file and your changes will cause it to exceed 300 lines, STOP. You MUST activate the refactoring guidelines and split the file immediately before continuing. Do not ignore this rule under any circumstances.
+For this repository, the phrase `commercial modules` means the Water Sales and Washer Rentals modules. Their cross-module financial impact is documented in `docs/agents/commercial-rules.md`.
 
-## 🧠 Knowledge Base & Local Skills
+## Local Skills
 
-This project contains a local Knowledge Base of best practices downloaded into the `.agents/skills/` directory.
+- If your agent supports skill loading, activate only the skills needed for the task.
+- Project-local skills live under `.agents/`. Route your skill loader there when task-specific guidance is needed.
+- Suggested mapping:
+  - React, rendering, UI, UX: React or web-design related skills
+  - Supabase, SQL, schema, RLS: Supabase or Postgres related skills
+  - Documentation authoring: agent-documentation or AGENTS-related skills
 
-**CRITICAL:** Do NOT attempt to use the `activate_skill` tool. Instead, you MUST use your file reading tools (`read_file`, `grep_search`) to read the `SKILL.md` or relevant `.md` files inside the following directories based on your task:
+## Task Routing
 
-- **For Database, Supabase or SQL tasks:** Read files inside `.agents/skills/supabase-postgres-best-practices/`.
-- **For React, Frontend Performance, and UI/UX:** Read files inside `.agents/skills/vercel-react-best-practices/` and `.agents/skills/web-design-guidelines/`.
+| Task Category | Load This | When to Load |
+| :------------ | :-------- | :----------- |
+| Frontend product work | `apps/web-app/AGENTS.md` | Any task touching `apps/web-app` code, routes, components, stores, services, or frontend docs |
+| Shared architecture and modularization | `docs/agents/architecture.md` | Changing folder boundaries, extracting shared logic, planning `libs/`, or reviewing coupling |
+| Commercial rules and financial ripple effects | `docs/agents/commercial-rules.md` | Editing water sales, rentals, mixed payments, tips, dashboard totals, expenses, or transaction summaries |
+| Frontend architecture and state patterns | `docs/agents/frontend-web-app.md` | Working on React structure, Zustand, React Query, UI composition, or frontend layering |
+| Supabase data access and persistence rules | `docs/agents/supabase.md` | Working on queries, tables, RLS, data hydration, synchronization, or persistence contracts |
+| Database schema reference | `docs/agents/database.md` | Inspecting current tables, relationships, enums, constraints, or Supabase-managed schemas before changing the database |
+| Testing discipline and workflow | `docs/agents/frontend-web-app.md` | Writing or updating frontend tests, enforcing TDD, AAA, or reuse-first implementation in `apps/web-app` |
+| AGENTS maintenance | `docs/agents/agents-guidelines.md` | Before editing any `AGENTS.md` or files inside `docs/agents/` |
 
----
+## Definition Of Done
 
-## Environment
+Before finishing, verify all of the following:
 
-- Supabase as Backend as a Service
-- Environment variables in the `.env` file at the root
-- Use `npx nx` to run monorepo commands
-- **CRITICAL SECURITY RULE:** Never print, log, or expose the contents of the `.env` file or credentials in your responses.
-
-## 📋 Technical Guidelines (Task-Specific)
-
-**CRITICAL:** You MUST read the corresponding guideline file before starting any of the following tasks:
-
-| 🛠️ Task / Area     | 📄 Guideline File                                                                  | 🎯 Activation Condition                                    |
-| :----------------- | :--------------------------------------------------------------------------------- | :--------------------------------------------------------- |
-| **🧪 Testing**     | [`docs/agents/testing-guidelines.md`](docs/agents/testing-guidelines.md)           | When asked to create, update, or run tests.                |
-| **🛠️ Refactoring** | [`docs/agents/refactoring-guidelines.md`](docs/agents/refactoring-guidelines.md)   | When refactoring existing code or logic.                   |
-| **🐛 Debugging**   | [`docs/agents/debugging-guidelines.md`](docs/agents/debugging-guidelines.md)       | When investigating or fixing reported bugs.                |
-| **🔒 Security**    | [`docs/agents/security-guidelines.md`](docs/agents/security-guidelines.md)         | When auditing code for vulnerabilities.                    |
-| **⚡ Performance** | [`docs/agents/optimization-guidelines.md`](docs/agents/optimization-guidelines.md) | When optimizing algorithms or execution time.              |
-| **🤖 AGENTS.md**   | [`docs/agents/agents-md-guidelines.md`](docs/agents/agents-md-guidelines.md)       | When asked to create, update, or modify an AGENTS.md file. |
+- Loaded the nearest `AGENTS.md` plus only the supporting docs required for the task
+- Updated affected agent docs when business rules or architectural patterns changed
+- Preserved module boundaries and future extraction paths into `libs/`
+- Kept edited files under the 300-line guardrail
+- Ran relevant Nx checks or clearly explained why a check was not run
+- Reviewed cross-module impact when touching Water Sales or Washer Rentals

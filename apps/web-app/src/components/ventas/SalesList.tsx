@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Sale, PaymentMethod, PaymentMethodLabels } from '@/types';
+import { useTipStore } from '@/store/useTipStore';
 import { useWaterSalesStore } from '@/store/useWaterSalesStore';
 import {
   type LucideIcon,
@@ -28,6 +29,7 @@ import { buildSalePaymentDisplayModel } from '@/services/payments/paymentDisplay
 import { hasValidMixedPaymentSplits } from '@/services/payments/paymentSplitValidity';
 import { SalePaymentBreakdown } from './SalePaymentBreakdown';
 import { deriveSaleTipAmountBs } from '@/services/transactions/transactionTotals';
+import type { Tip } from '@/types/tips';
 
 interface SalesListProps {
   sales: Sale[];
@@ -43,6 +45,7 @@ const paymentIcons: Record<PaymentMethod, LucideIcon> = {
 
 export function SalesList({ sales, paymentFilter = 'todos' }: SalesListProps) {
   const { deleteSale } = useWaterSalesStore();
+  const tips = useTipStore((state) => state.tips);
   const [editingSale, setEditingSale] = useState<Sale | null>(null);
   const [editSheetOpen, setEditSheetOpen] = useState(false);
   const [saleToDelete, setSaleToDelete] = useState<string | null>(null);
@@ -82,6 +85,9 @@ export function SalesList({ sales, paymentFilter = 'todos' }: SalesListProps) {
     setEditingSale(sale);
     setEditSheetOpen(true);
   };
+
+  const findLinkedTip = (saleId: string): Tip | undefined =>
+    tips.find((tip) => tip.originType === 'sale' && tip.originId === saleId);
 
   if (filteredSales.length === 0) {
     return (
@@ -127,6 +133,7 @@ export function SalesList({ sales, paymentFilter = 'todos' }: SalesListProps) {
 
         <div className="space-y-2">
           {filteredSales.map((sale) => {
+            const linkedTip = findLinkedTip(sale.id);
             const paymentDisplay = buildSalePaymentDisplayModel(sale);
             const iconMethod = hasValidMixedPaymentSplits(sale.paymentSplits)
               ? paymentDisplay.primaryMethod
@@ -141,7 +148,8 @@ export function SalesList({ sales, paymentFilter = 'todos' }: SalesListProps) {
               (sum, item) => sum + Number(item.subtotal || 0),
               0
             );
-            const tipAmountBs = deriveSaleTipAmountBs(sale.totalBs, subtotalBs);
+            const tipAmountBs =
+              linkedTip?.amountBs ?? deriveSaleTipAmountBs(sale.totalBs, subtotalBs);
 
             return (
               <div
@@ -158,6 +166,7 @@ export function SalesList({ sales, paymentFilter = 'todos' }: SalesListProps) {
                     </div>
                     <SalePaymentBreakdown
                       sale={sale}
+                      tip={linkedTip}
                       paymentDisplay={paymentDisplay}
                       timeLabel={time}
                       paymentIcon={PaymentIcon}
