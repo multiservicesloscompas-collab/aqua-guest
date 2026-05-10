@@ -17,6 +17,8 @@ import {
 } from './tipSupabaseAdapters';
 
 type InFlightPayout = Promise<TipPayoutSummary>;
+type TipAmountRow = Pick<TipRow, 'amount_bs'>;
+type PaidTipRow = Pick<TipRow, 'tip_date' | 'amount_bs'>;
 
 export class TipsDataService {
   private readonly inFlightDailyPayouts = new Map<string, InFlightPayout>();
@@ -78,9 +80,9 @@ export class TipsDataService {
         throw error;
       }
 
-      const updatedRows = (data ?? []) as any[];
+      const updatedRows = (data ?? []) as TipAmountRow[];
       const totalAmount = updatedRows.reduce(
-        (sum, t) => sum + Number(t[TIP_SCHEMA_CONTRACT.columns.amountBs]),
+        (sum, tip) => sum + Number(tip.amount_bs),
         0
       );
       const count = updatedRows.length;
@@ -144,12 +146,12 @@ export class TipsDataService {
       };
     }
 
-    const tip = data[0] as any;
+    const tip = data[0] as PaidTipRow;
     return {
-      date: tip[TIP_SCHEMA_CONTRACT.columns.tipDate],
+      date: tip.tip_date,
       paymentMethod: paymentMethod,
       paidCount: 1,
-      totalAmountBs: tip[TIP_SCHEMA_CONTRACT.columns.amountBs],
+      totalAmountBs: Number(tip.amount_bs),
     };
   }
 

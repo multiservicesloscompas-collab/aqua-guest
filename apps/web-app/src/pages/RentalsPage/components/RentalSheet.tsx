@@ -23,6 +23,8 @@ interface RentalSheetProps {
   onOpenChange: (open: boolean) => void;
 }
 
+const NOOP_STATUS_CHANGE = () => undefined;
+
 export function RentalSheet({ open, onOpenChange }: RentalSheetProps) {
   const viewModel = useRentalSheetViewModel({ open, onOpenChange });
 
@@ -76,7 +78,7 @@ export function RentalSheet({ open, onOpenChange }: RentalSheetProps) {
           <EditRentalStatusPaymentCard
             statusOptions={[{ value: 'agendado', label: 'Agendado' }]}
             status="agendado"
-            onChangeStatus={() => {}}
+            onChangeStatus={NOOP_STATUS_CHANGE}
             statusEditable={false}
             paymentStatus={viewModel.isPaid ? 'paid' : 'pending'}
             onChangePaymentStatus={viewModel.onChangePaymentStatus}

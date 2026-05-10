@@ -1,13 +1,15 @@
-import type { WasherRental } from '@/types';
-import type { PaymentMethod } from '@/types';
-import type { PaymentSplit } from '@/types/paymentSplits';
+import type { PaymentMethod, PaymentSplit } from '@aqua-guest/domain';
+import type {
+  WasherRental,
+  WasherRentalDraft,
+} from '@aqua-guest/domain/modules/washer-rentals';
 import { PAYMENT_SPLIT_SCHEMA } from '@/services/payments/paymentSplitSchemaContract';
 import { rentalPaymentSplitAdapter } from '@/services/payments/paymentSplitSupabaseAdapters';
 import { useSyncStore } from '@/store/useSyncStore';
 
 interface EnqueueOfflineRentalInput {
   payload: Record<string, unknown>;
-  rental: Omit<WasherRental, 'id' | 'createdAt' | 'updatedAt'>;
+  rental: WasherRentalDraft;
   paymentSplits?: PaymentSplit[];
   actionSource?: string;
 }
@@ -27,7 +29,7 @@ const generateTempId = () =>
   `temp-${Math.random().toString(36).substring(2, 15)}`;
 
 const buildRentalBusinessKey = (
-  rental: Omit<WasherRental, 'id' | 'createdAt' | 'updatedAt'>
+  rental: WasherRentalDraft
 ) =>
   `rental:${rental.date}:${rental.customerId ?? 'unknown'}:${
     rental.machineId

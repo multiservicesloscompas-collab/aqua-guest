@@ -1,26 +1,32 @@
-/**
- * useWaterSalesStore.core.ts
- * Type definitions for the water sales Zustand store.
- * No Zustand or Supabase dependencies — pure TypeScript.
- */
-import { CartItem, PaymentMethod, Sale } from '@/types';
+import type {
+  CartItem,
+  CartItemDraft,
+  PaymentMethod,
+  PaymentSplit,
+  Sale,
+} from '@aqua-guest/domain';
 import type { TipCaptureInput } from '@/types/tips';
-import type { PaymentSplit } from '@/types/paymentSplits';
-
-// ─── Row / Insert / Update shapes ────────────────────────────────────────────
 
 export interface SalesRow {
   id: string;
+  // TODO: do not use snake_case!
   daily_number: number;
   date: string;
   items: CartItem[];
+  // TODO: do not use snake_case!
   payment_method: PaymentMethod;
+  // TODO: do not use snake_case!
   payment_splits?: PaymentSplit[];
+  // TODO: do not use snake_case!;
   total_bs: number;
+  // TODO: do not use snake_case!
   total_usd: number;
+  // TODO: do not use snake_case!
   exchange_rate: number;
   notes?: string | null;
+  // TODO: do not use snake_case!
   created_at?: string | null;
+  // TODO: do not use snake_case!
   updated_at?: string | null;
 }
 
@@ -52,7 +58,7 @@ export interface WaterSalesState {
   cart: CartItem[];
   loadingSalesByRange: Record<string, boolean>;
 
-  addToCart: (item: Omit<CartItem, 'id' | 'subtotal'>) => void;
+  addToCart: (item: CartItemDraft) => void;
   updateCartItem: (id: string, updates: Partial<CartItem>) => void;
   removeFromCart: (id: string) => void;
   clearCart: () => void;

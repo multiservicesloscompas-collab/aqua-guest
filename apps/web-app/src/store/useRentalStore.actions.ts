@@ -1,5 +1,8 @@
 import supabase from '@/lib/supabaseClient';
-import { WasherRental } from '@/types';
+import type {
+  WasherRental,
+  WasherRentalDraft,
+} from '@aqua-guest/domain/modules/washer-rentals';
 import { rentalsDataService } from '@/services/RentalsDataService';
 import {
   enqueueOfflineRental,
@@ -33,7 +36,7 @@ type SetFn = (
 type GetFn = () => RentalState;
 
 export async function addRentalAction(
-  rental: Omit<WasherRental, 'id' | 'createdAt' | 'updatedAt'>,
+  rental: WasherRentalDraft,
   tipInput: TipCaptureInput | undefined,
   set: SetFn,
   _get: GetFn

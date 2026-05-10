@@ -1,54 +1,72 @@
-/**
- * useRentalStore.core.ts
- * Type definitions and pure helper functions for the rental store.
- * No Zustand or Supabase dependencies — pure TypeScript.
- */
-import {
+import type {
   PaymentMethod,
+  PaymentSplit,
   RentalShift,
   RentalStatus,
   WasherRental,
-} from '@/types';
+  WasherRentalDraft,
+  WasherRentalUpdate,
+} from '@aqua-guest/domain';
 import type { TipCaptureInput } from '@/types/tips';
-import type { PaymentSplit } from '@/types/paymentSplits';
 import { preparePaymentWritePayload } from '@/services/payments/paymentSplitWritePath';
-
-// ─── Row / Insert / Update shapes ────────────────────────────────────────────
 
 export interface RentalRow {
   id: string;
   date: string;
+  // TODO: do not use snake_case!
   customer_id: string;
+  // TODO: do not use snake_case!
   machine_id: string;
   shift: RentalShift;
+  // TODO: do not use snake_case!
   delivery_time: string;
+  // TODO: do not use snake_case!
   pickup_time: string;
+  // TODO: do not use snake_case!
   pickup_date: string;
+  // TODO: do not use snake_case!
   delivery_fee: number;
+  // TODO: do not use snake_case!
   total_usd: number;
+  // TODO: do not use snake_case!
   payment_method: PaymentMethod;
+  // TODO: do not use snake_case!
   payment_splits?: PaymentSplit[];
   status: RentalStatus;
+  // TODO: do not use snake_case!
   is_paid: boolean;
+  // TODO: do not use snake_case!
   date_paid?: string | null;
   notes?: string | null;
+  // TODO: do not use snake_case!
   created_at?: string | null;
+  // TODO: do not use snake_case!
   updated_at?: string | null;
 }
 
 export type RentalInsert = {
   date: string;
+  // TODO: do not use snake_case!
   customer_id: string;
+  // TODO: do not use snake_case!
   machine_id: string;
   shift: RentalShift;
+  // TODO: do not use snake_case!
   delivery_time: string;
+  // TODO: do not use snake_case!
   pickup_time: string;
+  // TODO: do not use snake_case!
   pickup_date: string;
+  // TODO: do not use snake_case!
   delivery_fee: number;
+  // TODO: do not use snake_case!
   total_usd: number;
+  // TODO: do not use snake_case!
   payment_method: PaymentMethod;
   status: RentalStatus;
+  // TODO: do not use snake_case!
   is_paid: boolean;
+  // TODO: do not use snake_case!
   date_paid: string | null;
   notes?: string;
 };
@@ -58,12 +76,6 @@ export type RentalUpdate = Partial<RentalInsert> & {
   updated_at?: string;
 };
 
-export type CustomerUpdate = Partial<{
-  name: string;
-  phone: string;
-  address: string;
-}>;
-
 // ─── State interface ──────────────────────────────────────────────────────────
 
 export interface RentalState {
@@ -71,12 +83,12 @@ export interface RentalState {
   loadingRentalsByRange: Record<string, boolean>;
 
   addRental: (
-    rental: Omit<WasherRental, 'id' | 'createdAt' | 'updatedAt'>,
+    rental: WasherRentalDraft,
     tipInput?: TipCaptureInput
   ) => Promise<WasherRental>;
   updateRental: (
     id: string,
-    updates: Partial<WasherRental>,
+    updates: WasherRentalUpdate,
     tipInput?: TipCaptureInput | null
   ) => Promise<void>;
   deleteRental: (id: string) => Promise<void>;
@@ -116,7 +128,7 @@ export function mapRentalRowToWasherRental(
   rentalRow: RentalRow,
   normalizedSplits: PaymentSplit[],
   splitWritePaymentMethod: PaymentMethod,
-  originalRental?: Partial<WasherRental>
+  originalRental?: Partial<WasherRentalDraft>
 ): WasherRental {
   return {
     id: rentalRow.id,

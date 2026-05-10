@@ -54,7 +54,7 @@ vi.mock('@/store/useTipStore', () => ({
         originId: 'sale-1',
       },
     ],
-    loadTipsByDateRange: vi.fn().mockResolvedValue(undefined),
+    loadPaidTipsByDateRange: vi.fn().mockResolvedValue(undefined),
   }),
 }));
 

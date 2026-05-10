@@ -1,8 +1,5 @@
-import type { Customer } from '@/types';
+import type { Customer, CustomerDraft, CustomerUpdate } from '@aqua-guest/domain';
 import { useSyncStore } from '@/store/useSyncStore';
-
-type CustomerCreateInput = Omit<Customer, 'id'>;
-type CustomerUpdateInput = Partial<Omit<Customer, 'id'>>;
 
 const generateTempId = () =>
   `temp-${Math.random().toString(36).substring(2, 15)}`;
@@ -10,7 +7,7 @@ const generateTempId = () =>
 const buildEntityBusinessKey = (id: string) => `customer:${id}`;
 
 export const enqueueOfflineCustomerCreate = (
-  customer: CustomerCreateInput,
+  customer: CustomerDraft,
   actionSource = 'customers/addCustomer'
 ): Customer => {
   const tempId = generateTempId();
@@ -39,7 +36,7 @@ export const enqueueOfflineCustomerCreate = (
 
 export const enqueueOfflineCustomerUpdate = (
   id: string,
-  updates: CustomerUpdateInput,
+  updates: CustomerUpdate,
   actionSource = 'customers/updateCustomer'
 ) => {
   const businessKey = buildEntityBusinessKey(id);

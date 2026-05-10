@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabaseClient';
-import { CartItem, PaymentMethod, Sale } from '@/types';
+import type { CartItem, PaymentMethod, Sale } from '@aqua-guest/domain';
 import { getSafeTimestamp, normalizeTimestamp } from '@/lib/date-utils';
 import {
   PAYMENT_SPLIT_SCHEMA,

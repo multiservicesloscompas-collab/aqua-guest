@@ -83,7 +83,7 @@ describe('updateRentalAction tip-aware recomputation guard', () => {
     });
   });
 
-  it('keeps explicit totals and explicit splits when tipInput is provided', async () => {
+  it('recomputes final total and merges tip into explicit splits when tipInput is provided', async () => {
     let state = buildState();
     const setState = vi.fn((partial) => {
       const next = typeof partial === 'function' ? partial(state) : partial;
@@ -95,7 +95,7 @@ describe('updateRentalAction tip-aware recomputation guard', () => {
       'rental-1',
       {
         paymentMethod: 'pago_movil',
-        totalUsd: 3,
+        totalUsd: 2,
         paymentSplits: [
           {
             method: 'pago_movil',
@@ -105,8 +105,8 @@ describe('updateRentalAction tip-aware recomputation guard', () => {
           },
           {
             method: 'efectivo',
-            amountBs: 60,
-            amountUsd: 1.2,
+            amountBs: 10,
+            amountUsd: 0.2,
             exchangeRateUsed: 50,
           },
         ],

@@ -1,12 +1,5 @@
-/**
- * useWaterSalesStore.actions.ts
- * Extracted async action implementations for the water sales Zustand store.
- * Each function accepts Zustand's set/get so they can be used inside create().
- */
 import supabase from '@/lib/supabaseClient';
-import { Sale } from '@/types';
-import type { PaymentSplit } from '@/types/paymentSplits';
-import { PaymentMethod } from '@/types';
+import type { PaymentMethod, PaymentSplit, Sale } from '@aqua-guest/domain';
 import { getSafeTimestamp, normalizeTimestamp } from '@/lib/date-utils';
 import { dateService } from '@/services/DateService';
 import { salesDataService } from '@/services/SalesDataService';

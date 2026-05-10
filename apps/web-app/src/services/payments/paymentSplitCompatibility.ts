@@ -1,5 +1,10 @@
-import type { PaymentMethod, Sale, WasherRental } from '@/types';
-import type { PaymentSplit, SplitAware } from '@/types/paymentSplits';
+import type {
+  PaymentMethod,
+  PaymentSplit,
+  Sale,
+  SplitAware,
+  WasherRental,
+} from '@aqua-guest/domain';
 
 export function deriveLegacyPaymentMethodFromSplits(
   splits: readonly PaymentSplit[],

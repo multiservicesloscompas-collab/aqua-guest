@@ -16,6 +16,11 @@
     "skipLibCheck": true,
     "strict": true,
     "target": "es2022",
-    "customConditions": ["@org/source"]
+    "customConditions": ["@org/source"],
+    "baseUrl": ".",
+    "paths": {
+      "@aqua-guest/domain": ["libs/domain/src/index.ts"],
+      "@aqua-guest/domain/*": ["libs/domain/src/*"]
+    }
   }
 }

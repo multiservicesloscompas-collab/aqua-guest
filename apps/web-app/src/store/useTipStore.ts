@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type { PaymentMethod } from '@/types';
 import type { Tip, TipPayout } from '@/types/tips';
+import { normalizeToVenezuelaDate } from '@/services/DateService';
 import { tipsDataService } from '@/services/tips/TipDataService';
 
 interface TipState {
@@ -18,6 +19,31 @@ interface TipState {
     paidAt?: string;
   }) => Promise<void>;
   removeTipByOrigin: (originType: string, originId: string) => void;
+}
+
+function isDateWithinRange(date: string, startDate: string, endDate: string) {
+  return date >= startDate && date <= endDate;
+}
+
+function replaceTipsByDateRange(
+  currentTips: readonly Tip[],
+  loadedTips: readonly Tip[],
+  startDate: string,
+  endDate: string,
+  resolveDate: (tip: Tip) => string | undefined
+) {
+  const nextTipsMap = new Map<string, Tip>();
+
+  currentTips
+    .filter((tip) => {
+      const resolvedDate = resolveDate(tip);
+      return !resolvedDate || !isDateWithinRange(resolvedDate, startDate, endDate);
+    })
+    .forEach((tip) => nextTipsMap.set(tip.id, tip));
+
+  loadedTips.forEach((tip) => nextTipsMap.set(tip.id, tip));
+
+  return Array.from(nextTipsMap.values());
 }
 
 export const useTipStore = create<TipState>()((set, get) => ({
@@ -51,11 +77,13 @@ export const useTipStore = create<TipState>()((set, get) => ({
       );
 
       set((state) => {
-        const nextTipsMap = new Map<string, Tip>();
-        state.tips.forEach((t) => nextTipsMap.set(t.id, t));
-        loadedTips.forEach((t) => nextTipsMap.set(t.id, t));
-
-        const nextTips = Array.from(nextTipsMap.values());
+        const nextTips = replaceTipsByDateRange(
+          state.tips,
+          loadedTips,
+          startDate,
+          endDate,
+          (tip) => normalizeToVenezuelaDate(tip.tipDate)
+        );
 
         return {
           tips: nextTips,
@@ -92,11 +120,16 @@ export const useTipStore = create<TipState>()((set, get) => ({
       );
 
       set((state) => {
-        const nextTipsMap = new Map<string, Tip>();
-        state.tips.forEach((t) => nextTipsMap.set(t.id, t));
-        loadedTips.forEach((t) => nextTipsMap.set(t.id, t));
-
-        const nextTips = Array.from(nextTipsMap.values());
+        const nextTips = replaceTipsByDateRange(
+          state.tips,
+          loadedTips,
+          startDate,
+          endDate,
+          (tip) =>
+            tip.status === 'paid'
+              ? normalizeToVenezuelaDate(tip.paidAt || tip.tipDate)
+              : undefined
+        );
 
         return {
           tips: nextTips,

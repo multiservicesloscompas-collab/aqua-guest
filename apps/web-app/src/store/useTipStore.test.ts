@@ -4,11 +4,13 @@ import { useTipStore } from './useTipStore';
 
 const {
   loadTipsByDateRangeMock,
+  loadPaidTipsByDateRangeMock,
   toTipPayoutReadModelMock,
   updateTipNoteMock,
   paySingleTipMock,
 } = vi.hoisted(() => ({
   loadTipsByDateRangeMock: vi.fn(),
+  loadPaidTipsByDateRangeMock: vi.fn(),
   toTipPayoutReadModelMock: vi.fn(),
   updateTipNoteMock: vi.fn(),
   paySingleTipMock: vi.fn(),
@@ -17,6 +19,7 @@ const {
 vi.mock('@/services/tips/TipDataService', () => ({
   tipsDataService: {
     loadTipsByDateRange: loadTipsByDateRangeMock,
+    loadPaidTipsByDateRange: loadPaidTipsByDateRangeMock,
     toTipPayoutReadModel: toTipPayoutReadModelMock,
     updateTipNote: updateTipNoteMock,
     paySingleTip: paySingleTipMock,
@@ -26,6 +29,7 @@ vi.mock('@/services/tips/TipDataService', () => ({
 describe('useTipStore', () => {
   beforeEach(() => {
     loadTipsByDateRangeMock.mockReset();
+    loadPaidTipsByDateRangeMock.mockReset();
     toTipPayoutReadModelMock.mockReset();
     updateTipNoteMock.mockReset();
     paySingleTipMock.mockReset();
@@ -183,6 +187,7 @@ describe('useTipStore', () => {
       totalAmountBs: 10,
     });
     loadTipsByDateRangeMock.mockResolvedValueOnce([]);
+    loadPaidTipsByDateRangeMock.mockResolvedValueOnce([]);
 
     await useTipStore.getState().paySingleTip({
       tipId: 'tip-1',
@@ -199,6 +204,10 @@ describe('useTipStore', () => {
       'tip-single:tip-1:efectivo:'
     );
     expect(loadTipsByDateRangeMock).toHaveBeenCalledWith(
+      '2026-03-13',
+      '2026-03-13'
+    );
+    expect(loadPaidTipsByDateRangeMock).toHaveBeenCalledWith(
       '2026-03-13',
       '2026-03-13'
     );

@@ -1,6 +1,9 @@
-import type { Sale } from '@/types';
-import type { PaymentMethod } from '@/types';
-import type { PaymentSplit } from '@/types/paymentSplits';
+import type {
+  CartItem,
+  PaymentMethod,
+  PaymentSplit,
+  Sale,
+} from '@aqua-guest/domain';
 import { PAYMENT_SPLIT_SCHEMA } from '@/services/payments/paymentSplitSchemaContract';
 import { salePaymentSplitAdapter } from '@/services/payments/paymentSplitSupabaseAdapters';
 import { useSyncStore } from '@/store/useSyncStore';
@@ -10,8 +13,8 @@ interface EnqueueOfflineSaleInput {
   paymentSplits?: PaymentSplit[];
   dailyNumber: number;
   date: string;
-  items: Sale['items'];
-  paymentMethod: Sale['paymentMethod'];
+  items: CartItem[];
+  paymentMethod: PaymentMethod;
   totalBs: number;
   totalUsd: number;
   exchangeRate: number;

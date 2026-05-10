@@ -1,31 +1,18 @@
-import type { PaymentBalanceTransaction } from '@/types';
+import type {
+  NormalizedPaymentBalanceAmounts,
+  PaymentBalanceTransaction,
+  PaymentBalanceTransactionDraft,
+  PaymentBalanceTransactionUpdate,
+} from '@aqua-guest/domain';
 import { useSyncStore } from '@/store/useSyncStore';
 
-type PaymentBalanceCreateInput = Omit<
-  PaymentBalanceTransaction,
-  'id' | 'createdAt' | 'updatedAt'
->;
-type PaymentBalanceUpdateInput = Partial<
-  Omit<PaymentBalanceTransaction, 'id' | 'createdAt' | 'updatedAt'>
->;
+type PaymentBalanceCreateInput = PaymentBalanceTransactionDraft;
+type PaymentBalanceUpdateInput = PaymentBalanceTransactionUpdate;
 
 const generateTempId = () =>
   `temp-${Math.random().toString(36).substring(2, 15)}`;
 
 const buildEntityBusinessKey = (id: string) => `payment-balance:${id}`;
-
-type NormalizedPaymentBalanceAmounts = {
-  operationType: 'equilibrio' | 'avance';
-  amount: number;
-  amountBs: number;
-  amountUsd?: number;
-  amountOutBs: number;
-  amountOutUsd?: number;
-  amountInBs: number;
-  amountInUsd?: number;
-  differenceBs: number;
-  differenceUsd?: number;
-};
 
 const normalizePaymentBalanceAmounts = (
   transaction: PaymentBalanceCreateInput | PaymentBalanceTransaction

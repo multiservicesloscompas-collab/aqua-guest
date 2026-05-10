@@ -6,7 +6,7 @@
  */
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { Sale } from '@/types';
+import type { Sale } from '@aqua-guest/domain';
 import { dateService } from '@/services/DateService';
 import {
   DateFilterStrategy,

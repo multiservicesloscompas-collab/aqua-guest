@@ -1,6 +1,6 @@
-import { Product } from '@/types';
+import type { ProductWithIcon } from '@/types';
 
-export const defaultProducts: Product[] = [
+export const defaultProducts: ProductWithIcon[] = [
   {
     id: 'recarga-agua',
     name: 'Recarga de Agua',

@@ -1,4 +1,4 @@
-import type { PaymentMethod, TipOriginType } from '@/types';
+import type { PaymentMethod, TipOriginType } from '@aqua-guest/domain';
 
 export const TIP_SCHEMA_CONTRACT = {
   tables: {

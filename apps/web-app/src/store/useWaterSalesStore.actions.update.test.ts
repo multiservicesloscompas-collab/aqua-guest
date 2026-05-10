@@ -86,7 +86,7 @@ describe('updateSaleAction tip-aware recomputation guard', () => {
     });
   });
 
-  it('keeps explicit totals and explicit mixed splits when tipInput is provided', async () => {
+  it('recomputes final totals and merges tip into explicit mixed splits when tipInput is provided', async () => {
     let state = buildState();
     const setState = vi.fn((partial) => {
       const next = typeof partial === 'function' ? partial(state) : partial;
@@ -98,19 +98,19 @@ describe('updateSaleAction tip-aware recomputation guard', () => {
       'sale-1',
       {
         paymentMethod: 'pago_movil',
-        totalBs: 150,
-        totalUsd: 3,
+        totalBs: 100,
+        totalUsd: 2,
         paymentSplits: [
           {
             method: 'pago_movil',
-            amountBs: 95,
-            amountUsd: 1.9,
+            amountBs: 60,
+            amountUsd: 1.2,
             exchangeRateUsed: 50,
           },
           {
             method: 'efectivo',
-            amountBs: 55,
-            amountUsd: 1.1,
+            amountBs: 40,
+            amountUsd: 0.8,
             exchangeRateUsed: 50,
           },
         ],
@@ -129,14 +129,14 @@ describe('updateSaleAction tip-aware recomputation guard', () => {
     expect(updated.paymentSplits).toEqual([
       {
         method: 'pago_movil',
-        amountBs: 95,
-        amountUsd: 1.9,
+        amountBs: 60,
+        amountUsd: 1.2,
         exchangeRateUsed: 50,
       },
       {
         method: 'efectivo',
-        amountBs: 55,
-        amountUsd: 1.1,
+        amountBs: 90,
+        amountUsd: 1.8,
         exchangeRateUsed: 50,
       },
     ]);
@@ -146,14 +146,14 @@ describe('updateSaleAction tip-aware recomputation guard', () => {
       [
         {
           method: 'pago_movil',
-          amountBs: 95,
-          amountUsd: 1.9,
+          amountBs: 60,
+          amountUsd: 1.2,
           exchangeRateUsed: 50,
         },
         {
           method: 'efectivo',
-          amountBs: 55,
-          amountUsd: 1.1,
+          amountBs: 90,
+          amountUsd: 1.8,
           exchangeRateUsed: 50,
         },
       ]

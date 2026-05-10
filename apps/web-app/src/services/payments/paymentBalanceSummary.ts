@@ -1,11 +1,11 @@
 import type {
+  PrepaidOrder,
   PaymentBalanceSummary,
   PaymentBalanceTransaction,
   PaymentMethod,
-  PrepaidOrder,
   Sale,
   WasherRental,
-} from '@/types';
+} from '@aqua-guest/domain';
 import {
   allocateRentalToMethodTotalsBs,
   allocateSaleToMethodTotalsBs,

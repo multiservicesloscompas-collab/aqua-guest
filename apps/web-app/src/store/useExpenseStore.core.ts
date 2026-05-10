@@ -1,18 +1,18 @@
-/**
- * useExpenseStore.core.ts
- * Type definitions for the expense Zustand store.
- * No Zustand or Supabase dependencies — pure TypeScript.
- */
-import { Expense, PaymentMethod } from '@/types';
+import type {
+  Expense,
+  ExpenseCategory,
+  ExpenseDraft,
+  ExpenseUpdate,
+  PaymentMethod,
+} from '@aqua-guest/domain';
 import { PaymentSplitRow } from '@/services/payments/paymentSplitSchemaContract';
-
-// ─── Row / Insert / Update shapes ────────────────────────────────────────────
 
 export type ExpenseInsertPayload = {
   date: string;
   description: string;
   amount: number;
-  category: Expense['category'];
+  category: ExpenseCategory;
+  // TODO: do not use snake_case!
   payment_method: PaymentMethod;
   notes?: string;
 };
@@ -20,7 +20,8 @@ export type ExpenseInsertPayload = {
 export type ExpenseUpdatePayload = {
   description?: string;
   amount?: number;
-  category?: Expense['category'];
+  category?: ExpenseCategory;
+  // TODO: do not use snake_case!
   payment_method?: PaymentMethod;
   notes?: string;
   date?: string;
@@ -31,11 +32,12 @@ export type ExpenseRow = {
   date: string;
   description: string;
   amount: number;
-  category: Expense['category'];
+  category: ExpenseCategory;
   payment_method?: PaymentMethod;
   notes?: string | null;
   created_at?: string;
   expense_payment_splits?: PaymentSplitRow[];
+  // TODO: do not use snake_case!
   payment_splits?: PaymentSplitRow[]; // Added for generic compatibility if needed
 };
 
@@ -44,8 +46,8 @@ export type ExpenseRow = {
 export interface ExpenseState {
   expenses: Expense[];
 
-  addExpense: (expense: Omit<Expense, 'id' | 'createdAt'>) => Promise<void>;
-  updateExpense: (id: string, updates: Partial<Expense>) => Promise<void>;
+  addExpense: (expense: ExpenseDraft) => Promise<void>;
+  updateExpense: (id: string, updates: ExpenseUpdate) => Promise<void>;
   deleteExpense: (id: string) => Promise<void>;
   getExpensesByDate: (date: string) => Expense[];
   loadExpensesByDate: (date: string) => Promise<Expense[]>;

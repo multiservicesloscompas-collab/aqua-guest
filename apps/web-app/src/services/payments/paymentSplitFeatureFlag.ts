@@ -1,7 +1,7 @@
 import type {
   MixedPaymentFeatureFlags,
   PaymentSplitModule,
-} from '@/types/paymentSplits';
+} from '@aqua-guest/domain';
 
 const DEFAULT_FLAGS: MixedPaymentFeatureFlags = {
   enabled: true,

@@ -1,5 +1,8 @@
 import supabase from '@/lib/supabaseClient';
-import type { WasherRental } from '@/types';
+import type {
+  CustomerUpdate,
+  WasherRentalUpdate,
+} from '@aqua-guest/domain';
 import type { TipCaptureInput } from '@/types/tips';
 import { preparePaymentWritePayload } from '@/services/payments/paymentSplitWritePath';
 import {
@@ -13,7 +16,6 @@ import {
 } from '@/services/transactions/transactionTotals';
 import { replaceRentalSplits } from './useRentalStore.supabase';
 import {
-  type CustomerUpdate,
   type RentalState,
   type RentalUpdate,
   buildRentalWriteContext,
@@ -26,7 +28,7 @@ type GetFn = () => RentalState;
 
 export async function updateRentalAction(
   id: string,
-  updates: Partial<WasherRental>,
+  updates: WasherRentalUpdate,
   tipInput: TipCaptureInput | null | undefined,
   set: SetFn,
   get: GetFn
@@ -37,7 +39,7 @@ export async function updateRentalAction(
     const currentRental = get().rentals.find((r) => r.id === id);
     if (!currentRental) throw new Error('Alquiler no encontrado');
 
-    const effectiveUpdates: Partial<WasherRental> = { ...updates };
+    const effectiveUpdates: WasherRentalUpdate = { ...updates };
 
     if (tipInput && tipInput.amountBs > 0) {
       const exchangeRate =

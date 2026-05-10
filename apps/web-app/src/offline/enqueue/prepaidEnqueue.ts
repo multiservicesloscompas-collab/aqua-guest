@@ -1,9 +1,9 @@
-import type { PrepaidOrder } from '@/types';
+import type { PrepaidOrder, PrepaidOrderDraft } from '@aqua-guest/domain';
 import { useSyncStore } from '@/store/useSyncStore';
 
 interface EnqueueOfflinePrepaidCreateInput {
   payload: Record<string, unknown>;
-  order: Omit<PrepaidOrder, 'id' | 'createdAt' | 'updatedAt'>;
+  order: PrepaidOrderDraft;
   createdAt: string;
   updatedAt: string;
   actionSource?: string;

@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
+import type { CartItem, Sale } from '@aqua-guest/domain';
 import { useAppStore } from '@/store/useAppStore';
 import { useWaterSalesStore } from '@/store/useWaterSalesStore';
-import { Sale, CartItem } from '@/types';
 
 export type DateRange = 'day' | 'week' | 'month';
 

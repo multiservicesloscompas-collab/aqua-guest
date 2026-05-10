@@ -1,4 +1,4 @@
-import type { ExchangeRateHistory, LiterPricing } from '@/types';
+import type { ExchangeRateHistory, LiterPricing } from '@aqua-guest/domain';
 import { useSyncStore } from '@/store/useSyncStore';
 
 interface EnqueueExchangeRateInput {

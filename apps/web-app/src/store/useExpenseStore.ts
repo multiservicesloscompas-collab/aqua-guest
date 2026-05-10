@@ -6,7 +6,7 @@
  */
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { Expense } from '@/types';
+import type { Expense } from '@aqua-guest/domain';
 import supabase from '@/lib/supabaseClient';
 import { expensesDataService } from '@/services/ExpensesDataService';
 import {

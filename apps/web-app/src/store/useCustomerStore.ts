@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { Customer } from '@/types';
+import type { Customer, CustomerDraft, CustomerUpdate } from '@aqua-guest/domain';
 import supabase from '@/lib/supabaseClient';
 import {
   enqueueOfflineCustomerCreate,
@@ -11,19 +11,16 @@ import {
 interface CustomerState {
   customers: Customer[];
 
-  addCustomer: (customer: CustomerCreateInput) => Promise<void>;
-  updateCustomer: (id: string, updates: CustomerUpdateInput) => Promise<void>;
+  addCustomer: (customer: CustomerDraft) => Promise<void>;
+  updateCustomer: (id: string, updates: CustomerUpdate) => Promise<void>;
   deleteCustomer: (id: string) => Promise<void>;
   setCustomers: (customers: Customer[]) => void;
 }
 
-type CustomerCreateInput = Omit<Customer, 'id'>;
-type CustomerUpdateInput = Partial<Omit<Customer, 'id'>>;
-
 const buildCustomerUpdatePayload = (
-  updates: CustomerUpdateInput
-): CustomerUpdateInput => {
-  const payload: CustomerUpdateInput = {};
+  updates: CustomerUpdate
+): CustomerUpdate => {
+  const payload: CustomerUpdate = {};
 
   if (updates.name !== undefined) payload.name = updates.name;
   if (updates.phone !== undefined) payload.phone = updates.phone;

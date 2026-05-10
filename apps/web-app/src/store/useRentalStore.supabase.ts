@@ -4,7 +4,7 @@
  * No Zustand dependency — pure async Supabase calls.
  */
 import supabase from '@/lib/supabaseClient';
-import type { PaymentSplit } from '@/types/paymentSplits';
+import type { PaymentSplit } from '@aqua-guest/domain';
 import {
   PAYMENT_SPLIT_SCHEMA,
   type PaymentSplitRow,

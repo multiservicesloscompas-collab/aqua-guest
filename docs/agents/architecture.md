@@ -55,4 +55,5 @@ When a feature grows, prefer this progression:
 
 - Keep files under 300 lines of code
 - Do not duplicate business rules across pages and stores
+- When a canonical entity has app-only presentation fields, keep the canonical shape in `libs/domain` and compose app-local extension types instead of moving UI metadata into domain
 - Update the matching docs when you establish a new architectural pattern

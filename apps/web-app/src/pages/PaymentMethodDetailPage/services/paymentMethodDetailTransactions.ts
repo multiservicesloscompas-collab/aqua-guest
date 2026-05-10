@@ -149,7 +149,7 @@ export function buildPaymentMethodTransactions(
         exchangeRate
       ),
       paymentMethodLabel: isMixed ? getMethodLabel(paymentMethod) : undefined,
-      linkedReference: buildRentalReference(rental.id),
+      linkedReference: buildRentalReference(rental),
       icon: WashingMachine,
     });
   }

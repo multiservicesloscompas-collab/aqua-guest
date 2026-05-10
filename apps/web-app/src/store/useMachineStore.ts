@@ -1,6 +1,11 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { WashingMachine } from '@/types';
+import type {
+  MachineStatus,
+  WashingMachine,
+  WashingMachineDraft,
+  WashingMachineUpdate,
+} from '@aqua-guest/domain';
 import supabase from '@/lib/supabaseClient';
 import {
   enqueueOfflineWashingMachineCreate,
@@ -11,11 +16,8 @@ import {
 interface MachineState {
   washingMachines: WashingMachine[];
 
-  addWashingMachine: (machine: Omit<WashingMachine, 'id'>) => Promise<void>;
-  updateWashingMachine: (
-    id: string,
-    updates: Partial<WashingMachine>
-  ) => Promise<void>;
+  addWashingMachine: (machine: WashingMachineDraft) => Promise<void>;
+  updateWashingMachine: (id: string, updates: WashingMachineUpdate) => Promise<void>;
   deleteWashingMachine: (id: string) => Promise<void>;
 
   loadWashingMachines: () => Promise<void>;
@@ -25,7 +27,7 @@ type WashingMachineUpdatePayload = {
   name?: string;
   kg?: number;
   brand?: string;
-  status?: WashingMachine['status'];
+  status?: MachineStatus;
   is_available?: boolean;
 };
 
@@ -34,7 +36,7 @@ type WashingMachineRow = {
   name: string;
   kg: number;
   brand: string;
-  status: WashingMachine['status'];
+  status: MachineStatus;
   is_available: boolean;
 };
 

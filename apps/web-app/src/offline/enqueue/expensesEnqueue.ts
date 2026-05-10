@@ -1,11 +1,11 @@
-import type { Expense } from '@/types';
+import type { Expense, ExpenseDraft, ExpenseUpdate } from '@aqua-guest/domain';
 import type { PaymentSplit } from '@/types/paymentSplits';
 import { PAYMENT_SPLIT_SCHEMA } from '@/services/payments/paymentSplitSchemaContract';
 import { expensePaymentSplitAdapter } from '@/services/payments/paymentSplitSupabaseAdapters';
 import { useSyncStore } from '@/store/useSyncStore';
 
-type ExpenseCreateInput = Omit<Expense, 'id' | 'createdAt'>;
-type ExpenseUpdateInput = Partial<Omit<Expense, 'id' | 'createdAt'>>;
+type ExpenseCreateInput = ExpenseDraft;
+type ExpenseUpdateInput = ExpenseUpdate;
 
 const generateTempId = () =>
   `temp-${Math.random().toString(36).substring(2, 15)}`;

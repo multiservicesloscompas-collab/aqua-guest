@@ -200,7 +200,7 @@ describe('useRentalStore offline queueing', () => {
     expect(queue.map((q) => q.type)).toEqual(['UPDATE', 'DELETE', 'INSERT']);
   });
 
-  it('queues edited rental tip upsert preserving explicit totals and mixed splits payload', async () => {
+  it('queues edited rental tip upsert with recomputed final totals and merged mixed splits payload', async () => {
     useRentalStore.setState({
       rentals: [
         {
@@ -244,7 +244,7 @@ describe('useRentalStore offline queueing', () => {
       'rental-1',
       {
         paymentMethod: 'pago_movil',
-        totalUsd: 3,
+        totalUsd: 2,
         paymentSplits: [
           {
             method: 'pago_movil',
@@ -254,8 +254,8 @@ describe('useRentalStore offline queueing', () => {
           },
           {
             method: 'efectivo',
-            amountBs: 60,
-            amountUsd: 1.2,
+            amountBs: 10,
+            amountUsd: 0.2,
             exchangeRateUsed: 50,
           },
         ],
@@ -282,7 +282,10 @@ describe('useRentalStore offline queueing', () => {
     });
     expect(
       (queue[2].payload as { splits: Array<{ amount_bs: number }> }).splits
-    ).toHaveLength(2);
+    ).toEqual([
+      expect.objectContaining({ amount_bs: 90, payment_method: 'pago_movil' }),
+      expect.objectContaining({ amount_bs: 60, payment_method: 'efectivo' }),
+    ]);
     expect(queue[3].payload).toMatchObject({
       origin_type: 'rental',
       origin_id: 'rental-1',

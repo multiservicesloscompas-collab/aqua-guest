@@ -6,7 +6,7 @@
  */
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { WasherRental } from '@/types';
+import type { CustomerUpdate, WasherRental } from '@aqua-guest/domain';
 import { rentalsDataService } from '@/services/RentalsDataService';
 import { tipsDataService } from '@/services/tips/TipDataService';
 import { createCurrencyConverter } from '@/services/CurrencyService';
@@ -16,7 +16,6 @@ import {
   type RentalRow,
   type RentalInsert,
   type RentalUpdate,
-  type CustomerUpdate,
   buildRentalWriteContext,
   mapRentalRowToWasherRental,
 } from './useRentalStore.core';

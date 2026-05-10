@@ -17,6 +17,7 @@ vi.mock('@/services/tips/TipDataService', () => ({
   tipsDataService: {
     upsertTipForOrigin: vi.fn(),
     deleteTipByOrigin: vi.fn(),
+    toTipPayoutReadModel: vi.fn(() => []),
   },
 }));
 

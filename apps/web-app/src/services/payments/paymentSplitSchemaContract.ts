@@ -1,5 +1,4 @@
-import type { PaymentMethod } from '@/types';
-import type { PaymentSplit } from '@/types/paymentSplits';
+import type { PaymentMethod, PaymentSplit } from '@aqua-guest/domain';
 
 export const PAYMENT_SPLIT_SCHEMA = {
   salesTable: 'sales',

@@ -1,12 +1,13 @@
-import {
-  Sale,
-  WasherRental,
+import type {
   Expense,
-  PrepaidOrder,
   PaymentBalanceTransaction,
   PaymentMethod,
-  TipPayout,
-} from '@/types';
+  PrepaidOrder,
+  Sale,
+  SplitAware,
+  WasherRental,
+} from '@aqua-guest/domain';
+import type { TipPayout } from '@/types';
 import {
   allocateRentalToMethodTotalsBs,
   allocateSaleToMethodTotalsBs,
@@ -14,7 +15,6 @@ import {
 } from '@/services/payments/paymentSplitReadModel';
 import { resolvePaymentBalanceTransferLegs } from '@/services/payments/paymentBalanceTransferSemantics';
 import { hasValidMixedPaymentSplits } from '@/services/payments/paymentSplitValidity';
-import type { PaymentSplit } from '@/types/paymentSplits';
 import { normalizeToVenezuelaDate } from '@/services/DateService';
 
 export interface DateRange {
@@ -75,24 +75,12 @@ function emptyMethodTotals(): Record<PaymentMethod, number> {
   return createEmptyMethodTotals();
 }
 
-interface SplitAwareSale extends Sale {
-  paymentSplits?: PaymentSplit[];
-}
-
-interface SplitAwareRental extends WasherRental {
-  paymentSplits?: PaymentSplit[];
-}
-
-interface SplitAwareExpense extends Expense {
-  paymentSplits?: PaymentSplit[];
-}
-
 function computeExpenseTotalsByMethod(
   expenses: readonly Expense[]
 ): Record<PaymentMethod, number> {
   const totals = createEmptyMethodTotals();
 
-  for (const expense of expenses as readonly SplitAwareExpense[]) {
+  for (const expense of expenses as readonly SplitAware<Expense>[]) {
     if (hasValidMixedPaymentSplits(expense.paymentSplits)) {
       for (const split of expense.paymentSplits) {
         totals[split.method] += Number(split.amountBs || 0);
@@ -117,13 +105,13 @@ function computeScope(
   tipPayouts: readonly TipPayout[]
 ): ScopeMetrics {
   const filteredSales = filterByDateRange(
-    sales as readonly SplitAwareSale[],
+    sales as readonly SplitAware<Sale>[],
     range,
     (s) => s.date
   );
   const filteredRentals = filterByDateRange(
-    (rentals as readonly SplitAwareRental[]).filter(
-      (r): r is SplitAwareRental & { datePaid: string } =>
+    (rentals as readonly SplitAware<WasherRental>[]).filter(
+      (r): r is SplitAware<WasherRental> & { datePaid: string } =>
         r.isPaid && Boolean(r.datePaid)
     ),
     range,

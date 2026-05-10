@@ -1,6 +1,11 @@
 import { toast } from 'sonner';
+import type { PaymentMethod } from '@aqua-guest/domain';
+import type {
+  RentalShift,
+  RentalStatus,
+  WasherRentalUpdate,
+} from '@aqua-guest/domain/modules/washer-rentals';
 import { getVenezuelaDate } from '@/services/DateService';
-import type { WasherRental } from '@/types';
 import type { PaymentSplit } from '@/types/paymentSplits';
 import type { TipCaptureInput } from '@/types/tips';
 import { normalizeAndValidatePaymentSplits } from '@/services/payments/paymentSplitValidation';
@@ -14,20 +19,20 @@ interface EditRentalValidationParams {
 
 interface BuildRentalUpdatesParams {
   machineId: string;
-  shift: WasherRental['shift'];
+  shift: RentalShift;
   deliveryTime: string;
   pickupTime: string;
   pickupDate: string;
   deliveryFee: number;
   totalUsd: number;
-  paymentMethod: WasherRental['paymentMethod'];
-  paymentSplits: NonNullable<WasherRental['paymentSplits']>;
+  paymentMethod: PaymentMethod;
+  paymentSplits: PaymentSplit[];
   selectedCustomerId: string;
   customerName: string;
   customerPhone: string;
   customerAddress: string;
   notes: string;
-  status: WasherRental['status'];
+  status: RentalStatus;
   isPaid: boolean;
   datePaid: string;
 }
@@ -41,7 +46,7 @@ interface SubmitEditRentalParams {
   tipInput?: TipCaptureInput | null;
   updateRental: (
     id: string,
-    updates: Partial<WasherRental>,
+    updates: WasherRentalUpdate,
     tipInput?: TipCaptureInput | null
   ) => Promise<void>;
   onSuccess: () => void;
@@ -67,7 +72,7 @@ export function getEditRentalValidationError(
 
 export function buildEditRentalUpdates(
   params: BuildRentalUpdatesParams
-): Partial<WasherRental> {
+): WasherRentalUpdate {
   return {
     machineId: params.machineId,
     shift: params.shift,

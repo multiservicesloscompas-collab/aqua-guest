@@ -1,68 +1,101 @@
-/**
- * usePaymentBalanceStore.core.ts
- * Type definitions for the payment balance Zustand store.
- * No Zustand or Supabase dependencies — pure TypeScript.
- */
 import {
+  PaymentBalanceTransactionDraft,
   PaymentBalanceTransaction,
+  PaymentBalanceTransactionUpdate,
   PaymentBalanceSummary,
   PaymentMethod,
 } from '@/types';
-
-// ─── Row / Insert / Update shapes ────────────────────────────────────────────
+import type { PaymentBalanceOperationType } from '@aqua-guest/domain';
 
 export type PaymentBalanceInsertPayload = {
   date: string;
-  operation_type?: 'equilibrio' | 'avance';
+
+  // TODO: do not use snake_case!
+  operation_type?: PaymentBalanceOperationType;
+  // TODO: do not use snake_case!
   from_method: PaymentMethod;
+  // TODO: do not use snake_case!
   to_method: PaymentMethod;
   amount: number;
+  // TODO: do not use snake_case!
   amount_bs?: number;
+  // TODO: do not use snake_case!
   amount_usd?: number;
+  // TODO: do not use snake_case!
   amount_out_bs?: number;
+  // TODO: do not use snake_case!
   amount_out_usd?: number;
+  // TODO: do not use snake_case!
   amount_in_bs?: number;
+  // TODO: do not use snake_case!
   amount_in_usd?: number;
+  // TODO: do not use snake_case!
   difference_bs?: number;
+  // TODO: do not use snake_case!
   difference_usd?: number;
   notes?: string;
 };
 
 export type PaymentBalanceUpdatePayload = {
-  operation_type?: 'equilibrio' | 'avance';
+  // TODO: do not use snake_case!
+  operation_type?: PaymentBalanceOperationType;
+  // TODO: do not use snake_case!
   from_method?: PaymentMethod;
+  // TODO: do not use snake_case!
   to_method?: PaymentMethod;
+  // TODO: do not use snake_case!
   amount?: number;
+  // TODO: do not use snake_case!
   amount_bs?: number;
+  // TODO: do not use snake_case!
   amount_usd?: number;
+  // TODO: do not use snake_case!
   amount_out_bs?: number;
+  // TODO: do not use snake_case!
   amount_out_usd?: number;
+  // TODO: do not use snake_case!
   amount_in_bs?: number;
+  // TODO: do not use snake_case!
   amount_in_usd?: number;
+  // TODO: do not use snake_case!
   difference_bs?: number;
+  // TODO: do not use snake_case!
   difference_usd?: number;
+  // TODO: do not use snake_case!
   notes?: string;
   date?: string;
+  // TODO: do not use snake_case!
   updated_at: string;
 };
 
 export type PaymentBalanceRow = {
   id: string;
   date: string;
-  operation_type?: 'equilibrio' | 'avance' | null;
+  operation_type?: PaymentBalanceOperationType | null;
   from_method: PaymentMethod;
   to_method: PaymentMethod;
   amount: number;
+  // TODO: do not use snake_case!
   amount_bs?: number | null;
+  // TODO: do not use snake_case!
   amount_usd?: number | null;
+  // TODO: do not use snake_case!
   amount_out_bs?: number | null;
+  // TODO: do not use snake_case!
   amount_out_usd?: number | null;
+  // TODO: do not use snake_case!
   amount_in_bs?: number | null;
+  // TODO: do not use snake_case!
   amount_in_usd?: number | null;
+  // TODO: do not use snake_case!
   difference_bs?: number | null;
+  // TODO: do not use snake_case!
   difference_usd?: number | null;
+  // TODO: do not use snake_case!
   notes?: string | null;
+  // TODO: do not use snake_case!
   created_at?: string | null;
+  // TODO: do not use snake_case!
   updated_at?: string | null;
 };
 
@@ -72,14 +105,11 @@ export interface PaymentBalanceState {
   paymentBalanceTransactions: PaymentBalanceTransaction[];
 
   addPaymentBalanceTransaction: (
-    transaction: Omit<
-      PaymentBalanceTransaction,
-      'id' | 'createdAt' | 'updatedAt'
-    >
+    transaction: PaymentBalanceTransactionDraft
   ) => Promise<void>;
   updatePaymentBalanceTransaction: (
     id: string,
-    updates: Partial<PaymentBalanceTransaction>
+    updates: PaymentBalanceTransactionUpdate
   ) => Promise<void>;
   deletePaymentBalanceTransaction: (id: string) => Promise<void>;
   getPaymentBalanceSummary: (date: string) => PaymentBalanceSummary[];

@@ -1,5 +1,9 @@
 import { supabase } from '@/lib/supabaseClient';
-import { Expense } from '@/types';
+import type {
+  Expense,
+  ExpenseCategory,
+  PaymentMethod,
+} from '@aqua-guest/domain';
 import { getSafeTimestamp, normalizeTimestamp } from '@/lib/date-utils';
 import { expensePaymentSplitAdapter } from '@/services/payments/paymentSplitSupabaseAdapters';
 import type { PaymentSplitRow } from '@/services/payments/paymentSplitSchemaContract';
@@ -9,8 +13,9 @@ type ExpenseDbRow = {
   date: string;
   description: string;
   amount: number | string;
-  category: Expense['category'];
-  payment_method?: Expense['paymentMethod'];
+  category: ExpenseCategory;
+  // TODO: do not use snake_case!
+  payment_method?: PaymentMethod;
   notes?: string;
   created_at?: string;
   createdAt?: string;
@@ -19,8 +24,7 @@ type ExpenseDbRow = {
 };
 
 const mapExpenseRow = (row: ExpenseDbRow): Expense => {
-  const rawSplits =
-    row.expense_payment_splits ?? row.payment_splits ?? [];
+  const rawSplits = row.expense_payment_splits ?? row.payment_splits ?? [];
 
   return {
     id: row.id,

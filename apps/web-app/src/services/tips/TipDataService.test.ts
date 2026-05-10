@@ -3,20 +3,20 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TipsDataService } from './TipDataService';
 
 const {
-  rpcMock,
   tipsDeleteMock,
   tipsDeleteEqOriginTypeMock,
   tipsDeleteEqOriginIdMock,
+  tipsUpdateStatusEqMock,
   tipsSingleMock,
   tipsSelectMock,
   tipsUpsertMock,
   tipsUpdateMock,
   tipsEqMock,
 } = vi.hoisted(() => ({
-  rpcMock: vi.fn(),
   tipsDeleteMock: vi.fn(),
   tipsDeleteEqOriginTypeMock: vi.fn(),
   tipsDeleteEqOriginIdMock: vi.fn(),
+  tipsUpdateStatusEqMock: vi.fn(),
   tipsSingleMock: vi.fn(),
   tipsSelectMock: vi.fn(),
   tipsUpsertMock: vi.fn(),
@@ -39,7 +39,6 @@ vi.mock('@/lib/supabaseClient', () => {
 
   const client = {
     from,
-    rpc: rpcMock,
   };
 
   return {
@@ -50,12 +49,12 @@ vi.mock('@/lib/supabaseClient', () => {
 
 describe('TipsDataService', () => {
   beforeEach(() => {
-    rpcMock.mockReset();
     tipsSingleMock.mockReset();
     tipsSelectMock.mockReset();
     tipsUpsertMock.mockReset();
     tipsUpdateMock.mockReset();
     tipsEqMock.mockReset();
+    tipsUpdateStatusEqMock.mockReset();
     tipsDeleteMock.mockReset();
     tipsDeleteEqOriginTypeMock.mockReset();
     tipsDeleteEqOriginIdMock.mockReset();
@@ -63,6 +62,10 @@ describe('TipsDataService', () => {
     tipsSelectMock.mockImplementation(() => ({ single: tipsSingleMock }));
     tipsUpsertMock.mockImplementation(() => ({ select: tipsSelectMock }));
     tipsEqMock.mockImplementation(() => ({
+      eq: tipsUpdateStatusEqMock,
+      select: tipsSelectMock,
+    }));
+    tipsUpdateStatusEqMock.mockImplementation(() => ({
       select: tipsSelectMock,
     }));
     tipsUpdateMock.mockImplementation(() => ({
@@ -94,20 +97,16 @@ describe('TipsDataService', () => {
   it('deduplicates concurrent daily payout requests by idempotency key', async () => {
     const service = new TipsDataService();
 
-    rpcMock.mockImplementation(
-      async (_fn: string, payload: Record<string, string>) => {
-        await Promise.resolve();
-        return {
-          data: {
-            paid_count: 2,
-            total_amount_bs: 80,
-            tip_date: payload.p_tip_date,
-            payment_method: payload.p_payment_method,
-          },
-          error: null,
-        };
-      }
-    );
+    tipsSelectMock.mockImplementation(async () => {
+      await Promise.resolve();
+      return {
+        data: [
+          { amount_bs: 50 },
+          { amount_bs: 30 },
+        ],
+        error: null,
+      };
+    });
 
     const request = {
       tipDate: '2026-03-13',
@@ -120,7 +119,9 @@ describe('TipsDataService', () => {
       service.payTipsForDay(request),
     ]);
 
-    expect(rpcMock).toHaveBeenCalledTimes(1);
+    expect(tipsUpdateMock).toHaveBeenCalledTimes(1);
+    expect(tipsEqMock).toHaveBeenCalledTimes(1);
+    expect(tipsUpdateStatusEqMock).toHaveBeenCalledTimes(1);
     expect(resultA).toEqual(resultB);
     expect(resultA.paidCount).toBe(2);
     expect(resultA.totalAmountBs).toBe(80);

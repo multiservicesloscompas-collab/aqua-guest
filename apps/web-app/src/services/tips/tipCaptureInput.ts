@@ -1,4 +1,4 @@
-import type { PaymentMethod } from '@/types';
+import type { PaymentMethod } from '@aqua-guest/domain';
 import type { TipCaptureInput } from '@/types/tips';
 
 interface TipInputBuildParams {

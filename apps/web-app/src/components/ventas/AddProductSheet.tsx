@@ -13,7 +13,7 @@ import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import { useWaterSalesStore } from '@/store/useWaterSalesStore';
 import { useConfigStore } from '@/store/useConfigStore';
-import { Product } from '@/types';
+import type { ProductWithIcon } from '@/types';
 import { Plus, Minus, Droplet, X } from 'lucide-react';
 
 import { toast } from 'sonner';
@@ -26,7 +26,7 @@ interface AddProductSheetProps {
 const DEFAULT_DISPLAY_LITERS = 19;
 
 function useProductDisplayPrice(
-  products: Product[],
+  products: ProductWithIcon[],
   getPriceForLiters: (liters: number) => number
 ): Map<string, number> {
   const priceMap = new Map<string, number>();
@@ -45,14 +45,14 @@ function useProductDisplayPrice(
 export function AddProductSheet({ open, onOpenChange }: AddProductSheetProps) {
   const { addToCart } = useWaterSalesStore();
   const { products, getPriceForLiters, config } = useConfigStore();
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [selectedProduct, setSelectedProduct] =
+    useState<ProductWithIcon | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [liters, setLiters] = useState(DEFAULT_DISPLAY_LITERS);
   const [unitPrice, setUnitPrice] = useState(0);
 
   const displayPrices = useProductDisplayPrice(products, getPriceForLiters);
 
-  // Actualizar precio cuando cambian los litros para productos que lo requieren
   useEffect(() => {
     if (selectedProduct) {
       if (selectedProduct.requiresLiters) {

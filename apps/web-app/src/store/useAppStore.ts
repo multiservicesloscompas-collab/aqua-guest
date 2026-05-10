@@ -1,9 +1,9 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import type { ExchangeRateHistory } from '@aqua-guest/domain';
 import supabase from '@/lib/supabaseClient';
 import { defaultProducts } from '@/data/products';
 import { getVenezuelaDate } from '@/services/DateService';
-import { ExchangeRateHistory } from '@/types';
 import {
   mapExchangeRateHistory,
   mapLiterPricing,

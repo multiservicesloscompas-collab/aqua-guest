@@ -1,6 +1,12 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { PrepaidOrder, PrepaidStatus } from '@/types';
+import type {
+  PaymentMethod,
+  PrepaidOrder,
+  PrepaidOrderDraft,
+  PrepaidOrderUpdate,
+  PrepaidStatus,
+} from '@aqua-guest/domain';
 import supabase from '@/lib/supabaseClient';
 import { getVenezuelaDate } from '@/services/DateService';
 import {
@@ -12,18 +18,14 @@ import {
 interface PrepaidState {
   prepaidOrders: PrepaidOrder[];
 
-  // Acciones de prepagados
-  addPrepaidOrder: (
-    order: Omit<PrepaidOrder, 'id' | 'createdAt' | 'updatedAt'>
-  ) => Promise<PrepaidOrder>;
+  addPrepaidOrder: (order: PrepaidOrderDraft) => Promise<PrepaidOrder>;
   updatePrepaidOrder: (
     id: string,
-    updates: Partial<PrepaidOrder>
+    updates: Partial<PrepaidOrderUpdate>
   ) => Promise<void>;
   deletePrepaidOrder: (id: string) => Promise<void>;
   markPrepaidAsDelivered: (id: string) => Promise<void>;
 
-  // Inicialización
   setPrepaidOrders: (orders: PrepaidOrder[]) => void;
 }
 
@@ -34,8 +36,8 @@ type PrepaidOrderUpdatePayload = {
   amount_bs?: number;
   amount_usd?: number;
   exchange_rate?: number;
-  payment_method?: PrepaidOrder['paymentMethod'];
-  status?: PrepaidOrder['status'];
+  payment_method?: PaymentMethod;
+  status?: PrepaidStatus;
   date_paid?: string;
   date_delivered?: string;
   notes?: string;

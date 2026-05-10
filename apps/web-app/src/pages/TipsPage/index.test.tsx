@@ -2,7 +2,10 @@
 
 import { describe, expect, it, beforeEach, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import type { Sale, WasherRental } from '@/types';
+import type {
+  SaleLabelReference,
+  WasherRentalLabelReference,
+} from '@aqua-guest/domain';
 import type { Tip } from '@/types/tips';
 
 import { TipsPage } from './index';
@@ -20,12 +23,12 @@ const tipStoreState = vi.hoisted(() => ({
 }));
 
 const waterSalesState = vi.hoisted(() => ({
-  sales: [] as Array<Pick<Sale, 'id' | 'dailyNumber'>>,
+  sales: [] as Array<{ id: string } & SaleLabelReference>,
   loadSalesByDate: vi.fn().mockResolvedValue(undefined),
 }));
 
 const rentalState = vi.hoisted(() => ({
-  rentals: [] as Array<Pick<WasherRental, 'id' | 'customerName'>>,
+  rentals: [] as Array<{ id: string } & WasherRentalLabelReference>,
   loadRentalsByDate: vi.fn().mockResolvedValue(undefined),
 }));
 

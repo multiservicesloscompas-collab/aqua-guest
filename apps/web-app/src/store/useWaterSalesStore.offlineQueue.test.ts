@@ -134,13 +134,13 @@ describe('useWaterSalesStore offline queueing', () => {
     expect(queue.map((q) => q.type)).toEqual(['UPDATE', 'DELETE', 'INSERT']);
   });
 
-  it('queues edited tip upsert preserving explicit totals and mixed splits payload', async () => {
+  it('queues edited tip upsert with recomputed final totals and merged mixed splits payload', async () => {
     await useWaterSalesStore.getState().updateSale(
       'sale-1',
       {
         paymentMethod: 'pago_movil',
-        totalBs: 140,
-        totalUsd: 2.8,
+        totalBs: 100,
+        totalUsd: 2,
         paymentSplits: [
           {
             method: 'pago_movil',
@@ -150,8 +150,8 @@ describe('useWaterSalesStore offline queueing', () => {
           },
           {
             method: 'efectivo',
-            amountBs: 60,
-            amountUsd: 1.2,
+            amountBs: 20,
+            amountUsd: 0.4,
             exchangeRateUsed: 50,
           },
         ],
@@ -179,7 +179,10 @@ describe('useWaterSalesStore offline queueing', () => {
     });
     expect(
       (queue[2].payload as { splits: Array<{ amount_bs: number }> }).splits
-    ).toHaveLength(2);
+    ).toEqual([
+      expect.objectContaining({ amount_bs: 80, payment_method: 'pago_movil' }),
+      expect.objectContaining({ amount_bs: 60, payment_method: 'efectivo' }),
+    ]);
     expect(queue[3].payload).toMatchObject({
       origin_type: 'sale',
       origin_id: 'sale-1',

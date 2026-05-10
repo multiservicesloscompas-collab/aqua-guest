@@ -1,12 +1,15 @@
 import type {
+  CartItem,
   ExchangeRateHistory,
-  PaymentBalanceTransaction,
+  PaymentBalanceOperationType,
   PaymentMethod,
+  PaymentBalanceTransaction,
   PrepaidOrder,
+  PrepaidStatus,
   Product,
   Sale,
-  Tip,
-} from '@/types';
+} from '@aqua-guest/domain';
+import type { ProductWithIcon, Tip } from '@/types';
 
 type ProductRow = {
   id: string;
@@ -33,7 +36,7 @@ type PrepaidOrderRow = {
   exchangeRate?: number | string | null;
   payment_method?: PaymentMethod;
   paymentMethod?: PaymentMethod;
-  status: 'pendiente' | 'entregado';
+  status: PrepaidStatus;
   date_paid?: string | null;
   datePaid?: string | null;
   date_delivered?: string | null;
@@ -53,7 +56,8 @@ type LiterPricingRow = {
 type PaymentBalanceTransactionRow = {
   id: string;
   date: string;
-  operation_type?: 'equilibrio' | 'avance' | null;
+  // TODO: do not use snake_case!
+  operation_type?: PaymentBalanceOperationType | null;
   from_method: PaymentMethod;
   to_method: PaymentMethod;
   amount: number | string;
@@ -81,7 +85,7 @@ type SaleRow = {
   id: string;
   daily_number: number;
   date: string;
-  items: Sale['items'];
+  items: CartItem[];
   payment_method: PaymentMethod;
   total_bs: number | string;
   total_usd: number | string;
@@ -116,16 +120,22 @@ type ExchangeRateRow = {
   updatedAt?: string | null;
 };
 
-export const mapProducts = (rows: ProductRow[]): Product[] =>
-  rows.map((product) => ({
-    id: product.id,
-    name: product.name,
-    defaultPrice: Number(product.default_price),
-    requiresLiters: product.requires_liters,
-    minLiters: product.minLiters ?? undefined,
-    maxLiters: product.max_liters ?? undefined,
-    icon: product.icon ?? undefined,
-  }));
+export const mapProducts = (rows: ProductRow[]): ProductWithIcon[] =>
+  rows.map((product) => {
+    const baseProduct: Product = {
+      id: product.id,
+      name: product.name,
+      defaultPrice: Number(product.default_price),
+      requiresLiters: product.requires_liters,
+      minLiters: product.minLiters ?? undefined,
+      maxLiters: product.max_liters ?? undefined,
+    };
+
+    return {
+      ...baseProduct,
+      icon: product.icon ?? undefined,
+    };
+  });
 
 export const mapPrepaidOrders = (rows: PrepaidOrderRow[]): PrepaidOrder[] =>
   rows.map((order) => ({

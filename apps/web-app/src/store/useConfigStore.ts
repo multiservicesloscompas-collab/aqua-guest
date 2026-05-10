@@ -1,11 +1,10 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import type { ExchangeRateHistory, LiterPricing } from '@aqua-guest/domain';
 import {
   AppConfig,
-  Product,
-  LiterPricing,
-  ExchangeRateHistory,
   DEFAULT_LITER_BREAKPOINTS,
+  ProductWithIcon,
 } from '@/types';
 import {
   createDefaultMixedPaymentFlags,
@@ -26,7 +25,7 @@ import {
 
 interface ConfigState {
   config: AppConfig;
-  products: Product[];
+  products: ProductWithIcon[];
   mixedPaymentFlags: MixedPaymentFeatureFlags;
 
   setExchangeRate: (rate: number) => Promise<void>;
@@ -38,7 +37,7 @@ interface ConfigState {
 
   setConfigData: (
     configUpdates: Partial<AppConfig>,
-    products: Product[]
+    products: ProductWithIcon[]
   ) => void;
 }
 

@@ -1,5 +1,10 @@
 import { supabase } from '@/lib/supabaseClient';
-import { WasherRental } from '@/types';
+import type {
+  PaymentMethod,
+  RentalShift,
+  RentalStatus,
+  WasherRental,
+} from '@aqua-guest/domain';
 import { getSafeTimestamp, normalizeTimestamp } from '@/lib/date-utils';
 import {
   PAYMENT_SPLIT_SCHEMA,
@@ -15,14 +20,14 @@ interface RentalDataRow {
   customer_phone?: string;
   customer_address?: string;
   machine_id: string;
-  shift: WasherRental['shift'];
+  shift: RentalShift;
   delivery_time?: string;
   pickup_time?: string;
   pickup_date: string;
   delivery_fee: number;
   total_usd: number;
-  payment_method?: WasherRental['paymentMethod'];
-  status: WasherRental['status'];
+  payment_method?: PaymentMethod;
+  status: RentalStatus;
   is_paid: boolean;
   date_paid?: string | null;
   notes?: string;

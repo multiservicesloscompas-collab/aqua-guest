@@ -1,4 +1,8 @@
-import type { Sale, TipPayout } from '@/types';
+import type {
+  SaleReference,
+  TipOriginReference,
+  WasherRentalReference,
+} from '@aqua-guest/domain';
 
 const SHORT_ID_LENGTH = 8;
 
@@ -9,22 +13,20 @@ export function toShortEntityId(id: string): string {
   return id.slice(0, SHORT_ID_LENGTH);
 }
 
-export function buildSaleReference(
-  sale: Pick<Sale, 'id' | 'dailyNumber'>
-): string {
+export function buildSaleReference(sale: SaleReference): string {
   if (Number.isFinite(sale.dailyNumber) && sale.dailyNumber > 0) {
     return `Venta #${sale.dailyNumber}`;
   }
   return `Venta #${toShortEntityId(sale.id)}`;
 }
 
-export function buildRentalReference(rentalId: string): string {
-  return `Alquiler #${toShortEntityId(rentalId)}`;
+export function buildRentalReference(rental: WasherRentalReference): string {
+  return `Alquiler #${toShortEntityId(rental.id)}`;
 }
 
 export function buildTipPayoutReference(
-  payout: Pick<TipPayout, 'originType' | 'originId'>,
-  salesById: ReadonlyMap<string, Pick<Sale, 'id' | 'dailyNumber'>>
+  payout: TipOriginReference,
+  salesById: ReadonlyMap<string, SaleReference>
 ): string {
   if (payout.originType === 'sale') {
     const sale = salesById.get(payout.originId);

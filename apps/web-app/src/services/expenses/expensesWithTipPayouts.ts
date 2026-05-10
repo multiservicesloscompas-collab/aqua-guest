@@ -1,4 +1,4 @@
-import type { Expense } from '@/types';
+import type { Expense } from '@aqua-guest/domain';
 import type { TipPayout } from '@/types/tips';
 import { normalizeToVenezuelaDate } from '@/services/DateService';
 

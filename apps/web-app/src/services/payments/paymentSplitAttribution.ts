@@ -1,18 +1,12 @@
-import type { PaymentMethod, Sale, WasherRental, Expense } from '@/types';
+import type {
+  Expense,
+  PaymentMethod,
+  Sale,
+  SplitAware,
+  WasherRental,
+} from '@aqua-guest/domain';
 import type { PaymentSplit } from '@/types/paymentSplits';
 import { hasValidMixedPaymentSplits } from '@/services/payments/paymentSplitValidity';
-
-interface SplitAwareSale extends Sale {
-  paymentSplits?: PaymentSplit[];
-}
-
-interface SplitAwareRental extends WasherRental {
-  paymentSplits?: PaymentSplit[];
-}
-
-interface SplitAwareExpense extends Expense {
-  paymentSplits?: PaymentSplit[];
-}
 
 function findSplitByMethod(
   splits: readonly PaymentSplit[] | undefined,
@@ -22,7 +16,7 @@ function findSplitByMethod(
 }
 
 export function includesMethodInSale(
-  sale: SplitAwareSale,
+  sale: SplitAware<Sale>,
   method: PaymentMethod
 ): boolean {
   if (hasValidMixedPaymentSplits(sale.paymentSplits)) {
@@ -32,7 +26,7 @@ export function includesMethodInSale(
 }
 
 export function getSaleAmountForMethodBs(
-  sale: SplitAwareSale,
+  sale: SplitAware<Sale>,
   method: PaymentMethod
 ): number {
   if (hasValidMixedPaymentSplits(sale.paymentSplits)) {
@@ -43,7 +37,7 @@ export function getSaleAmountForMethodBs(
 }
 
 export function getSaleAmountForMethodUsd(
-  sale: SplitAwareSale,
+  sale: SplitAware<Sale>,
   method: PaymentMethod,
   exchangeRate: number
 ): number {
@@ -59,7 +53,7 @@ export function getSaleAmountForMethodUsd(
 }
 
 export function includesMethodInRental(
-  rental: SplitAwareRental,
+  rental: SplitAware<WasherRental>,
   method: PaymentMethod
 ): boolean {
   if (hasValidMixedPaymentSplits(rental.paymentSplits)) {
@@ -69,7 +63,7 @@ export function includesMethodInRental(
 }
 
 export function getRentalAmountForMethodBs(
-  rental: SplitAwareRental,
+  rental: SplitAware<WasherRental>,
   method: PaymentMethod,
   exchangeRate: number
 ): number {
@@ -83,7 +77,7 @@ export function getRentalAmountForMethodBs(
 }
 
 export function getRentalAmountForMethodUsd(
-  rental: SplitAwareRental,
+  rental: SplitAware<WasherRental>,
   method: PaymentMethod,
   exchangeRate: number
 ): number {
@@ -99,7 +93,7 @@ export function getRentalAmountForMethodUsd(
 }
 
 export function includesMethodInExpense(
-  expense: SplitAwareExpense,
+  expense: SplitAware<Expense>,
   method: PaymentMethod
 ): boolean {
   if (hasValidMixedPaymentSplits(expense.paymentSplits)) {
@@ -109,7 +103,7 @@ export function includesMethodInExpense(
 }
 
 export function getExpenseAmountForMethodBs(
-  expense: SplitAwareExpense,
+  expense: SplitAware<Expense>,
   method: PaymentMethod
 ): number {
   if (hasValidMixedPaymentSplits(expense.paymentSplits)) {
