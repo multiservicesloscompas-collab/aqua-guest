@@ -32,7 +32,3 @@ export function getSafeTimestampForSorting(timestamp: string): number {
   const date = new Date(timestamp);
   return isNaN(date.getTime()) ? 0 : date.getTime();
 }
-
-export function compareTimestamps(a: string, b: string): number {
-  return getSafeTimestampForSorting(b) - getSafeTimestampForSorting(a);
-}

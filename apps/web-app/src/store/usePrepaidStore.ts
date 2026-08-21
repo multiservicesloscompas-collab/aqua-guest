@@ -1,13 +1,12 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type {
-  PaymentMethod,
   PrepaidOrder,
   PrepaidOrderDraft,
   PrepaidOrderUpdate,
   PrepaidStatus,
 } from '@aqua-guest/domain';
-import supabase from '@/lib/supabaseClient';
+import { appRepositories } from '@/lib/app-repositories';
 import { getVenezuelaDate } from '@/services/DateService';
 import {
   enqueueOfflinePrepaidCreate,
@@ -28,25 +27,9 @@ interface PrepaidState {
 
   setPrepaidOrders: (orders: PrepaidOrder[]) => void;
 }
-
-type PrepaidOrderUpdatePayload = {
-  customer_name?: string;
-  customer_phone?: string;
-  liters?: number;
-  amount_bs?: number;
-  amount_usd?: number;
-  exchange_rate?: number;
-  payment_method?: PaymentMethod;
-  status?: PrepaidStatus;
-  date_paid?: string;
-  date_delivered?: string;
-  notes?: string;
-  updated_at?: string;
-};
-
 export const usePrepaidStore = create<PrepaidState>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       prepaidOrders: [],
 
       setPrepaidOrders: (orders) => set({ prepaidOrders: orders }),
@@ -82,30 +65,7 @@ export const usePrepaidStore = create<PrepaidState>()(
             return offlineOrder;
           }
 
-          const { data, error } = await supabase
-            .from('prepaid_orders')
-            .insert(payload)
-            .select('*')
-            .single();
-
-          if (error) throw error;
-
-          const newPrepaid: PrepaidOrder = {
-            id: data.id,
-            customerName: data.customer_name ?? data.customerName,
-            customerPhone: data.customer_phone ?? data.customerPhone,
-            liters: Number(data.liters),
-            amountBs: Number(data.amount_bs ?? data.amountBs ?? 0),
-            amountUsd: Number(data.amount_usd ?? data.amountUsd ?? 0),
-            exchangeRate: Number(data.exchange_rate ?? data.exchangeRate ?? 0),
-            paymentMethod: data.payment_method ?? data.paymentMethod,
-            status: data.status,
-            datePaid: data.date_paid ?? data.datePaid,
-            dateDelivered: data.date_delivered ?? data.dateDelivered,
-            notes: data.notes,
-            createdAt: data.created_at ?? data.createdAt,
-            updatedAt: data.updated_at ?? data.updatedAt,
-          };
+          const newPrepaid = await appRepositories.prepaidOrdersRepository.create(order);
 
           set((state) => ({
             prepaidOrders: [...state.prepaidOrders, newPrepaid],
@@ -120,30 +80,42 @@ export const usePrepaidStore = create<PrepaidState>()(
       updatePrepaidOrder: async (id, updates) => {
         try {
           const updatedAt = new Date().toISOString();
-          const payload: PrepaidOrderUpdatePayload = {};
-          if (updates.customerName !== undefined)
-            payload.customer_name = updates.customerName;
-          if (updates.customerPhone !== undefined)
-            payload.customer_phone = updates.customerPhone;
-          if (updates.liters !== undefined) payload.liters = updates.liters;
-          if (updates.amountBs !== undefined)
-            payload.amount_bs = updates.amountBs;
-          if (updates.amountUsd !== undefined)
-            payload.amount_usd = updates.amountUsd;
-          if (updates.exchangeRate !== undefined)
-            payload.exchange_rate = updates.exchangeRate;
-          if (updates.paymentMethod !== undefined)
-            payload.payment_method = updates.paymentMethod;
-          if (updates.status !== undefined) payload.status = updates.status;
-          if (updates.datePaid !== undefined)
-            payload.date_paid = updates.datePaid;
-          if (updates.dateDelivered !== undefined)
-            payload.date_delivered = updates.dateDelivered;
-          if (updates.notes !== undefined) payload.notes = updates.notes;
-          payload.updated_at = updatedAt;
+          const repositoryUpdates = { ...updates, updatedAt };
 
           if (!window.navigator.onLine) {
-            enqueueOfflinePrepaidUpdate({ id, payload });
+            enqueueOfflinePrepaidUpdate({
+              id,
+              payload: {
+                ...(updates.customerName !== undefined
+                  ? { customer_name: updates.customerName }
+                  : {}),
+                ...(updates.customerPhone !== undefined
+                  ? { customer_phone: updates.customerPhone }
+                  : {}),
+                ...(updates.liters !== undefined ? { liters: updates.liters } : {}),
+                ...(updates.amountBs !== undefined
+                  ? { amount_bs: updates.amountBs }
+                  : {}),
+                ...(updates.amountUsd !== undefined
+                  ? { amount_usd: updates.amountUsd }
+                  : {}),
+                ...(updates.exchangeRate !== undefined
+                  ? { exchange_rate: updates.exchangeRate }
+                  : {}),
+                ...(updates.paymentMethod !== undefined
+                  ? { payment_method: updates.paymentMethod }
+                  : {}),
+                ...(updates.status !== undefined ? { status: updates.status } : {}),
+                ...(updates.datePaid !== undefined
+                  ? { date_paid: updates.datePaid }
+                  : {}),
+                ...(updates.dateDelivered !== undefined
+                  ? { date_delivered: updates.dateDelivered }
+                  : {}),
+                ...(updates.notes !== undefined ? { notes: updates.notes } : {}),
+                updated_at: updatedAt,
+              },
+            });
 
             set((state) => ({
               prepaidOrders: state.prepaidOrders.map((order) =>
@@ -153,12 +125,7 @@ export const usePrepaidStore = create<PrepaidState>()(
             return;
           }
 
-          const { error } = await supabase
-            .from('prepaid_orders')
-            .update(payload)
-            .eq('id', id);
-
-          if (error) throw error;
+          await appRepositories.prepaidOrdersRepository.update(id, repositoryUpdates);
 
           set((state) => ({
             prepaidOrders: state.prepaidOrders.map((order) =>
@@ -184,12 +151,7 @@ export const usePrepaidStore = create<PrepaidState>()(
             return;
           }
 
-          const { error } = await supabase
-            .from('prepaid_orders')
-            .delete()
-            .eq('id', id);
-
-          if (error) throw error;
+          await appRepositories.prepaidOrdersRepository.delete(id);
 
           set((state) => ({
             prepaidOrders: state.prepaidOrders.filter(
@@ -232,16 +194,11 @@ export const usePrepaidStore = create<PrepaidState>()(
             return;
           }
 
-          const { error } = await supabase
-            .from('prepaid_orders')
-            .update({
-              status: 'entregado',
-              date_delivered: dateDelivered,
-              updated_at: updatedAt,
-            })
-            .eq('id', id);
-
-          if (error) throw error;
+          await appRepositories.prepaidOrdersRepository.update(id, {
+            status: 'entregado',
+            dateDelivered,
+            updatedAt,
+          });
 
           set((state) => ({
             prepaidOrders: state.prepaidOrders.map((order) =>

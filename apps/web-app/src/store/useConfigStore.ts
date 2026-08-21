@@ -1,6 +1,10 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { ExchangeRateHistory, LiterPricing } from '@aqua-guest/domain';
+import type {
+  MixedPaymentFeatureFlags,
+  PaymentSplitModule,
+} from '@aqua-guest/domain';
 import {
   AppConfig,
   DEFAULT_LITER_BREAKPOINTS,
@@ -10,11 +14,7 @@ import {
   createDefaultMixedPaymentFlags,
   isMixedPaymentEnabledForModule,
 } from '@/services/payments/paymentSplitFeatureFlag';
-import type {
-  MixedPaymentFeatureFlags,
-  PaymentSplitModule,
-} from '@/types/paymentSplits';
-import supabase from '@/lib/supabaseClient';
+import { appRepositories } from '@/lib/app-repositories';
 import { defaultProducts } from '@/data/products';
 import { getVenezuelaDate } from '@/services/DateService';
 import {
@@ -40,12 +40,6 @@ interface ConfigState {
     products: ProductWithIcon[]
   ) => void;
 }
-
-type LiterPricingRow = {
-  id: string;
-  breakpoint: number | string;
-  price: number | string;
-};
 
 export const useConfigStore = create<ConfigState>()(
   persist(
@@ -98,16 +92,11 @@ export const useConfigStore = create<ConfigState>()(
         }
 
         try {
-          const { error } = await supabase.from('exchange_rates').upsert(
-            {
-              date: today,
-              rate,
-              updated_at: new Date().toISOString(),
-            },
-            { onConflict: 'date' }
-          );
-
-          if (error) throw error;
+          await appRepositories.exchangeRatesRepository.upsert({
+            date: today,
+            rate,
+            updatedAt: newHistoryEntry.updatedAt,
+          });
         } catch (err) {
           console.error('Failed to save exchange rate to Supabase', err);
           throw err;
@@ -148,39 +137,7 @@ export const useConfigStore = create<ConfigState>()(
         }
 
         try {
-          const { data: existingPricing, error: fetchError } = await supabase
-            .from('liter_pricing')
-            .select('id, breakpoint, price');
-          if (fetchError) throw fetchError;
-
-          const payload = pricing.map((p) => {
-            const existing = existingPricing?.find(
-              (ep: LiterPricingRow) =>
-                Number(ep.breakpoint) === Number(p.breakpoint)
-            );
-            return {
-              ...(existing ? { id: existing.id } : {}),
-              breakpoint: p.breakpoint,
-              price: p.price,
-            };
-          });
-
-          const updates = payload.filter((p) => 'id' in p);
-          const inserts = payload.filter((p) => !('id' in p));
-
-          if (updates.length > 0) {
-            const { error: updateError } = await supabase
-              .from('liter_pricing')
-              .upsert(updates);
-            if (updateError) throw updateError;
-          }
-
-          if (inserts.length > 0) {
-            const { error: insertError } = await supabase
-              .from('liter_pricing')
-              .insert(inserts);
-            if (insertError) throw insertError;
-          }
+          await appRepositories.literPricingRepository.replace(pricing);
         } catch (err) {
           console.error('Failed to persist liter pricing to Supabase', err);
           throw err;

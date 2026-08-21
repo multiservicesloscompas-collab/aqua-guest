@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
+import type { PaymentSplit } from '@aqua-guest/domain';
 import { useConfigStore } from '@/store/useConfigStore';
 import { useTipStore } from '@/store/useTipStore';
 import { useWaterSalesStore } from '@/store/useWaterSalesStore';
 import { PaymentMethod, Sale } from '@/types';
-import type { PaymentSplit } from '@/types/paymentSplits';
 import { normalizeAndValidatePaymentSplits } from '@/services/payments/paymentSplitValidation';
 import { buildDualPaymentSplits } from '@/services/payments/paymentSplitWritePath';
 import { resolveSplitFormHydrationState } from '@/services/payments/paymentSplitFormHydration';
@@ -100,6 +100,19 @@ export function useEditSaleSheetViewModel({
       setTipPaymentMethod(tipHydration.paymentMethod);
       setTipNotes(tipHydration.notes);
       setSubtotalBs(Math.max(0, sale.totalBs - hydratedTipAmountBs).toString());
+
+      const splitState = resolveSplitFormHydrationState({
+        paymentMethod: sale.paymentMethod,
+        paymentSplits: sale.paymentSplits,
+        totalBs: sale.totalBs,
+        tipAmountBs: hydratedTipAmountBs,
+        tipPaymentMethod: tipHydration.paymentMethod,
+      });
+
+      setIsMixedPayment(splitState.isMixedPayment);
+      setPaymentMethod(splitState.paymentMethod);
+      setSplit1Amount(splitState.split1Amount);
+      setSplit2Method(splitState.split2Method);
     };
 
     const cachedTip = tips.find(
