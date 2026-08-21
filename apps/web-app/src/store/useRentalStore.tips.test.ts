@@ -49,11 +49,6 @@ vi.mock('@/services/payments/paymentSplitWritePath', () => ({
   })),
 }));
 
-vi.mock('./useRentalStore.supabase', () => ({
-  replaceRentalSplits: vi.fn(),
-  fetchRentalSplits: vi.fn(async () => []),
-}));
-
 describe('useRentalStore tip integration', () => {
   beforeEach(() => {
     addRentalActionMock.mockReset();

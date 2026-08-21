@@ -1,101 +1,41 @@
-import { supabase } from '@/lib/supabaseClient';
 import type {
-  Tip,
   TipDailyPayoutRequest,
-  TipPayout,
   TipPayoutSummary,
   TipSinglePayoutRequest,
   TipUpsertInput,
-} from '@/types/tips';
-import {
-  TIP_SCHEMA_CONTRACT,
-  type TipRow,
-} from './tipSchemaContract';
-import {
-  toTipDomain,
-  toTipUpsertRow,
-} from './tipSupabaseAdapters';
+  TipsRepository,
+} from '@aqua-guest/product-domain/frontend';
+import type { Tip } from '@aqua-guest/domain';
+import { appRepositories } from '@/lib/app-repositories';
+import type { TipPayout } from '@/types/tips';
 
 type InFlightPayout = Promise<TipPayoutSummary>;
-type TipAmountRow = Pick<TipRow, 'amount_bs'>;
-type PaidTipRow = Pick<TipRow, 'tip_date' | 'amount_bs'>;
 
 export class TipsDataService {
+  private readonly tipsRepository: TipsRepository;
   private readonly inFlightDailyPayouts = new Map<string, InFlightPayout>();
+
+  constructor(
+    tipsRepository: TipsRepository = appRepositories.tipsRepository
+  ) {
+    this.tipsRepository = tipsRepository;
+  }
 
   async upsertTipForOrigin(input: TipUpsertInput): Promise<Tip> {
     this.ensureOriginLink(input.originType, input.originId);
-
-    const row = toTipUpsertRow(input);
-    const { data, error } = await supabase
-      .from(TIP_SCHEMA_CONTRACT.tables.tips)
-      .upsert(row, {
-        onConflict: `${TIP_SCHEMA_CONTRACT.columns.originType},${TIP_SCHEMA_CONTRACT.columns.originId}`,
-      })
-      .select('*')
-      .single();
-
-    if (error) {
-      throw error;
-    }
-
-    return toTipDomain(data as TipRow);
+    return this.tipsRepository.upsertByOrigin(input);
   }
 
   async payTipsForDay(input: TipDailyPayoutRequest): Promise<TipPayoutSummary> {
     this.ensureIdempotencyKey(input.idempotencyKey);
-    const { tipDate, paymentMethod, paidAt } = input;
-
-    // Frontend Validation
-    if (paidAt && tipDate) {
-      const pDate = new Date(paidAt.split('T')[0]);
-      const oDate = new Date(tipDate.split('T')[0]);
-      if (pDate < oDate) {
-        throw new Error(
-          `La fecha de pago no puede ser anterior a la fecha de las propinas (${tipDate})`
-        );
-      }
-    }
+    this.ensurePaidAtAfterTipDate(input.tipDate, input.paidAt, 'propinas');
 
     const existing = this.inFlightDailyPayouts.get(input.idempotencyKey);
     if (existing) {
       return existing;
     }
 
-    const performPayout = async (): Promise<TipPayoutSummary> => {
-      const { data, error } = await supabase
-        .from(TIP_SCHEMA_CONTRACT.tables.tips)
-        .update({
-          [TIP_SCHEMA_CONTRACT.columns.status]: 'paid',
-          [TIP_SCHEMA_CONTRACT.columns.paidPaymentMethod]: paymentMethod,
-          [TIP_SCHEMA_CONTRACT.columns.paidAt]:
-            paidAt || new Date().toISOString(),
-          [TIP_SCHEMA_CONTRACT.columns.updatedAt]: new Date().toISOString(),
-        })
-        .eq(TIP_SCHEMA_CONTRACT.columns.tipDate, tipDate)
-        .eq(TIP_SCHEMA_CONTRACT.columns.status, 'pending')
-        .select(TIP_SCHEMA_CONTRACT.columns.amountBs);
-
-      if (error) {
-        throw error;
-      }
-
-      const updatedRows = (data ?? []) as TipAmountRow[];
-      const totalAmount = updatedRows.reduce(
-        (sum, tip) => sum + Number(tip.amount_bs),
-        0
-      );
-      const count = updatedRows.length;
-
-      return {
-        date: tipDate,
-        paymentMethod: paymentMethod,
-        paidCount: count,
-        totalAmountBs: totalAmount,
-      };
-    };
-
-    const request = performPayout();
+    const request = this.tipsRepository.payForDay(input);
     this.inFlightDailyPayouts.set(input.idempotencyKey, request);
 
     try {
@@ -107,126 +47,32 @@ export class TipsDataService {
 
   async paySingleTip(input: TipSinglePayoutRequest): Promise<TipPayoutSummary> {
     this.ensureIdempotencyKey(input.idempotencyKey);
-    const { tipId, paymentMethod, paidAt, tipDate } = input;
-
-    // Frontend Validation: Payment date cannot be before tip date
-    if (paidAt && tipDate) {
-      const pDate = new Date(paidAt.split('T')[0]);
-      const oDate = new Date(tipDate.split('T')[0]);
-      if (pDate < oDate) {
-        throw new Error(
-          `La fecha de pago no puede ser anterior a la fecha de la propina (${tipDate})`
-        );
-      }
-    }
-
-    const { data, error } = await supabase
-      .from(TIP_SCHEMA_CONTRACT.tables.tips)
-      .update({
-        [TIP_SCHEMA_CONTRACT.columns.status]: 'paid',
-        [TIP_SCHEMA_CONTRACT.columns.paidPaymentMethod]: paymentMethod,
-        [TIP_SCHEMA_CONTRACT.columns.paidAt]:
-          paidAt || new Date().toISOString(),
-        [TIP_SCHEMA_CONTRACT.columns.updatedAt]: new Date().toISOString(),
-      })
-      .eq(TIP_SCHEMA_CONTRACT.columns.id, tipId)
-      .eq(TIP_SCHEMA_CONTRACT.columns.status, 'pending')
-      .select(`${TIP_SCHEMA_CONTRACT.columns.tipDate}, ${TIP_SCHEMA_CONTRACT.columns.amountBs}`);
-
-    if (error) {
-      throw error;
-    }
-
-    if (!data || data.length === 0) {
-      return {
-        date: tipDate || '',
-        paymentMethod: paymentMethod,
-        paidCount: 0,
-        totalAmountBs: 0,
-      };
-    }
-
-    const tip = data[0] as PaidTipRow;
-    return {
-      date: tip.tip_date,
-      paymentMethod: paymentMethod,
-      paidCount: 1,
-      totalAmountBs: Number(tip.amount_bs),
-    };
+    this.ensurePaidAtAfterTipDate(input.tipDate, input.paidAt, 'propina');
+    return this.tipsRepository.paySingle(input);
   }
 
-  async loadTipsByDateRange(
-    startDate: string,
-    endDate: string
-  ): Promise<Tip[]> {
-    const { data, error } = await supabase
-      .from(TIP_SCHEMA_CONTRACT.tables.tips)
-      .select('*')
-      .gte(TIP_SCHEMA_CONTRACT.columns.tipDate, startDate)
-      .lte(TIP_SCHEMA_CONTRACT.columns.tipDate, endDate)
-      .order(TIP_SCHEMA_CONTRACT.columns.createdAt, { ascending: true });
-
-    if (error) {
-      throw error;
-    }
-
-    return ((data ?? []) as TipRow[]).map(toTipDomain);
+  loadTipsByDateRange(startDate: string, endDate: string): Promise<Tip[]> {
+    return this.tipsRepository.loadByDateRange(startDate, endDate);
   }
 
-  async loadPaidTipsByDateRange(
-    startDate: string,
-    endDate: string
-  ): Promise<Tip[]> {
-    // We filter by the date part of paid_at
-    const { data, error } = await supabase
-      .from(TIP_SCHEMA_CONTRACT.tables.tips)
-      .select('*')
-      .eq(TIP_SCHEMA_CONTRACT.columns.status, 'paid')
-      .gte(TIP_SCHEMA_CONTRACT.columns.paidAt, `${startDate}T00:00:00Z`)
-      .lte(TIP_SCHEMA_CONTRACT.columns.paidAt, `${endDate}T23:59:59Z`)
-      .order(TIP_SCHEMA_CONTRACT.columns.paidAt, { ascending: true });
-
-    if (error) {
-      throw error;
-    }
-
-    return ((data ?? []) as TipRow[]).map(toTipDomain);
+  loadPaidTipsByDateRange(startDate: string, endDate: string): Promise<Tip[]> {
+    return this.tipsRepository.loadPaidByDateRange(startDate, endDate);
   }
 
-  async updateTipNote(tipId: string, notes?: string): Promise<Tip> {
+  updateTipNote(tipId: string, notes?: string): Promise<Tip> {
     if (!tipId.trim()) {
       throw new Error('tip id requerido');
     }
 
-    const normalizedNotes = notes?.trim() ? notes.trim() : null;
-    const { data, error } = await supabase
-      .from(TIP_SCHEMA_CONTRACT.tables.tips)
-      .update({
-        [TIP_SCHEMA_CONTRACT.columns.notes]: normalizedNotes,
-      })
-      .eq(TIP_SCHEMA_CONTRACT.columns.id, tipId)
-      .select('*')
-      .single();
-
-    if (error) {
-      throw error;
-    }
-
-    return toTipDomain(data as TipRow);
+    return this.tipsRepository.updateNote(tipId, notes);
   }
 
   async deleteTipByOrigin(originType: string, originId: string): Promise<void> {
     this.ensureOriginLink(originType, originId);
-
-    const { error } = await supabase
-      .from(TIP_SCHEMA_CONTRACT.tables.tips)
-      .delete()
-      .eq(TIP_SCHEMA_CONTRACT.columns.originType, originType)
-      .eq(TIP_SCHEMA_CONTRACT.columns.originId, originId);
-
-    if (error) {
-      throw error;
-    }
+    await this.tipsRepository.deleteByOrigin(
+      originType as Tip['originType'],
+      originId
+    );
   }
 
   toTipPayoutReadModel(tips: readonly Tip[]): TipPayout[] {
@@ -243,7 +89,6 @@ export class TipsDataService {
       }));
   }
 
-
   private ensureOriginLink(originType: string, originId: string) {
     if (!originType || !originId.trim()) {
       throw new Error('La propina debe estar vinculada a un origen valido');
@@ -253,6 +98,24 @@ export class TipsDataService {
   private ensureIdempotencyKey(idempotencyKey: string) {
     if (!idempotencyKey.trim()) {
       throw new Error('idempotency key requerido');
+    }
+  }
+
+  private ensurePaidAtAfterTipDate(
+    tipDate: string | undefined,
+    paidAt: string | undefined,
+    label: string
+  ) {
+    if (!tipDate || !paidAt) {
+      return;
+    }
+
+    const paymentDate = new Date(paidAt.split('T')[0]);
+    const originalDate = new Date(tipDate.split('T')[0]);
+    if (paymentDate < originalDate) {
+      throw new Error(
+        `La fecha de pago no puede ser anterior a la fecha de la ${label} (${tipDate})`
+      );
     }
   }
 }

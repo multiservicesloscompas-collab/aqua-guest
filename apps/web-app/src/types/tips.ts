@@ -1,25 +1,20 @@
-import type { PaymentMethod } from './index';
+import type {
+  PaymentMethod,
+  Tip,
+  TipOriginType,
+} from '@aqua-guest/domain';
+import type {
+  TipDailyPayoutRequest,
+  TipPayoutSummary,
+  TipSinglePayoutRequest,
+  TipUpsertInput,
+} from '@aqua-guest/product-domain/frontend';
 
-export type TipOriginType = 'sale' | 'rental';
+export type { TipOriginType };
 
-export type TipStatus = 'pending' | 'paid';
+export type { Tip, TipDailyPayoutRequest, TipPayoutSummary, TipSinglePayoutRequest, TipUpsertInput };
 
-export interface Tip {
-  id: string;
-  originType: TipOriginType;
-  originId: string;
-  tipDate: string;
-  amountBs: number;
-  amountUsd?: number;
-  exchangeRateUsed?: number;
-  capturePaymentMethod: PaymentMethod;
-  status: TipStatus;
-  paidPaymentMethod?: PaymentMethod;
-  paidAt?: string;
-  notes?: string;
-  createdAt: string;
-  updatedAt: string;
-}
+export type TipStatus = Tip['status'];
 
 export interface TipPayout {
   id: string;
@@ -29,39 +24,6 @@ export interface TipPayout {
   amountBs: number;
   originType: TipOriginType;
   originId: string;
-}
-
-export interface TipPayoutSummary {
-  date: string;
-  paymentMethod: PaymentMethod;
-  paidCount: number;
-  totalAmountBs: number;
-}
-
-export interface TipUpsertInput {
-  originType: TipOriginType;
-  originId: string;
-  tipDate: string;
-  amountBs: number;
-  amountUsd?: number;
-  exchangeRateUsed?: number;
-  capturePaymentMethod: PaymentMethod;
-  notes?: string;
-}
-
-export interface TipDailyPayoutRequest {
-  tipDate: string;
-  paymentMethod: PaymentMethod;
-  idempotencyKey: string;
-  paidAt?: string;
-}
-
-export interface TipSinglePayoutRequest {
-  tipId: string;
-  paymentMethod: PaymentMethod;
-  idempotencyKey: string;
-  paidAt?: string;
-  tipDate?: string;
 }
 
 export interface TipCaptureInput {
