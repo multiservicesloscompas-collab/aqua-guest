@@ -1,8 +1,10 @@
 import { useCallback, useMemo, useState } from 'react';
 import { toast } from '@/components/ui/sonner';
 import { useMachineStore } from '@/store/useMachineStore';
+import { useRentalStore } from '@/store/useRentalStore';
 import { canExtendRental } from '@/utils/rentalExtensions';
-import { RentalShiftConfig, RentalStatus, WasherRental } from '@/types';
+import { RentalStatus, WasherRental } from '@/types';
+import { resolveShiftConfig } from '@aqua-guest/domain';
 
 interface RentalCardViewModelInput {
   rental: WasherRental;
@@ -27,11 +29,24 @@ export function useRentalCardViewModel({
   const [pendingStatus, setPendingStatus] = useState<RentalStatus | null>(null);
 
   const { washingMachines } = useMachineStore();
+  const { shifts: dynamicShifts } = useRentalStore();
   const machine = useMemo(
     () => washingMachines.find((m) => m.id === rental.machineId),
     [washingMachines, rental.machineId]
   );
-  const shiftConfig = RentalShiftConfig[rental.shift];
+  const shiftConfig = useMemo(
+    () =>
+      resolveShiftConfig(rental.shift, dynamicShifts) ?? {
+        id: rental.shift,
+        label: rental.shift,
+        priceUsd: 0,
+        hours: 0,
+        hasDivisaDiscount: false,
+        divisaDiscountAmount: 0,
+        isActive: true,
+      },
+    [rental.shift, dynamicShifts]
+  );
   const canExtend = canExtendRental(rental);
 
   const handleStatusClick = useCallback((status: RentalStatus) => {

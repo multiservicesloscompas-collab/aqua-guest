@@ -2,13 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { updateRentalAction } from './useRentalStore.actions.update';
 import type { RentalState } from './useRentalStore.core';
 
-const { replaceRentalSplitsMock, invalidateCacheMock } = vi.hoisted(() => ({
-  replaceRentalSplitsMock: vi.fn(),
+const { invalidateCacheMock } = vi.hoisted(() => ({
   invalidateCacheMock: vi.fn(),
-}));
-
-vi.mock('./useRentalStore.supabase', () => ({
-  replaceRentalSplits: replaceRentalSplitsMock,
 }));
 
 vi.mock('@/services/RentalsDataService', () => ({
@@ -62,6 +57,8 @@ function buildState(): RentalState {
       },
     ],
     loadingRentalsByRange: {},
+    shifts: [],
+    loadingShifts: false,
     addRental: vi.fn(),
     updateRental: vi.fn(),
     deleteRental: vi.fn(),
@@ -69,12 +66,15 @@ function buildState(): RentalState {
     getActiveRentalsForDate: vi.fn(),
     loadRentalsByDate: vi.fn(),
     loadRentalsByDateRange: vi.fn(),
+    loadShifts: vi.fn(),
+    addShift: vi.fn(),
+    updateShift: vi.fn(),
+    deleteShift: vi.fn(),
   };
 }
 
 describe('updateRentalAction tip-aware recomputation guard', () => {
   beforeEach(() => {
-    replaceRentalSplitsMock.mockReset();
     invalidateCacheMock.mockReset();
 
     Object.defineProperty(globalThis, 'navigator', {
@@ -135,6 +135,5 @@ describe('updateRentalAction tip-aware recomputation guard', () => {
         exchangeRateUsed: 50,
       },
     ]);
-    expect(replaceRentalSplitsMock).not.toHaveBeenCalled();
   });
 });

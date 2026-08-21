@@ -1,87 +1,12 @@
-import { supabase } from '@/lib/supabaseClient';
-import type {
-  PaymentMethod,
-  RentalShift,
-  RentalStatus,
-  WasherRental,
-} from '@aqua-guest/domain';
-import { getSafeTimestamp, normalizeTimestamp } from '@/lib/date-utils';
+import type { WasherRental } from '@aqua-guest/domain';
+import type { WasherRentalsRepository } from '@aqua-guest/product-domain/frontend';
+import { appRepositories } from '@/lib/app-repositories';
+import { RentalsCache } from '@/services/rentalsDataService.cache';
 import {
-  PAYMENT_SPLIT_SCHEMA,
-  type PaymentSplitRow,
-} from '@/services/payments/paymentSplitSchemaContract';
-import { rentalPaymentSplitAdapter } from '@/services/payments/paymentSplitSupabaseAdapters';
-
-interface RentalDataRow {
-  id: string;
-  date: string;
-  customer_id?: string;
-  customer_name?: string;
-  customer_phone?: string;
-  customer_address?: string;
-  machine_id: string;
-  shift: RentalShift;
-  delivery_time?: string;
-  pickup_time?: string;
-  pickup_date: string;
-  delivery_fee: number;
-  total_usd: number;
-  payment_method?: PaymentMethod;
-  status: RentalStatus;
-  is_paid: boolean;
-  date_paid?: string | null;
-  notes?: string;
-  created_at?: string;
-  createdAt?: string;
-  updated_at?: string;
-  updatedAt?: string;
-  customers?: {
-    name?: string;
-    phone?: string;
-    address?: string;
-  };
-  rental_payment_splits?: PaymentSplitRow[];
-  payment_splits?: PaymentSplitRow[];
-  splits?: PaymentSplitRow[];
-}
-
-const RENTALS_SELECT = `*, customers(name, phone, address), ${PAYMENT_SPLIT_SCHEMA.rentalsSplitsTable}(payment_method, amount_bs, amount_usd, exchange_rate_used)`;
-
-function toRentalRow(r: RentalDataRow): WasherRental {
-  const rawSplits =
-    r.rental_payment_splits ?? r.payment_splits ?? r.splits ?? [];
-  const splits = rentalPaymentSplitAdapter.fromRows(rawSplits);
-
-  return {
-    id: r.id,
-    date: r.date.substring(0, 10),
-    customerId: r.customer_id,
-    customerName: r.customers?.name || r.customer_name || '',
-    customerPhone: r.customers?.phone || r.customer_phone || '',
-    customerAddress: r.customers?.address || r.customer_address || '',
-    machineId: r.machine_id,
-    shift: r.shift,
-    deliveryTime: r.delivery_time ? r.delivery_time.substring(0, 5) : '',
-    pickupTime: r.pickup_time ? r.pickup_time.substring(0, 5) : '',
-    pickupDate: r.pickup_date,
-    deliveryFee: Number(r.delivery_fee),
-    totalUsd: Number(r.total_usd),
-    paymentMethod: r.payment_method || 'efectivo',
-    paymentSplits: splits.length ? splits : undefined,
-    status: r.status,
-    isPaid: r.is_paid,
-    datePaid: r.date_paid ? r.date_paid.substring(0, 10) : undefined,
-    notes: r.notes,
-    createdAt: normalizeTimestamp(
-      r.created_at ?? r.createdAt,
-      getSafeTimestamp()
-    ),
-    updatedAt: normalizeTimestamp(
-      r.updated_at ?? r.updatedAt,
-      getSafeTimestamp()
-    ),
-  };
-}
+  buildDateRangeKeys,
+  cacheGroupedDateResults,
+  projectCachedDates,
+} from '@/services/dateRangeDataServiceHelpers';
 
 export interface IRentalsDataService {
   loadRentalsByDate(date: string): Promise<WasherRental[]>;
@@ -89,51 +14,24 @@ export interface IRentalsDataService {
   invalidateCache(date: string): void;
   getCachedRentals(date: string): WasherRental[] | null;
   hasCachedDate(date: string): boolean;
-  loadRentalsByDateRange(
-    startDate: string,
-    endDate: string
-  ): Promise<Map<string, WasherRental[]>>;
+  loadRentalsByDateRange(startDate: string, endDate: string): Promise<Map<string, WasherRental[]>>;
+  loadRentalsByDates(dates: string[]): Promise<Map<string, WasherRental[]>>;
 }
 
-class RentalsCache {
-  private cache: Map<string, WasherRental[]> = new Map();
-  private maxSize = 30;
-
-  set(date: string, rentals: WasherRental[]): void {
-    if (this.cache.size >= this.maxSize && !this.cache.has(date)) {
-      const oldestKey = this.cache.keys().next().value;
-      if (oldestKey) {
-        this.cache.delete(oldestKey);
-      }
-    }
-    this.cache.set(date, rentals);
-  }
-
-  get(date: string): WasherRental[] | null {
-    return this.cache.get(date) || null;
-  }
-
-  has(date: string): boolean {
-    return this.cache.has(date);
-  }
-
-  clear(): void {
-    this.cache.clear();
-  }
-
-  delete(date: string): boolean {
-    return this.cache.delete(date);
-  }
-
-  keys(): IterableIterator<string> {
-    return this.cache.keys();
-  }
+interface RentalsDataServiceDeps {
+  washerRentalsRepository: WasherRentalsRepository;
+  rentalsCache?: RentalsCache;
 }
 
 export class RentalsDataService implements IRentalsDataService {
-  private rentalsCache: RentalsCache;
+  private readonly washerRentalsRepository: WasherRentalsRepository;
+  private readonly rentalsCache: RentalsCache;
 
-  constructor(rentalsCache: RentalsCache = new RentalsCache()) {
+  constructor({
+    washerRentalsRepository = appRepositories.washerRentalsRepository,
+    rentalsCache = new RentalsCache(),
+  }: Partial<RentalsDataServiceDeps> = {}) {
+    this.washerRentalsRepository = washerRentalsRepository;
     this.rentalsCache = rentalsCache;
   }
 
@@ -143,25 +41,42 @@ export class RentalsDataService implements IRentalsDataService {
       return cached;
     }
 
-    const { data, error } = await supabase
-      .from('washer_rentals')
-      .select(RENTALS_SELECT)
-      .lte('date', date)
-      .gte('pickup_date', date)
-      .order('created_at', { ascending: true });
+    const rentals = await this.washerRentalsRepository.loadByDate(date);
+    this.rentalsCache.set(date, rentals);
+    return rentals;
+  }
 
-    if (error) {
-      console.error(`Error loading rentals for date ${date}:`, error);
-      throw error;
+  async loadRentalsByDates(dates: string[]): Promise<Map<string, WasherRental[]>> {
+    const datesToLoad = dates.filter((date) => !this.rentalsCache.has(date));
+    if (datesToLoad.length > 0) {
+      const loaded = await this.washerRentalsRepository.loadByDates(datesToLoad);
+      for (const [date, rentals] of loaded.entries()) {
+        this.rentalsCache.set(date, rentals);
+      }
     }
 
-    const rentals: WasherRental[] = (data || []).map((r) =>
-      toRentalRow(r as unknown as RentalDataRow)
+    return projectCachedDates(dates, this.rentalsCache);
+  }
+
+  async loadRentalsByDateRange(
+    startDate: string,
+    endDate: string
+  ): Promise<Map<string, WasherRental[]>> {
+    const datesInRange = buildDateRangeKeys(startDate, endDate);
+    if (datesInRange.every((date) => this.rentalsCache.has(date))) {
+      return projectCachedDates(datesInRange, this.rentalsCache);
+    }
+
+    const rentalsMap = await this.washerRentalsRepository.loadByDateRange(
+      startDate,
+      endDate
     );
 
-    this.rentalsCache.set(date, rentals);
-
-    return rentals;
+    return cacheGroupedDateResults(
+      datesInRange,
+      Object.fromEntries(rentalsMap.entries()),
+      this.rentalsCache
+    );
   }
 
   clearCache(): void {
@@ -178,122 +93,6 @@ export class RentalsDataService implements IRentalsDataService {
 
   hasCachedDate(date: string): boolean {
     return this.rentalsCache.has(date);
-  }
-
-  async loadRentalsByDates(
-    dates: string[]
-  ): Promise<Map<string, WasherRental[]>> {
-    const results = new Map<string, WasherRental[]>();
-    const datesToLoad = dates.filter((date) => !this.rentalsCache.has(date));
-
-    if (datesToLoad.length === 0) {
-      for (const date of dates) {
-        const cached = this.rentalsCache.get(date);
-        if (cached) {
-          results.set(date, cached);
-        }
-      }
-      return results;
-    }
-
-    const promises = datesToLoad.map(async (date) => {
-      const { data, error } = await supabase
-        .from('washer_rentals')
-        .select(RENTALS_SELECT)
-        .eq('date', date)
-        .order('created_at', { ascending: true });
-
-      if (error) {
-        console.error(`Error loading rentals for date ${date}:`, error);
-        return { date, rentals: [] };
-      }
-
-      const rentals: WasherRental[] = (data || []).map((r) =>
-        toRentalRow(r as unknown as RentalDataRow)
-      );
-
-      this.rentalsCache.set(date, rentals);
-
-      return { date, rentals };
-    });
-
-    await Promise.all(promises);
-
-    for (const date of dates) {
-      const cached = this.rentalsCache.get(date);
-      if (cached) {
-        results.set(date, cached);
-      }
-    }
-
-    return results;
-  }
-
-  async loadRentalsByDateRange(
-    startDate: string,
-    endDate: string
-  ): Promise<Map<string, WasherRental[]>> {
-    const results = new Map<string, WasherRental[]>();
-    const datesInRange: string[] = [];
-
-    const current = new Date(startDate + 'T12:00:00');
-    const end = new Date(endDate + 'T12:00:00');
-
-    while (current <= end) {
-      const y = current.getFullYear();
-      const m = String(current.getMonth() + 1).padStart(2, '0');
-      const d = String(current.getDate()).padStart(2, '0');
-      datesInRange.push(`${y}-${m}-${d}`);
-      current.setDate(current.getDate() + 1);
-    }
-
-    const allCached = datesInRange.every((d) => this.rentalsCache.has(d));
-
-    if (allCached) {
-      for (const date of datesInRange) {
-        results.set(date, this.rentalsCache.get(date) || []);
-      }
-      return results;
-    }
-
-    const { data, error } = await supabase
-      .from('washer_rentals')
-      .select(RENTALS_SELECT)
-      .or(
-        `and(date.gte.${startDate},date.lte.${endDate}),and(date_paid.gte.${startDate},date_paid.lte.${endDate})`
-      )
-      .order('created_at', { ascending: true });
-
-    if (error) {
-      console.error(
-        `Error loading rentals for range ${startDate} to ${endDate}:`,
-        error
-      );
-      throw error;
-    }
-
-    const grouped: Record<string, WasherRental[]> = {};
-    for (const date of datesInRange) {
-      grouped[date] = [];
-    }
-
-    (data || []).forEach((item) => {
-      const r = item as unknown as RentalDataRow;
-      // Agrupar por fecha de servicio (date)
-      const dateKey = r.date.substring(0, 10);
-
-      if (!grouped[dateKey]) grouped[dateKey] = [];
-
-      grouped[dateKey].push(toRentalRow(r));
-    });
-
-    for (const date of Object.keys(grouped)) {
-      const rentals = grouped[date];
-      this.rentalsCache.set(date, rentals);
-      results.set(date, rentals);
-    }
-
-    return results;
   }
 }
 

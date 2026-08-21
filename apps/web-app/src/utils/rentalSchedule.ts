@@ -27,18 +27,6 @@ export function calculatePickupTime(
   deliveryDate: Date,
   deliveryTime: string,
   shift: string,
-  options?: CalculatePickupTimeOptions
-): { pickupTime: string; pickupDate: string };
-export function calculatePickupTime(
-  deliveryDate: Date,
-  deliveryTime: string,
-  shift: string,
-  dynamicShifts?: ReadonlyArray<RentalShiftConfig>
-): { pickupTime: string; pickupDate: string };
-export function calculatePickupTime(
-  deliveryDate: Date,
-  deliveryTime: string,
-  shift: string,
   optionsOrShifts?: CalculatePickupTimeOptions | ReadonlyArray<RentalShiftConfig>
 ): { pickupTime: string; pickupDate: string } {
   const dynamicShifts: ReadonlyArray<RentalShiftConfig> | undefined = (() => {

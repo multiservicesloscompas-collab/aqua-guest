@@ -1,8 +1,8 @@
 import { toast } from 'sonner';
+import type { PaymentSplit } from '@aqua-guest/domain';
 import type { WasherRentalDraft } from '@aqua-guest/domain/modules/washer-rentals';
 import { buildTipCaptureInput } from '@/services/tips/tipCaptureInput';
 import type { PaymentMethod, WasherRental } from '@/types';
-import type { PaymentSplit } from '@/types/paymentSplits';
 import { submitRental } from './rentalSheetViewModel.submit';
 
 interface ExecuteSubmitParams {
@@ -20,7 +20,7 @@ interface ExecuteSubmitParams {
   selectedDate: string;
   selectedCustomerId: string;
   customerPhone: string;
-  shift: 'medio' | 'completo' | 'doble';
+  shift: string;
   deliveryTime: string;
   pickupInfo: { pickupTime: string; pickupDate: string };
   deliveryFee: number;

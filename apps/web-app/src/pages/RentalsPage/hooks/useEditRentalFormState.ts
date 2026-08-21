@@ -123,7 +123,7 @@ export function useEditRentalFormState({
 
   const selectSecondaryPaymentMethod = useCallback(
     (method: PaymentMethod) => {
-      setSplit2MethodState((currentSecondary) => {
+      setSplit2MethodState(() => {
         if (paymentMethod === method) {
           return resolveAlternativeMethod(method);
         }

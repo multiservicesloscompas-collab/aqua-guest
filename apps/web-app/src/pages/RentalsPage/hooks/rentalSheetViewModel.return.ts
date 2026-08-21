@@ -8,7 +8,7 @@ import type {
 
 interface RentalSheetFormShape {
   machineId: string;
-  shift: 'medio' | 'completo' | 'doble';
+  shift: string;
   paymentMethod: PaymentMethod;
   split2Method: PaymentMethod;
   split1Amount: string;
@@ -27,7 +27,7 @@ interface RentalSheetFormShape {
   isPaid: boolean;
   datePaid: string;
   setMachineId: (value: string) => void;
-  setShift: (value: 'medio' | 'completo' | 'doble') => void;
+  setShift: (value: string) => void;
   setPaymentMethod: (value: PaymentMethod) => void;
   setSplit2Method: (value: PaymentMethod) => void;
   setSplit1Amount: (value: string) => void;

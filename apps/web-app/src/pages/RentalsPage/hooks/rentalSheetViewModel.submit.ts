@@ -1,10 +1,7 @@
 import { toast } from 'sonner';
-import type {
-  PaymentMethod,
-  WasherRental,
-} from '@/types';
+import type { PaymentMethod, PaymentSplit } from '@aqua-guest/domain';
+import type { WasherRental } from '@/types';
 import type { WasherRentalDraft } from '@aqua-guest/domain/modules/washer-rentals';
-import type { PaymentSplit } from '@/types/paymentSplits';
 import type { TipCaptureInput } from '@/types/tips';
 import { normalizeAndValidatePaymentSplits } from '@/services/payments/paymentSplitValidation';
 

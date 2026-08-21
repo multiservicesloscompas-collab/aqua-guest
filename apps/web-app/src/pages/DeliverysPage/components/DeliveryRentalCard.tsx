@@ -5,7 +5,9 @@ import { Clock, MapPin, Phone, User, WashingMachine } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { RentalShiftConfig, RentalStatusLabels, WasherRental } from '@/types';
+import { useRentalStore } from '@/store/useRentalStore';
+import { resolveShiftConfig } from '@aqua-guest/domain';
+import { RentalStatusLabels, WasherRental } from '@/types';
 
 interface DeliveryRentalCardProps {
   rental: WasherRental;
@@ -18,6 +20,9 @@ export function DeliveryRentalCard({
   getMachineName,
   getStatusColor,
 }: DeliveryRentalCardProps) {
+  const { shifts: dynamicShifts } = useRentalStore();
+  const shiftConfig = resolveShiftConfig(rental.shift, dynamicShifts);
+  const shiftLabel = shiftConfig?.label ?? rental.shift;
   return (
     <Card className="overflow-hidden">
       <CardContent className="p-4 space-y-3">
@@ -29,7 +34,7 @@ export function DeliveryRentalCard({
             <div>
               <p className="font-medium">{getMachineName(rental.machineId)}</p>
               <p className="text-sm text-muted-foreground">
-                {RentalShiftConfig[rental.shift].label}
+                {shiftLabel}
               </p>
             </div>
           </div>

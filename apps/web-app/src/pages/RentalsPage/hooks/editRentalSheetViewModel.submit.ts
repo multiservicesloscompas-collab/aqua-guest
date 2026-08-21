@@ -1,12 +1,11 @@
 import { toast } from 'sonner';
-import type { PaymentMethod } from '@aqua-guest/domain';
+import type { PaymentMethod, PaymentSplit } from '@aqua-guest/domain';
 import type {
   RentalShift,
   RentalStatus,
   WasherRentalUpdate,
 } from '@aqua-guest/domain/modules/washer-rentals';
 import { getVenezuelaDate } from '@/services/DateService';
-import type { PaymentSplit } from '@/types/paymentSplits';
 import type { TipCaptureInput } from '@/types/tips';
 import { normalizeAndValidatePaymentSplits } from '@/services/payments/paymentSplitValidation';
 

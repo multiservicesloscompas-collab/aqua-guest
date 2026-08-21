@@ -1,30 +1,21 @@
 import { useEffect, useMemo, useState } from 'react';
-import { parse } from 'date-fns';
 import { useAppStore } from '@/store/useAppStore';
 import { useCustomerStore } from '@/store/useCustomerStore';
 import { useRentalStore } from '@/store/useRentalStore';
 import { useMachineStore } from '@/store/useMachineStore';
 import { useConfigStore } from '@/store/useConfigStore';
-import type { PaymentSplit } from '@/types/paymentSplits';
-import {
-  calculatePickupTime,
-  formatPickupInfo,
-  generateTimeSlots,
-} from '@/utils/rentalSchedule';
-import { calculateRentalPrice } from '@/utils/rentalPricing';
-import { buildDualPaymentSplits } from '@/services/payments/paymentSplitWritePath';
-import { calculateFinalRentalTotals } from '@/services/transactions/transactionTotals';
+import { generateTimeSlots } from '@/utils/rentalSchedule';
 import {
   DELIVERY_FEE_OPTIONS,
   PAYMENT_METHOD_OPTIONS,
   getDefaultDeliveryTime,
   getPaidDateLabel,
   getRentalValidationError,
-  getUnavailableMachineIds,
   mapMachineItems,
   mapShiftOptions,
 } from './rentalSheetViewModel.helpers';
 import { useRentalSheetFormState } from './useRentalSheetFormState';
+import { useRentalSheetComputed } from './useRentalSheetComputed';
 import {
   handleCreateNewRentalCustomer,
   handleRentalCustomerSelect,
@@ -38,6 +29,7 @@ interface RentalSheetViewModelProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
+
 export function useRentalSheetViewModel({
   open,
   onOpenChange,
@@ -48,7 +40,7 @@ export function useRentalSheetViewModel({
   );
   const exchangeRate = useConfigStore((state) => state.config.exchangeRate);
   const { customers } = useCustomerStore();
-  const { addRental, rentals } = useRentalStore();
+  const { addRental, rentals, shifts: dynamicShifts } = useRentalStore();
   const { washingMachines } = useMachineStore();
   const form = useRentalSheetFormState();
   const {
@@ -94,6 +86,7 @@ export function useRentalSheetViewModel({
   } = form;
   const [isSaving, setIsSaving] = useState(false);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+
   useEffect(() => {
     if (open) {
       setDeliveryTime(getDefaultDeliveryTime());
@@ -101,60 +94,33 @@ export function useRentalSheetViewModel({
   }, [open, setDeliveryTime]);
 
   const timeSlots = useMemo(() => generateTimeSlots(), []);
-  const pickupInfo = useMemo(() => {
-    const date = parse(selectedDate, 'yyyy-MM-dd', new Date());
-    return calculatePickupTime(date, deliveryTime, shift);
-  }, [selectedDate, deliveryTime, shift]);
 
-  const subtotalUsd = useMemo(
-    () => calculateRentalPrice(shift, paymentMethod, deliveryFee),
-    [shift, paymentMethod, deliveryFee]
-  );
-
-  const tipAmountBsNumeric = useMemo(
-    () => (tipEnabled ? Number(tipAmount) || 0 : 0),
-    [tipEnabled, tipAmount]
-  );
-
-  const finalTotals = useMemo(
-    () =>
-      calculateFinalRentalTotals({
-        principalUsd: subtotalUsd,
-        tipAmountBs: tipAmountBsNumeric,
-        exchangeRate,
-      }),
-    [subtotalUsd, tipAmountBsNumeric, exchangeRate]
-  );
-
-  const totalUsd = finalTotals.totalUsd;
-  const totalBs = totalUsd * exchangeRate;
-  const hasMixedPaymentEnabled = isMixedPaymentEnabled && isMixedPayment;
-
-  const subtotalBs =
-    exchangeRate > 0 ? subtotalUsd * exchangeRate : Number.NaN;
-
-  const paymentSplits = useMemo<PaymentSplit[]>(
-    () =>
-      buildDualPaymentSplits({
-        enableMixedPayment: hasMixedPaymentEnabled,
-        primaryMethod: paymentMethod,
-        secondaryMethod: split2Method,
-        amountInput: split1Amount,
-        amountInputMode: 'secondary',
-        totalBs: subtotalBs,
-        totalUsd: subtotalUsd,
-        exchangeRate,
-      }),
-    [
-      exchangeRate,
-      hasMixedPaymentEnabled,
-      paymentMethod,
-      split1Amount,
-      split2Method,
-      subtotalBs,
-      subtotalUsd,
-    ]
-  );
+  const {
+    pickupInfo,
+    subtotalUsd,
+    tipAmountBsNumeric,
+    totalUsd,
+    totalBs,
+    subtotalBs,
+    paymentSplits,
+    unavailableMachines,
+    pickupLabel,
+  } = useRentalSheetComputed({
+    selectedDate,
+    deliveryTime,
+    shift,
+    paymentMethod,
+    deliveryFee,
+    tipEnabled,
+    tipAmount,
+    exchangeRate,
+    isMixedPaymentEnabled,
+    isMixedPayment,
+    split2Method,
+    split1Amount,
+    rentals,
+    dynamicShifts,
+  });
 
   useEffect(() => {
     if (split2Method === paymentMethod) {
@@ -162,43 +128,16 @@ export function useRentalSheetViewModel({
     }
   }, [paymentMethod, setSplit2Method, split2Method]);
 
-  const unavailableMachines = useMemo(
-    () =>
-      getUnavailableMachineIds({
-        rentals,
-        selectedDate,
-        deliveryTime,
-        pickupDate: pickupInfo.pickupDate,
-        pickupTime: pickupInfo.pickupTime,
-      }),
-    [
-      rentals,
-      selectedDate,
-      deliveryTime,
-      pickupInfo.pickupDate,
-      pickupInfo.pickupTime,
-    ]
-  );
-
   const machineItems = useMemo(
     () => mapMachineItems({ washingMachines, unavailableMachines }),
     [washingMachines, unavailableMachines]
   );
 
   const shiftOptions = useMemo(
-    () => mapShiftOptions(paymentMethod),
-    [paymentMethod]
+    () => mapShiftOptions(paymentMethod, dynamicShifts),
+    [paymentMethod, dynamicShifts]
   );
   const paymentMethodOptions = useMemo(() => PAYMENT_METHOD_OPTIONS, []);
-  const pickupLabel = useMemo(
-    () =>
-      formatPickupInfo(
-        pickupInfo.pickupDate,
-        pickupInfo.pickupTime,
-        selectedDate
-      ),
-    [pickupInfo.pickupDate, pickupInfo.pickupTime, selectedDate]
-  );
 
   const handleSubmit = () =>
     executeRentalSubmit({

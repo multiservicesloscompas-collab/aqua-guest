@@ -11,7 +11,9 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { canExtendRental } from '@/utils/rentalExtensions';
-import { RentalShiftConfig, WasherRental } from '@/types';
+import { useRentalStore } from '@/store/useRentalStore';
+import { resolveShiftConfig } from '@aqua-guest/domain';
+import { WasherRental } from '@/types';
 
 interface FollowUpRentalCardProps {
   rental: WasherRental;
@@ -26,6 +28,9 @@ export function FollowUpRentalCard({
   getMachineName,
   onExtendRental,
 }: FollowUpRentalCardProps) {
+  const { shifts: dynamicShifts } = useRentalStore();
+  const shiftConfig = resolveShiftConfig(rental.shift, dynamicShifts);
+  const shiftLabel = shiftConfig?.label ?? rental.shift;
   return (
     <Card className="bg-accent/30 border-border/50">
       <CardContent className="p-4 space-y-3">
@@ -73,7 +78,7 @@ export function FollowUpRentalCard({
                 {rental.deliveryTime} → {rental.pickupTime}
               </span>
             </div>
-            <span>{RentalShiftConfig[rental.shift].label}</span>
+            <span>{shiftLabel}</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-1 text-sm font-semibold text-primary">
