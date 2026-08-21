@@ -43,3 +43,8 @@ export type SaleLabelReference = Pick<Sale, 'dailyNumber'>;
 export type SaleReference = Pick<Sale, 'id' | 'dailyNumber'>;
 
 export type SaleDraft = Omit<Sale, 'id' | 'createdAt' | 'updatedAt'>;
+
+export interface LiterPricing {
+  breakpoint: number;
+  price: number;
+}

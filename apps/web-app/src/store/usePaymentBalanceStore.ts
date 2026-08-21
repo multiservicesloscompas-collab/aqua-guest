@@ -1,12 +1,7 @@
-/**
- * usePaymentBalanceStore.ts
- * Thin Zustand store barrel — imports type definitions from .core.
- * All consumers can import from this file and nothing breaks.
- */
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { calculatePaymentBalanceSummary } from '@/services/payments/paymentBalanceSummary';
-import supabase from '@/lib/supabaseClient';
+import { appRepositories } from '@/lib/app-repositories';
 import {
   enqueueOfflinePaymentBalanceCreate,
   enqueueOfflinePaymentBalanceDelete,
@@ -18,9 +13,6 @@ import { useWaterSalesStore } from './useWaterSalesStore';
 import { usePrepaidStore } from './usePrepaidStore';
 import {
   type PaymentBalanceState,
-  type PaymentBalanceInsertPayload,
-  type PaymentBalanceUpdatePayload,
-  type PaymentBalanceRow,
   rowToTransaction,
 } from './usePaymentBalanceStore.core';
 import {
@@ -29,17 +21,11 @@ import {
 } from './paymentBalanceDraft';
 import {
   applyLocalTransactionUpdate,
-  assignUpdatePayloadFromNormalized,
-  assignUpdatePayloadFromUpdates,
   toDraftInput,
 } from './paymentBalanceStoreHelpers';
 
-// Re-export types so existing import paths continue to work
 export type {
   PaymentBalanceState,
-  PaymentBalanceInsertPayload,
-  PaymentBalanceUpdatePayload,
-  PaymentBalanceRow,
 };
 export { rowToTransaction };
 
@@ -82,30 +68,23 @@ export const usePaymentBalanceStore = create<PaymentBalanceState>()(
             return;
           }
 
-          const payload: PaymentBalanceInsertPayload = {
-            date: transaction.date,
-            operation_type: normalized.operation_type,
-            from_method: transaction.fromMethod,
-            to_method: transaction.toMethod,
-            amount: normalized.amount,
-            amount_bs: normalized.amount_bs,
-            amount_usd: normalized.amount_usd,
-            amount_out_bs: normalized.amount_out_bs,
-            amount_out_usd: normalized.amount_out_usd,
-            amount_in_bs: normalized.amount_in_bs,
-            amount_in_usd: normalized.amount_in_usd,
-            difference_bs: normalized.difference_bs,
-            difference_usd: normalized.difference_usd,
-            notes: normalized.notes,
-          };
-          const { data, error } = await supabase
-            .from('payment_balance_transactions')
-            .insert(payload)
-            .select('*')
-            .single();
-          if (error) throw error;
-
-          const newTransaction = rowToTransaction(data as PaymentBalanceRow);
+          const newTransaction =
+            await appRepositories.paymentBalanceRepository.create({
+              date: transaction.date,
+              operationType: normalized.operation_type,
+              fromMethod: transaction.fromMethod,
+              toMethod: transaction.toMethod,
+              amount: normalized.amount,
+              amountBs: normalized.amount_bs,
+              amountUsd: normalized.amount_usd,
+              amountOutBs: normalized.amount_out_bs,
+              amountOutUsd: normalized.amount_out_usd,
+              amountInBs: normalized.amount_in_bs,
+              amountInUsd: normalized.amount_in_usd,
+              differenceBs: normalized.difference_bs,
+              differenceUsd: normalized.difference_usd,
+              notes: normalized.notes,
+            });
           set((state) => ({
             paymentBalanceTransactions: [
               ...state.paymentBalanceTransactions,
@@ -168,20 +147,46 @@ export const usePaymentBalanceStore = create<PaymentBalanceState>()(
             return;
           }
 
-          const payload: PaymentBalanceUpdatePayload = {
-            updated_at: updatedAt,
-          };
-          assignUpdatePayloadFromUpdates(payload, updates);
+          const repositoryUpdate: Parameters<
+            typeof appRepositories.paymentBalanceRepository.update
+          >[1] = {};
+
+          if (updates.date !== undefined) repositoryUpdate.date = updates.date;
+          if (updates.operationType !== undefined)
+            repositoryUpdate.operationType = updates.operationType;
+          if (updates.fromMethod !== undefined)
+            repositoryUpdate.fromMethod = updates.fromMethod;
+          if (updates.toMethod !== undefined) repositoryUpdate.toMethod = updates.toMethod;
+          if (updates.amount !== undefined) repositoryUpdate.amount = updates.amount;
+          if (updates.amountBs !== undefined) repositoryUpdate.amountBs = updates.amountBs;
+          if (updates.amountUsd !== undefined) repositoryUpdate.amountUsd = updates.amountUsd;
+          if (updates.amountOutBs !== undefined)
+            repositoryUpdate.amountOutBs = updates.amountOutBs;
+          if (updates.amountOutUsd !== undefined)
+            repositoryUpdate.amountOutUsd = updates.amountOutUsd;
+          if (updates.amountInBs !== undefined)
+            repositoryUpdate.amountInBs = updates.amountInBs;
+          if (updates.amountInUsd !== undefined)
+            repositoryUpdate.amountInUsd = updates.amountInUsd;
+          if (updates.differenceBs !== undefined)
+            repositoryUpdate.differenceBs = updates.differenceBs;
+          if (updates.differenceUsd !== undefined)
+            repositoryUpdate.differenceUsd = updates.differenceUsd;
+          if (updates.notes !== undefined) repositoryUpdate.notes = updates.notes;
 
           if (normalized !== undefined && hasAmountUpdates(updates)) {
-            assignUpdatePayloadFromNormalized(payload, normalized);
+            repositoryUpdate.amount = normalized.amount;
+            repositoryUpdate.amountBs = normalized.amount_bs;
+            repositoryUpdate.amountUsd = normalized.amount_usd;
+            repositoryUpdate.amountOutBs = normalized.amount_out_bs;
+            repositoryUpdate.amountOutUsd = normalized.amount_out_usd;
+            repositoryUpdate.amountInBs = normalized.amount_in_bs;
+            repositoryUpdate.amountInUsd = normalized.amount_in_usd;
+            repositoryUpdate.differenceBs = normalized.difference_bs;
+            repositoryUpdate.differenceUsd = normalized.difference_usd;
           }
 
-          const { error } = await supabase
-            .from('payment_balance_transactions')
-            .update(payload)
-            .eq('id', id);
-          if (error) throw error;
+          await appRepositories.paymentBalanceRepository.update(id, repositoryUpdate);
 
           set((state) => ({
             paymentBalanceTransactions: state.paymentBalanceTransactions.map(
@@ -213,14 +218,10 @@ export const usePaymentBalanceStore = create<PaymentBalanceState>()(
               paymentBalanceTransactions:
                 state.paymentBalanceTransactions.filter((t) => t.id !== id),
             }));
-            return;
-          }
+              return;
+            }
 
-          const { error } = await supabase
-            .from('payment_balance_transactions')
-            .delete()
-            .eq('id', id);
-          if (error) throw error;
+          await appRepositories.paymentBalanceRepository.delete(id);
           set((state) => ({
             paymentBalanceTransactions: state.paymentBalanceTransactions.filter(
               (t) => t.id !== id
@@ -253,16 +254,8 @@ export const usePaymentBalanceStore = create<PaymentBalanceState>()(
 
       loadPaymentBalanceTransactions: async () => {
         try {
-          const { data, error } = await supabase
-            .from('payment_balance_transactions')
-            .select('*')
-            .order('created_at', { ascending: false });
-
-          if (error) throw error;
-
-          const transactions = ((data || []) as PaymentBalanceRow[]).map(
-            rowToTransaction
-          );
+          const transactions =
+            await appRepositories.paymentBalanceRepository.getAll();
           set(() => ({ paymentBalanceTransactions: transactions }));
         } catch (err) {
           console.error(

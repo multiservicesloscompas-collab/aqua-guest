@@ -37,6 +37,7 @@ testem.log
 # System Files
 .DS_Store
 Thumbs.db
+*.tsbuildinfo
 
 .nx/cache
 .nx/workspace-data
@@ -62,5 +63,8 @@ GEMINI.md
 
 testsprite_tests/*
 .temp
-supabase
-supabase
+supabase/*
+!supabase/migrations/
+
+.agents
+.antigravitycli

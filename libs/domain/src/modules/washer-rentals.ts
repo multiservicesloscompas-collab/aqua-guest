@@ -11,7 +11,108 @@ export interface WashingMachine {
   isAvailable: boolean;
 }
 
-export type RentalShift = 'medio' | 'completo' | 'doble';
+export type RentalShift = string;
+export const SHIFT_UUID = {
+  medio: 'd1111111-1111-1111-1111-111111111111',
+  completo: 'd2222222-2222-2222-2222-222222222222',
+  doble: 'd3333333-3333-3333-3333-333333333333',
+} as const;
+export interface RentalShiftConfig {
+  id: string;
+  label: string;
+  priceUsd: number;
+  hours: number;
+  hasDivisaDiscount: boolean;
+  divisaDiscountAmount: number;
+  isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export type RentalShiftConfigDraft = Omit<
+  RentalShiftConfig,
+  'id' | 'createdAt' | 'updatedAt'
+>;
+
+export type RentalShiftConfigUpdate = Partial<RentalShiftConfigDraft>;
+
+export const SHIFT_FALLBACKS: Record<string, RentalShiftConfig> = {
+  medio: {
+    id: SHIFT_UUID.medio,
+    label: 'Medio Turno',
+    priceUsd: 4,
+    hours: 8,
+    hasDivisaDiscount: false,
+    divisaDiscountAmount: 1,
+    isActive: true,
+  },
+  completo: {
+    id: SHIFT_UUID.completo,
+    label: 'Completo',
+    priceUsd: 6,
+    hours: 24,
+    hasDivisaDiscount: true,
+    divisaDiscountAmount: 1,
+    isActive: true,
+  },
+  doble: {
+    id: SHIFT_UUID.doble,
+    label: 'Doble',
+    priceUsd: 12,
+    hours: 48,
+    hasDivisaDiscount: false,
+    divisaDiscountAmount: 1,
+    isActive: true,
+  },
+  [SHIFT_UUID.medio]: {
+    id: SHIFT_UUID.medio,
+    label: 'Medio Turno',
+    priceUsd: 4,
+    hours: 8,
+    hasDivisaDiscount: false,
+    divisaDiscountAmount: 1,
+    isActive: true,
+  },
+  [SHIFT_UUID.completo]: {
+    id: SHIFT_UUID.completo,
+    label: 'Completo',
+    priceUsd: 6,
+    hours: 24,
+    hasDivisaDiscount: true,
+    divisaDiscountAmount: 1,
+    isActive: true,
+  },
+  [SHIFT_UUID.doble]: {
+    id: SHIFT_UUID.doble,
+    label: 'Doble',
+    priceUsd: 12,
+    hours: 48,
+    hasDivisaDiscount: false,
+    divisaDiscountAmount: 1,
+    isActive: true,
+  },
+};
+
+export const DEFAULT_RENTAL_SHIFT: RentalShiftConfig =
+  SHIFT_FALLBACKS[SHIFT_UUID.completo];
+
+export function resolveShiftConfig(
+  shift: string | null | undefined,
+  catalog?: ReadonlyArray<RentalShiftConfig>
+): RentalShiftConfig | null {
+  if (!shift) {
+    return null;
+  }
+
+  if (catalog && catalog.length > 0) {
+    const fromCatalog = catalog.find((entry) => entry.id === shift);
+    if (fromCatalog) {
+      return fromCatalog;
+    }
+  }
+
+  return SHIFT_FALLBACKS[shift] ?? null;
+}
 
 export type RentalStatus = 'agendado' | 'enviado' | 'finalizado';
 
@@ -62,10 +163,7 @@ export interface WasherRental {
   updatedAt: string;
 }
 
-export type WasherRentalLabelReference = Pick<
-  WasherRental,
-  'customerName'
->;
+export type WasherRentalLabelReference = Pick<WasherRental, 'customerName'>;
 
 export type WasherRentalReference = Pick<WasherRental, 'id'>;
 

@@ -1,19 +1,40 @@
-import { RentalShift, RentalShiftConfig, PaymentMethod } from '@/types';
+import {
+  resolveShiftConfig,
+  type RentalShiftConfig,
+} from '@aqua-guest/domain';
+import type { PaymentMethod } from '@aqua-guest/domain';
 
-export function calculateRentalPrice(
-  shift: RentalShift,
-  paymentMethod: PaymentMethod,
-  deliveryFee = 0
-): number {
-  const basePrice = RentalShiftConfig[shift].priceUsd;
+const DIVISA: PaymentMethod = 'divisa';
 
-  if (shift === 'completo' && paymentMethod === 'divisa') {
-    return 5 + deliveryFee;
-  }
-
-  return basePrice + deliveryFee;
+export interface CalculateRentalPriceOptions {
+  dynamicShifts?: ReadonlyArray<RentalShiftConfig>;
 }
 
-export function getBaseRentalPrice(shift: RentalShift): number {
-  return RentalShiftConfig[shift].priceUsd;
+export interface CalculateRentalPriceParams {
+  shift: string;
+  paymentMethod: PaymentMethod;
+  deliveryFee?: number;
+}
+
+export function calculateRentalPrice(
+  shift: string,
+  paymentMethod: PaymentMethod,
+  deliveryFee: number = 0,
+  options: CalculateRentalPriceOptions = {}
+): number {
+  const config = resolveShiftConfig(shift, options.dynamicShifts);
+
+  if (!config) {
+    return 0 + deliveryFee;
+  }
+
+  const basePrice = Number(config.priceUsd) || 0;
+  const shouldApplyDiscount =
+    Boolean(config.hasDivisaDiscount) && paymentMethod === DIVISA;
+  const discount = shouldApplyDiscount
+    ? Number(config.divisaDiscountAmount) || 0
+    : 0;
+  const finalBase = Math.max(0, basePrice - discount);
+
+  return finalBase + deliveryFee;
 }

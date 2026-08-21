@@ -2,6 +2,9 @@ import type {
   PaymentMethod,
   PaymentSplit,
   RentalShift,
+  RentalShiftConfig,
+  RentalShiftConfigDraft,
+  RentalShiftConfigUpdate,
   RentalStatus,
   WasherRental,
   WasherRentalDraft,
@@ -13,60 +16,37 @@ import { preparePaymentWritePayload } from '@/services/payments/paymentSplitWrit
 export interface RentalRow {
   id: string;
   date: string;
-  // TODO: do not use snake_case!
   customer_id: string;
-  // TODO: do not use snake_case!
   machine_id: string;
   shift: RentalShift;
-  // TODO: do not use snake_case!
   delivery_time: string;
-  // TODO: do not use snake_case!
   pickup_time: string;
-  // TODO: do not use snake_case!
   pickup_date: string;
-  // TODO: do not use snake_case!
   delivery_fee: number;
-  // TODO: do not use snake_case!
   total_usd: number;
-  // TODO: do not use snake_case!
   payment_method: PaymentMethod;
-  // TODO: do not use snake_case!
   payment_splits?: PaymentSplit[];
   status: RentalStatus;
-  // TODO: do not use snake_case!
   is_paid: boolean;
-  // TODO: do not use snake_case!
   date_paid?: string | null;
   notes?: string | null;
-  // TODO: do not use snake_case!
   created_at?: string | null;
-  // TODO: do not use snake_case!
   updated_at?: string | null;
 }
 
 export type RentalInsert = {
   date: string;
-  // TODO: do not use snake_case!
   customer_id: string;
-  // TODO: do not use snake_case!
   machine_id: string;
   shift: RentalShift;
-  // TODO: do not use snake_case!
   delivery_time: string;
-  // TODO: do not use snake_case!
   pickup_time: string;
-  // TODO: do not use snake_case!
   pickup_date: string;
-  // TODO: do not use snake_case!
   delivery_fee: number;
-  // TODO: do not use snake_case!
   total_usd: number;
-  // TODO: do not use snake_case!
   payment_method: PaymentMethod;
   status: RentalStatus;
-  // TODO: do not use snake_case!
   is_paid: boolean;
-  // TODO: do not use snake_case!
   date_paid: string | null;
   notes?: string;
 };
@@ -76,11 +56,12 @@ export type RentalUpdate = Partial<RentalInsert> & {
   updated_at?: string;
 };
 
-// ─── State interface ──────────────────────────────────────────────────────────
-
 export interface RentalState {
   rentals: WasherRental[];
   loadingRentalsByRange: Record<string, boolean>;
+
+  shifts: RentalShiftConfig[];
+  loadingShifts: boolean;
 
   addRental: (
     rental: WasherRentalDraft,
@@ -98,9 +79,15 @@ export interface RentalState {
 
   loadRentalsByDate: (date: string) => Promise<WasherRental[]>;
   loadRentalsByDateRange: (startDate: string, endDate: string) => Promise<void>;
-}
 
-// ─── Pure helpers ─────────────────────────────────────────────────────────────
+  loadShifts: () => Promise<void>;
+  addShift: (shift: RentalShiftConfigDraft) => Promise<RentalShiftConfig>;
+  updateShift: (
+    id: string,
+    updates: RentalShiftConfigUpdate
+  ) => Promise<void>;
+  deleteShift: (id: string) => Promise<void>;
+}
 
 export function buildRentalWriteContext(
   input: {

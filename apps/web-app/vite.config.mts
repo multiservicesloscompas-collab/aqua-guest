@@ -9,7 +9,7 @@ export default defineConfig(() => ({
   cacheDir: '../../node_modules/.vite/apps/web-app',
   server: {
     host: true,
-    port: 4200, // Allow this host so Vite accepts requests proxied from it
+    port: 4200,
   },
   plugins: [
     react(),
@@ -44,7 +44,7 @@ export default defineConfig(() => ({
               cacheName: 'supabase-api-cache',
               expiration: {
                 maxEntries: 100,
-                maxAgeSeconds: 60 * 60 * 24 * 7, // 1 week
+                maxAgeSeconds: 60 * 60 * 24 * 7,
               },
               cacheableResponse: {
                 statuses: [0, 200],
@@ -58,6 +58,18 @@ export default defineConfig(() => ({
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
+      '@aqua-guest/domain': fileURLToPath(
+        new URL('../../libs/domain/src/index.ts', import.meta.url)
+      ),
+      '@aqua-guest/domain/': fileURLToPath(
+        new URL('../../libs/domain/src/', import.meta.url)
+      ),
+      '@aqua-guest/product-domain/frontend': fileURLToPath(
+        new URL('../../libs/product-domain/frontend/index.ts', import.meta.url)
+      ),
+      '@aqua-guest/product-domain/frontend/': fileURLToPath(
+        new URL('../../libs/product-domain/frontend/', import.meta.url)
+      ),
     },
   },
   build: {

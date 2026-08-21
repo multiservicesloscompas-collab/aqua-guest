@@ -1,33 +1,30 @@
-/**
- * useRentalStore.ts
- * Thin Zustand store barrel — wires together types from .core and
- * action implementations from .supabase. All consumers can import
- * from this file and nothing breaks.
- */
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { CustomerUpdate, WasherRental } from '@aqua-guest/domain';
+import type {
+  CustomerUpdate,
+  RentalShiftConfig,
+  WasherRental,
+} from '@aqua-guest/domain';
+import { SHIFT_FALLBACKS, SHIFT_UUID } from '@aqua-guest/domain';
 import { rentalsDataService } from '@/services/RentalsDataService';
 import { tipsDataService } from '@/services/tips/TipDataService';
 import { createCurrencyConverter } from '@/services/CurrencyService';
 
 import {
   type RentalState,
-  type RentalRow,
-  type RentalInsert,
-  type RentalUpdate,
   buildRentalWriteContext,
-  mapRentalRowToWasherRental,
 } from './useRentalStore.core';
-import {
-  replaceRentalSplits,
-  fetchRentalSplits,
-} from './useRentalStore.supabase';
 import {
   addRentalAction,
   updateRentalAction,
   deleteRentalAction,
 } from './useRentalStore.actions';
+import {
+  addShiftAction,
+  deleteShiftAction,
+  loadShiftsAction,
+  updateShiftAction,
+} from './useRentalStore.shifts';
 import { useConfigStore } from './useConfigStore';
 import { useTipStore } from './useTipStore';
 import {
@@ -47,26 +44,24 @@ function upsertRentalTipInStore(nextTip: Tip) {
   tipStore.setTips([...nextTips, nextTip]);
 }
 
-// Re-export everything so existing import paths continue to work
 export type {
   RentalState,
-  RentalRow,
-  RentalInsert,
-  RentalUpdate,
   CustomerUpdate,
 };
-export {
-  buildRentalWriteContext,
-  mapRentalRowToWasherRental,
-  replaceRentalSplits,
-  fetchRentalSplits,
-};
+export { buildRentalWriteContext };
 
 export const useRentalStore = create<RentalState>()(
   persist(
     (set, get) => ({
       rentals: [],
       loadingRentalsByRange: {},
+
+      shifts: [
+        SHIFT_FALLBACKS[SHIFT_UUID.medio],
+        SHIFT_FALLBACKS[SHIFT_UUID.completo],
+        SHIFT_FALLBACKS[SHIFT_UUID.doble],
+      ],
+      loadingShifts: false,
 
       addRental: async (rental, tipInput) => {
         const createdRental = await addRentalAction(rental, tipInput, set, get);
@@ -141,9 +136,10 @@ export const useRentalStore = create<RentalState>()(
         }
       },
       deleteRental: (id) =>
-        deleteRentalAction(id, set, get, (originType, originId) =>
-          tipsDataService.deleteTipByOrigin(originType, originId)
-        ),
+        deleteRentalAction(id, set, get, async (originType, originId) => {
+          await tipsDataService.deleteTipByOrigin(originType, originId);
+          useTipStore.getState().removeTipByOrigin(originType, originId);
+        }),
 
       getRentalsByDate: (date) =>
         get().rentals.filter((rental) => rental.date === date),
@@ -234,9 +230,39 @@ export const useRentalStore = create<RentalState>()(
           }));
         }
       },
+
+      loadShifts: async () => loadShiftsAction(set, get),
+      addShift: async (shift) => addShiftAction(shift, set, get),
+      updateShift: async (id, updates) => updateShiftAction(id, updates, set, get),
+      deleteShift: async (id) => deleteShiftAction(id, set, get),
     }),
     {
       name: 'aquagest-rental-storage',
+      partialize: (state) => ({
+        shifts: state.shifts,
+      }),
     }
   )
 );
+
+void useRentalStore
+  .getState()
+  .loadShifts()
+  .catch((err: unknown) => {
+    console.error(err);
+  });
+
+export const selectShiftConfigById = (
+  shifts: ReadonlyArray<RentalShiftConfig>
+) => {
+  return (id: string | null | undefined) => {
+    if (!id) return null;
+
+    const fromStore = shifts.find((shift) => shift.id === id);
+    if (fromStore) {
+      return fromStore;
+    }
+
+    return SHIFT_FALLBACKS[id] ?? null;
+  };
+};

@@ -9,7 +9,13 @@
     "paths": {
       "@/*": ["src/*"],
       "@aqua-guest/domain": ["../../libs/domain/src/index.ts"],
-      "@aqua-guest/domain/*": ["../../libs/domain/src/*"]
+      "@aqua-guest/domain/*": ["../../libs/domain/src/*"],
+      "@aqua-guest/product-domain/frontend": [
+        "../../libs/product-domain/frontend/index.ts"
+      ],
+      "@aqua-guest/product-domain/frontend/*": [
+        "../../libs/product-domain/frontend/*"
+      ]
     },
     "types": [
       "node",
@@ -45,6 +51,9 @@
   "references": [
     {
       "path": "../../libs/domain/tsconfig.lib.json"
+    },
+    {
+      "path": "../../libs/product-domain/frontend/tsconfig.lib.json"
     }
   ]
 }

@@ -20,7 +20,13 @@
     "baseUrl": ".",
     "paths": {
       "@aqua-guest/domain": ["libs/domain/src/index.ts"],
-      "@aqua-guest/domain/*": ["libs/domain/src/*"]
+      "@aqua-guest/domain/*": ["libs/domain/src/*"],
+      "@aqua-guest/product-domain/frontend": [
+        "libs/product-domain/frontend/index.ts"
+      ],
+      "@aqua-guest/product-domain/frontend/*": [
+        "libs/product-domain/frontend/*"
+      ]
     }
   }
 }

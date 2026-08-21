@@ -1,0 +1,18 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "outDir": "../../../dist/libs/product-domain/frontend",
+    "tsBuildInfoFile": "../../../dist/libs/product-domain/frontend/tsconfig.lib.tsbuildinfo",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "types": []
+  },
+  "include": ["**/*.ts"],
+  "exclude": ["**/*.spec.ts", "**/*.test.ts"],
+  "references": [
+    {
+      "path": "../../domain/tsconfig.lib.json"
+    }
+  ]
+}

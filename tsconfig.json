@@ -11,6 +11,9 @@
     },
     {
       "path": "./apps/web-app-e2e"
+    },
+    {
+      "path": "./libs/product-domain/frontend"
     }
   ]
 }

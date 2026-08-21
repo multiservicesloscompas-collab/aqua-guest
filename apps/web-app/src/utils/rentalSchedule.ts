@@ -1,4 +1,4 @@
-import { RentalShiftConfig, RentalShift, BUSINESS_HOURS } from '@/types';
+import { resolveShiftConfig, type RentalShiftConfig } from '@aqua-guest/domain';
 import {
   format,
   addDays,
@@ -10,12 +10,47 @@ import {
   getDay,
 } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { BUSINESS_HOURS } from '@/types';
+
+export interface CalculatePickupTimeOptions {
+  dynamicShifts?: ReadonlyArray<RentalShiftConfig>;
+}
+
+export interface CalculatePickupTimeParams {
+  deliveryDate: Date;
+  deliveryTime: string;
+  shift: string;
+  options?: CalculatePickupTimeOptions;
+}
 
 export function calculatePickupTime(
   deliveryDate: Date,
-  deliveryTime: string, // HH:mm
-  shift: RentalShift
+  deliveryTime: string,
+  shift: string,
+  options?: CalculatePickupTimeOptions
+): { pickupTime: string; pickupDate: string };
+export function calculatePickupTime(
+  deliveryDate: Date,
+  deliveryTime: string,
+  shift: string,
+  dynamicShifts?: ReadonlyArray<RentalShiftConfig>
+): { pickupTime: string; pickupDate: string };
+export function calculatePickupTime(
+  deliveryDate: Date,
+  deliveryTime: string,
+  shift: string,
+  optionsOrShifts?: CalculatePickupTimeOptions | ReadonlyArray<RentalShiftConfig>
 ): { pickupTime: string; pickupDate: string } {
+  const dynamicShifts: ReadonlyArray<RentalShiftConfig> | undefined = (() => {
+    if (Array.isArray(optionsOrShifts)) {
+      return optionsOrShifts;
+    }
+    if (optionsOrShifts && 'dynamicShifts' in optionsOrShifts) {
+      return optionsOrShifts.dynamicShifts;
+    }
+    return undefined;
+  })();
+
   if (!deliveryTime) {
     return {
       pickupTime: format(deliveryDate, 'HH:mm'),
@@ -23,7 +58,7 @@ export function calculatePickupTime(
     };
   }
 
-  const shiftConfig = RentalShiftConfig[shift];
+  const shiftConfig = resolveShiftConfig(shift, dynamicShifts);
   if (!shiftConfig) {
     return {
       pickupTime: format(deliveryDate, 'HH:mm'),
@@ -69,7 +104,6 @@ export function calculatePickupTime(
       ) {
         pickupDateTime = openTime;
       } else {
-        // Mover al siguiente día laboral a la hora de apertura
         let nextDay = addDays(new Date(pickupDateTime), 1);
         while (!BUSINESS_HOURS.workDays.includes(getDay(nextDay))) {
           nextDay = addDays(nextDay, 1);
@@ -99,10 +133,6 @@ export function generateTimeSlots(): string[] {
     slots.push(`${hour.toString().padStart(2, '0')}:30`);
   }
   return slots;
-}
-
-export function isWorkDay(date: Date): boolean {
-  return BUSINESS_HOURS.workDays.includes(getDay(date));
 }
 
 export function formatPickupInfo(

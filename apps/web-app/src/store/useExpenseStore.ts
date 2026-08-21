@@ -1,13 +1,7 @@
-/**
- * useExpenseStore.ts
- * Thin Zustand store barrel — imports type definitions from .core
- * and helpers from .helpers. All consumers can import from this
- * file and nothing breaks.
- */
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { Expense } from '@aqua-guest/domain';
-import supabase from '@/lib/supabaseClient';
+import { appRepositories } from '@/lib/app-repositories';
 import { expensesDataService } from '@/services/ExpensesDataService';
 import {
   enqueueOfflineExpenseCreate,
@@ -17,27 +11,12 @@ import {
 } from '@/offline/enqueue/expensesEnqueue';
 import {
   dedupExpensesByDateRange,
-  insertExpenseSplitsStrict,
-  mapExpenseRowToExpense,
-  type SupabaseCompensatingLike,
-  toExpenseInsertPayload,
-  toExpenseUpdatePayload,
-  updateExpenseWithSplitCompensationStrict,
 } from './useExpenseStore.helpers';
 import {
   type ExpenseState,
-  type ExpenseInsertPayload,
-  type ExpenseUpdatePayload,
-  type ExpenseRow,
 } from './useExpenseStore.core';
 
-// Re-export types so existing import paths continue to work
-export type {
-  ExpenseState,
-  ExpenseInsertPayload,
-  ExpenseUpdatePayload,
-  ExpenseRow,
-};
+export type { ExpenseState };
 
 const loadingExpenseRanges = new Set<string>();
 
@@ -61,38 +40,9 @@ export const useExpenseStore = create<ExpenseState>()(
             return;
           }
 
-          const payload = toExpenseInsertPayload(expense);
-          const { data, error } = await supabase
-            .from('expenses')
-            .insert(payload)
-            .select('*')
-            .single();
-          if (error) throw error;
-          const row = data as ExpenseRow;
-
-          try {
-            await insertExpenseSplitsStrict(
-              supabase,
-              row.id,
-              expense.paymentSplits
-            );
-          } catch (splitsError) {
-            const { error: rollbackError } = await supabase
-              .from('expenses')
-              .delete()
-              .eq('id', row.id);
-            if (rollbackError) {
-              throw rollbackError;
-            }
-            throw splitsError;
-          }
-
-          const newExpense: Expense = mapExpenseRowToExpense(
-            row,
-            expense.paymentSplits
-          );
+          const newExpense = await appRepositories.expensesRepository.create(expense);
           set((state) => ({ expenses: [...state.expenses, newExpense] }));
-          expensesDataService.invalidateCache(row.date);
+          expensesDataService.invalidateCache(newExpense.date);
         } catch (err) {
           console.error('Failed to add expense to Supabase', err);
           throw err;
@@ -121,25 +71,10 @@ export const useExpenseStore = create<ExpenseState>()(
                 expensesDataService.invalidateCache(updates.date);
               }
             }
-            return;
-          }
+              return;
+            }
 
-          const payload = toExpenseUpdatePayload(updates);
-
-          if (updates.paymentSplits !== undefined) {
-            await updateExpenseWithSplitCompensationStrict(
-              supabase as unknown as SupabaseCompensatingLike,
-              id,
-              payload,
-              updates.paymentSplits
-            );
-          } else if (Object.keys(payload).length > 0) {
-            const { error } = await supabase
-              .from('expenses')
-              .update(payload)
-              .eq('id', id);
-            if (error) throw error;
-          }
+          await appRepositories.expensesRepository.update(id, updates);
 
           set((state) => ({
             expenses: state.expenses.map((exp) =>
@@ -170,14 +105,10 @@ export const useExpenseStore = create<ExpenseState>()(
             if (expenseToDelete) {
               expensesDataService.invalidateCache(expenseToDelete.date);
             }
-            return;
-          }
+              return;
+            }
 
-          const { error } = await supabase
-            .from('expenses')
-            .delete()
-            .eq('id', id);
-          if (error) throw error;
+          await appRepositories.expensesRepository.delete(id);
           set((state) => ({
             expenses: state.expenses.filter((exp) => exp.id !== id),
           }));

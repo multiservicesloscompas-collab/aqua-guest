@@ -4,17 +4,15 @@ export type PaymentMethod =
   | 'punto_venta'
   | 'divisa';
 
-export type PaymentMethodForSplit = PaymentMethod;
-
 export interface PaymentSplit {
-  method: PaymentMethodForSplit;
+  method: PaymentMethod;
   amountBs: number;
   amountUsd?: number;
   exchangeRateUsed?: number;
 }
 
 export interface SplitPaymentCompatible {
-  paymentMethod: PaymentMethodForSplit;
+  paymentMethod: PaymentMethod;
   paymentSplits?: PaymentSplit[];
 }
 
@@ -63,9 +61,8 @@ export type PaymentBalanceTransactionDraft = Omit<
   'id' | 'createdAt' | 'updatedAt'
 >;
 
-export type PaymentBalanceTransactionUpdate = Partial<
-  PaymentBalanceTransactionDraft
->;
+export type PaymentBalanceTransactionUpdate =
+  Partial<PaymentBalanceTransactionDraft>;
 
 export type NormalizedPaymentBalanceAmounts = Required<
   Pick<

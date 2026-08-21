@@ -1,0 +1,7 @@
+{
+  "name": "product-domain-frontend",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/product-domain/frontend",
+  "projectType": "library",
+  "tags": ["scope:product-domain", "layer:frontend", "type:domain"]
+}

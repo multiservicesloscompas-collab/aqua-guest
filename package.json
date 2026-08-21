@@ -3,6 +3,7 @@
   "version": "0.0.0",
   "license": "MIT",
   "scripts": {
+    "dev:all": "bash scripts/dev-all.sh",
     "playwright:install": "playwright install chromium",
     "e2e:web-app": "npx nx run web-app-e2e:e2e",
     "e2e:web-app:ci": "npx nx run web-app-e2e:e2e-ci"
