@@ -1,6 +1,7 @@
 import {
   BarChart2,
   ClipboardList,
+  Clock,
   CreditCard,
   DollarSign,
   Droplets,
@@ -89,6 +90,11 @@ export const moduleSubItems: Record<ModuleRoute, ModuleSubItem[]> = {
     },
     { label: 'Seguimiento', route: 'seguimiento', icon: ClipboardList },
     { label: 'Gestión de Máquinas', route: 'lavadoras', icon: WashingMachine },
+    {
+      label: 'Configuración de Turnos',
+      route: 'configuracion-turnos',
+      icon: Clock,
+    },
   ],
   entregas: [
     {

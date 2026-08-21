@@ -27,7 +27,8 @@ export type AppRoute =
   | 'clientes-top'
   | 'egresos-metricas'
   | 'config-precios-agua'
-  | 'config-tasa-cambio';
+  | 'config-tasa-cambio'
+  | 'configuracion-turnos';
 
 export type ModuleRoute =
   | 'agua'
@@ -55,6 +56,7 @@ export const routeToModule: Partial<Record<AppRoute, ModuleRoute>> = {
   'lavadoras-metricas': 'lavadoras',
   lavadoras: 'lavadoras',
   seguimiento: 'lavadoras',
+  'configuracion-turnos': 'lavadoras',
   deliverys: 'entregas',
   'entregas-metricas': 'entregas',
   clientes: 'clientes',
