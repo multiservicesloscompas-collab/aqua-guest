@@ -19,7 +19,7 @@ export interface CalculateRentalPriceParams {
 export function calculateRentalPrice(
   shift: string,
   paymentMethod: PaymentMethod,
-  deliveryFee: number = 0,
+  deliveryFee = 0,
   options: CalculateRentalPriceOptions = {}
 ): number {
   const config = resolveShiftConfig(shift, options.dynamicShifts);

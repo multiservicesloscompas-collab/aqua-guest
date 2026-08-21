@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { Customer, CustomerDraft, CustomerUpdate } from '@aqua-guest/domain';
-import supabase from '@/lib/supabaseClient';
+import { appRepositories } from '@/lib/app-repositories';
 import {
   enqueueOfflineCustomerCreate,
   enqueueOfflineCustomerDelete,
@@ -16,19 +16,6 @@ interface CustomerState {
   deleteCustomer: (id: string) => Promise<void>;
   setCustomers: (customers: Customer[]) => void;
 }
-
-const buildCustomerUpdatePayload = (
-  updates: CustomerUpdate
-): CustomerUpdate => {
-  const payload: CustomerUpdate = {};
-
-  if (updates.name !== undefined) payload.name = updates.name;
-  if (updates.phone !== undefined) payload.phone = updates.phone;
-  if (updates.address !== undefined) payload.address = updates.address;
-
-  return payload;
-};
-
 export const useCustomerStore = create<CustomerState>()(
   persist(
     (set) => ({
@@ -46,62 +33,42 @@ export const useCustomerStore = create<CustomerState>()(
             return;
           }
 
-          const { data, error } = await supabase
-            .from('customers')
-            .insert({
-              name: customer.name,
-              phone: customer.phone,
-              address: customer.address,
-            })
-            .select('*')
-            .single();
-
-          if (error) throw error;
-          if (!data) {
-            throw new Error('Missing customer data from Supabase');
-          }
+          const data = await appRepositories.customersRepository.create(customer);
 
           set((state) => ({
             customers: [
               ...state.customers,
               {
-                id: data.id,
-                name: data.name,
-                phone: data.phone,
-                address: data.address,
-              },
-            ],
-          }));
+                  id: data.id,
+                  name: data.name,
+                  phone: data.phone,
+                  address: data.address,
+                },
+              ],
+            }));
         } catch (err: unknown) {
           console.error('Failed to add customer to Supabase', err);
           throw err;
         }
       },
 
-      updateCustomer: async (id, updates) => {
-        try {
-          const payload = buildCustomerUpdatePayload(updates);
+        updateCustomer: async (id, updates) => {
+          try {
+            if (!window.navigator.onLine) {
+              enqueueOfflineCustomerUpdate(id, updates);
 
-          if (!window.navigator.onLine) {
-            enqueueOfflineCustomerUpdate(id, payload);
-
-            set((state) => ({
-              customers: state.customers.map((c) =>
+              set((state) => ({
+                customers: state.customers.map((c) =>
                 c.id === id ? { ...c, ...updates } : c
               ),
             }));
-            return;
-          }
+              return;
+            }
 
-          const { error } = await supabase
-            .from('customers')
-            .update(payload)
-            .eq('id', id);
+            await appRepositories.customersRepository.update(id, updates);
 
-          if (error) throw error;
-
-          set((state) => ({
-            customers: state.customers.map((c) =>
+            set((state) => ({
+              customers: state.customers.map((c) =>
               c.id === id ? { ...c, ...updates } : c
             ),
           }));
@@ -119,23 +86,16 @@ export const useCustomerStore = create<CustomerState>()(
             set((state) => ({
               customers: state.customers.filter((c) => c.id !== id),
             }));
-            return;
-          }
+              return;
+            }
 
-          const { error } = await supabase
-            .from('customers')
-            .delete()
-            .eq('id', id);
+            await appRepositories.customersRepository.delete(id);
 
-          if (error) throw error;
-
-          set((state) => ({
-            customers: state.customers.filter((c) => c.id !== id),
+            set((state) => ({
+              customers: state.customers.filter((c) => c.id !== id),
           }));
         } catch (err: unknown) {
           console.error('Failed to delete customer from Supabase', err);
-          // Fallback local
-
           throw err;
         }
       },

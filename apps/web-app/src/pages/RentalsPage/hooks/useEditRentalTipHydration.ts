@@ -19,17 +19,22 @@ interface UseEditRentalTipHydrationParams {
   open: boolean;
   rental: WasherRental | null;
   tipCapture: TipCaptureApi;
+  onTipHydrated?: (input: { amountBs: number; paymentMethod: PaymentMethod }) => void;
 }
 
 export function useEditRentalTipHydration({
   open,
   rental,
   tipCapture,
+  onTipHydrated,
 }: UseEditRentalTipHydrationParams) {
-  const { tips, loadTipsByDateRange } = useTipStore();
+  const tips = useTipStore((state) => state.tips);
+  const loadTipsByDateRange = useTipStore((state) => state.loadTipsByDateRange);
   const [controller] = useState(() => createTipHydrationController());
   const { hydrateTipCapture, resetTipCapture } = tipCapture;
   const requestKeyRef = useRef<string | null>(null);
+  const onTipHydratedRef = useRef(onTipHydrated);
+  onTipHydratedRef.current = onTipHydrated;
 
   useEffect(() => {
     if (!open || !rental) {
@@ -49,6 +54,10 @@ export function useEditRentalTipHydration({
         amountBs: cachedTip.amountBs,
         paymentMethod: cachedTip.capturePaymentMethod,
         notes: cachedTip.notes,
+      });
+      onTipHydratedRef.current?.({
+        amountBs: cachedTip.amountBs,
+        paymentMethod: cachedTip.capturePaymentMethod,
       });
       return;
     }
@@ -77,14 +86,26 @@ export function useEditRentalTipHydration({
             paymentMethod: linkedTip.capturePaymentMethod,
             notes: linkedTip.notes,
           });
+          onTipHydratedRef.current?.({
+            amountBs: linkedTip.amountBs,
+            paymentMethod: linkedTip.capturePaymentMethod,
+          });
           return;
         }
 
         resetTipCapture();
+        onTipHydratedRef.current?.({
+          amountBs: 0,
+          paymentMethod: rental.paymentMethod,
+        });
       })
       .catch(() => {
         if (cancelled || !controller.canApply(ticket)) return;
         resetTipCapture();
+        onTipHydratedRef.current?.({
+          amountBs: 0,
+          paymentMethod: rental.paymentMethod,
+        });
       });
 
     return () => {

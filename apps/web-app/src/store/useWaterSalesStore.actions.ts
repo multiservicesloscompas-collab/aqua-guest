@@ -1,13 +1,8 @@
-import supabase from '@/lib/supabaseClient';
 import type { PaymentMethod, PaymentSplit, Sale } from '@aqua-guest/domain';
 import { getSafeTimestamp, normalizeTimestamp } from '@/lib/date-utils';
+import { appRepositories } from '@/lib/app-repositories';
 import { dateService } from '@/services/DateService';
 import { salesDataService } from '@/services/SalesDataService';
-import {
-  PAYMENT_SPLIT_SCHEMA,
-  type PaymentSplitRow,
-} from '@/services/payments/paymentSplitSchemaContract';
-import { salePaymentSplitAdapter } from '@/services/payments/paymentSplitSupabaseAdapters';
 import { preparePaymentWritePayload } from '@/services/payments/paymentSplitWritePath';
 import {
   enqueueOfflineSale,
@@ -18,8 +13,6 @@ import {
 import { useConfigStore } from './useConfigStore';
 import {
   type WaterSalesState,
-  type SaleInsert,
-  type SalesRow,
 } from './useWaterSalesStore.core';
 import type { TipCaptureInput } from '@/types/tips';
 import {
@@ -67,7 +60,7 @@ export async function completeSaleAction(
     tipAmountBs: tipInput?.amountBs ?? 0,
     tipPaymentMethod: tipInput?.capturePaymentMethod ?? paymentMethod,
     exchangeRate,
-    principalBs, // Pass principal amount
+    principalBs,
   });
 
   const splitWrite = preparePaymentWritePayload({
@@ -78,21 +71,19 @@ export async function completeSaleAction(
     exchangeRate,
   });
 
-  const newSalePayload: SaleInsert = {
-    daily_number: dailyNumber,
-    date: normalizedDate,
-    items: state.cart,
-    payment_method: splitWrite.paymentMethod,
-    total_bs: finalTotals.totalBs,
-    total_usd: finalTotals.totalUsd,
-    exchange_rate: exchangeRate,
-    notes: notes || undefined,
-  };
-
   try {
     if (!window.navigator.onLine) {
       const sale = enqueueOfflineSale({
-        newSalePayload,
+        newSalePayload: {
+          daily_number: dailyNumber,
+          date: normalizedDate,
+          items: state.cart,
+          payment_method: splitWrite.paymentMethod,
+          total_bs: finalTotals.totalBs,
+          total_usd: finalTotals.totalUsd,
+          exchange_rate: exchangeRate,
+          notes: notes || undefined,
+        },
         paymentSplits: splitWrite.paymentSplits,
         dailyNumber,
         date: normalizedDate,
@@ -109,63 +100,22 @@ export async function completeSaleAction(
       return sale;
     }
 
-    const { data, error } = await supabase
-      .from('sales')
-      .insert(newSalePayload)
-      .select('*')
-      .single();
-    if (error) throw error;
-
-    const saleRow = data as SalesRow | null;
-    if (!saleRow) throw new Error('Error al crear la venta');
-
-    const { error: deleteSplitsError } = await supabase
-      .from(PAYMENT_SPLIT_SCHEMA.salesSplitsTable)
-      .delete()
-      .eq(PAYMENT_SPLIT_SCHEMA.columns.parentId, saleRow.id);
-    if (deleteSplitsError) throw deleteSplitsError;
-
-    const splitRows = salePaymentSplitAdapter.toInsertRows(
-      saleRow.id,
-      splitWrite.paymentSplits
-    );
-    const { error: splitInsertError } = await supabase
-      .from(PAYMENT_SPLIT_SCHEMA.salesSplitsTable)
-      .insert(splitRows);
-    if (splitInsertError) throw splitInsertError;
-
-    const { data: splitData, error: splitSelectError } = await supabase
-      .from(PAYMENT_SPLIT_SCHEMA.salesSplitsTable)
-      .select('payment_method, amount_bs, amount_usd, exchange_rate_used')
-      .eq(PAYMENT_SPLIT_SCHEMA.columns.parentId, saleRow.id);
-    if (splitSelectError) throw splitSelectError;
-
-    const saleDate = dateService.normalizeSaleDate(
-      saleRow.date || normalizedDate
-    );
-    const normalizedSplits = salePaymentSplitAdapter.fromRows(
-      (splitData ?? []) as PaymentSplitRow[]
-    );
+    const createdSale = await appRepositories.salesRepository.create({
+      dailyNumber,
+      date: normalizedDate,
+      items: state.cart,
+      paymentMethod: splitWrite.paymentMethod,
+      paymentSplits: splitWrite.paymentSplits,
+      totalBs: finalTotals.totalBs,
+      totalUsd: finalTotals.totalUsd,
+      exchangeRate,
+      notes: notes || undefined,
+    });
 
     const sale: Sale = {
-      id: saleRow.id,
-      dailyNumber: saleRow.daily_number,
-      date: saleDate,
-      items: saleRow.items,
-      paymentMethod: splitWrite.paymentMethod,
-      paymentSplits: normalizedSplits,
-      totalBs: Number(saleRow.total_bs),
-      totalUsd: Number(saleRow.total_usd),
-      exchangeRate: Number(saleRow.exchange_rate),
-      notes: saleRow.notes || undefined,
-      createdAt: normalizeTimestamp(
-        saleRow.created_at ?? undefined,
-        safeCreatedAt
-      ),
-      updatedAt: normalizeTimestamp(
-        saleRow.updated_at ?? undefined,
-        safeUpdatedAt
-      ),
+      ...createdSale,
+      createdAt: normalizeTimestamp(createdSale.createdAt, safeCreatedAt),
+      updatedAt: normalizeTimestamp(createdSale.updatedAt, safeUpdatedAt),
     };
 
     set((s) => ({ sales: [...s.sales, sale], cart: [] }));
@@ -198,8 +148,7 @@ export async function deleteSaleAction(
       await deleteTipByOrigin('sale', id);
     }
 
-    const { error } = await supabase.from('sales').delete().eq('id', id);
-    if (error) throw error;
+    await appRepositories.salesRepository.delete(id);
     set((state) => ({ sales: state.sales.filter((sale) => sale.id !== id) }));
     if (saleToDelete) salesDataService.invalidateCache(saleToDelete.date);
   } catch (err) {

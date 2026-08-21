@@ -1,14 +1,14 @@
-import { PaymentMethodLabels } from '@/types';
 import type {
+  PaymentSplit,
   Expense,
   PaymentBalanceTransaction,
   PaymentMethod,
   PrepaidOrder,
   Sale,
-  TipPayout,
   WasherRental,
-} from '@/types';
-import type { PaymentSplit } from '@/types/paymentSplits';
+} from '@aqua-guest/domain';
+import { PaymentMethodLabels } from '@/types';
+import type { TipPayout } from '@/types/tips';
 import { hasValidMixedPaymentSplits } from '@/services/payments/paymentSplitValidity';
 import { normalizeToVenezuelaDate } from '@/services/DateService';
 import { resolvePaymentBalanceTransferLegs } from '@/services/payments/paymentBalanceTransferSemantics';

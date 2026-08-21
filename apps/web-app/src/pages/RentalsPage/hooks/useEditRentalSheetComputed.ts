@@ -2,15 +2,15 @@ import { useMemo } from 'react';
 import { parse } from 'date-fns';
 import { calculatePickupTime, formatPickupInfo } from '@/utils/rentalSchedule';
 import { calculateRentalPrice } from '@/utils/rentalPricing';
+import type { PaymentSplit, RentalShiftConfig } from '@aqua-guest/domain';
 import { buildDualPaymentSplits } from '@/services/payments/paymentSplitWritePath';
 import { calculateFinalRentalTotals } from '@/services/transactions/transactionTotals';
-import { getUnavailableMachineIds } from './editRentalSheetViewModel.helpers';
+import { getUnavailableMachineIds } from './rentalSheetViewModel.helpers';
 import type { WasherRental } from '@/types';
-import type { PaymentSplit } from '@/types/paymentSplits';
 
 interface Params {
   rental: WasherRental | null;
-  shift: 'medio' | 'completo' | 'doble';
+  shift: string;
   paymentMethod: 'pago_movil' | 'efectivo' | 'punto_venta' | 'divisa';
   deliveryFee: number;
   deliveryTime: string;
@@ -20,23 +20,32 @@ interface Params {
   tipAmountBs: number;
   exchangeRate: number;
   rentals: WasherRental[];
+  dynamicShifts?: ReadonlyArray<RentalShiftConfig>;
 }
 
 export function useEditRentalSheetComputed(params: Params) {
   const pickupInfo = useMemo(() => {
     if (!params.rental) return { pickupDate: '', pickupTime: '' };
     const date = parse(params.rental.date, 'yyyy-MM-dd', new Date());
-    return calculatePickupTime(date, params.deliveryTime, params.shift);
-  }, [params.rental, params.deliveryTime, params.shift]);
+    return calculatePickupTime(date, params.deliveryTime, params.shift, {
+      dynamicShifts: params.dynamicShifts,
+    });
+  }, [params.rental, params.deliveryTime, params.shift, params.dynamicShifts]);
 
   const subtotalUsd = useMemo(
     () =>
       calculateRentalPrice(
         params.shift,
         params.paymentMethod,
-        params.deliveryFee
+        params.deliveryFee,
+        { dynamicShifts: params.dynamicShifts }
       ),
-    [params.shift, params.paymentMethod, params.deliveryFee]
+    [
+      params.shift,
+      params.paymentMethod,
+      params.deliveryFee,
+      params.dynamicShifts,
+    ]
   );
 
   const totalUsd = useMemo(
@@ -49,15 +58,9 @@ export function useEditRentalSheetComputed(params: Params) {
     [subtotalUsd, params.tipAmountBs, params.exchangeRate]
   );
 
-  const totalBs = useMemo(
-    () => totalUsd * params.exchangeRate,
-    [totalUsd, params.exchangeRate]
-  );
-
-  const subtotalBs = useMemo(
-    () => (params.exchangeRate > 0 ? subtotalUsd * params.exchangeRate : 0),
-    [subtotalUsd, params.exchangeRate]
-  );
+  const totalBs = totalUsd * params.exchangeRate;
+  const subtotalBs =
+    params.exchangeRate > 0 ? subtotalUsd * params.exchangeRate : 0;
 
   const paymentSplits = useMemo<PaymentSplit[]>(
     () =>
@@ -87,7 +90,7 @@ export function useEditRentalSheetComputed(params: Params) {
     return getUnavailableMachineIds({
       rentals: params.rentals,
       currentRentalId: params.rental.id,
-      currentDate: params.rental.date,
+      selectedDate: params.rental.date,
       deliveryTime: params.deliveryTime,
       pickupDate: pickupInfo.pickupDate,
       pickupTime: pickupInfo.pickupTime,

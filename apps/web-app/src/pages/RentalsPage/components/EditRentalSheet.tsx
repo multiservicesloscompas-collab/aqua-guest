@@ -25,14 +25,18 @@ interface EditRentalSheetProps {
   onOpenChange: (open: boolean) => void;
 }
 
-export function EditRentalSheet({
+interface EditRentalSheetContentProps {
+  rental: WasherRental;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
+
+function EditRentalSheetContent({
   rental,
   open,
   onOpenChange,
-}: EditRentalSheetProps) {
+}: EditRentalSheetContentProps) {
   const viewModel = useEditRentalSheetViewModel({ rental, open, onOpenChange });
-
-  if (!rental) return null;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -156,5 +160,22 @@ export function EditRentalSheet({
         />
       </SheetContent>
     </Sheet>
+  );
+}
+
+export function EditRentalSheet({
+  rental,
+  open,
+  onOpenChange,
+}: EditRentalSheetProps) {
+  if (!rental) return null;
+
+  return (
+    <EditRentalSheetContent
+      key={rental.id}
+      rental={rental}
+      open={open}
+      onOpenChange={onOpenChange}
+    />
   );
 }

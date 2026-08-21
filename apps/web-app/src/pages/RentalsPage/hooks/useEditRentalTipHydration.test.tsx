@@ -12,11 +12,13 @@ const { loadTipsByDateRangeMock, setCurrentTips, useTipStoreMock } = vi.hoisted(
     const loadTipsByDateRangeMock = vi.fn();
 
     const useTipStoreMock = Object.assign(
-      () =>
-        ({
+      (selector?: (state: TipStoreSnapshot) => unknown) => {
+        const snapshot: TipStoreSnapshot = {
           tips: currentTips,
           loadTipsByDateRange: loadTipsByDateRangeMock,
-        } as TipStoreSnapshot),
+        };
+        return selector ? selector(snapshot) : snapshot;
+      },
       {
         getState: () => ({ tips: currentTips }),
       }
@@ -51,56 +53,29 @@ type TipCaptureMockApi = {
 };
 
 function buildRental(id: string, date = '2026-03-15'): WasherRental {
-  return {
-    id,
-    date,
-    customerId: 'customer-1',
-    customerName: 'Cliente',
-    customerPhone: '0414',
-    customerAddress: 'Centro',
-    machineId: 'machine-1',
-    shift: 'medio',
-    deliveryTime: '09:00',
-    pickupTime: '13:00',
-    pickupDate: date,
-    deliveryFee: 0,
-    totalUsd: 2,
-    paymentMethod: 'efectivo',
-    status: 'agendado',
-    isPaid: false,
-    createdAt: `${date}T08:00:00.000Z`,
-    updatedAt: `${date}T08:00:00.000Z`,
-  };
+  return { id, date, customerId: 'customer-1', customerName: 'Cliente', customerPhone: '0414', customerAddress: 'Centro', machineId: 'machine-1', shift: 'medio', deliveryTime: '09:00', pickupTime: '13:00', pickupDate: date, deliveryFee: 0, totalUsd: 2, paymentMethod: 'efectivo', status: 'agendado', isPaid: false, createdAt: `${date}T08:00:00.000Z`, updatedAt: `${date}T08:00:00.000Z` };
 }
 
 function buildTip(originId: string, amountBs: number): Tip {
-  return {
-    id: `tip-${originId}`,
-    originType: 'rental',
-    originId,
-    tipDate: '2026-03-15',
-    amountBs,
-    capturePaymentMethod: 'pago_movil',
-    status: 'pending',
-    notes: `nota-${originId}`,
-    createdAt: '2026-03-15T08:00:00.000Z',
-    updatedAt: '2026-03-15T08:00:00.000Z',
-  };
+  return { id: `tip-${originId}`, originType: 'rental', originId, tipDate: '2026-03-15', amountBs, capturePaymentMethod: 'pago_movil', status: 'pending', notes: `nota-${originId}`, createdAt: '2026-03-15T08:00:00.000Z', updatedAt: '2026-03-15T08:00:00.000Z' };
 }
 
 function Harness({
   open,
   rental,
   tipCapture,
+  onTipHydrated,
 }: {
   open: boolean;
   rental: WasherRental | null;
   tipCapture: TipCaptureMockApi;
+  onTipHydrated?: (input: { amountBs: number; paymentMethod: 'pago_movil' | 'efectivo' | 'punto_venta' | 'divisa' }) => void;
 }) {
   useEditRentalTipHydration({
     open,
     rental,
     tipCapture,
+    onTipHydrated,
   });
   return null;
 }
@@ -289,6 +264,31 @@ describe('useEditRentalTipHydration', () => {
     );
     await waitFor(() => {
       expect(tipCapture.hydrateTipCapture).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  it('triggers onTipHydrated callback when loading tips', async () => {
+    const tipCapture = {
+      hydrateTipCapture: vi.fn(),
+      resetTipCapture: vi.fn(),
+    };
+    const onTipHydrated = vi.fn();
+    setCurrentTips([buildTip('rental-1', 45)]);
+
+    render(
+      <Harness
+        open={true}
+        rental={buildRental('rental-1')}
+        tipCapture={tipCapture}
+        onTipHydrated={onTipHydrated}
+      />
+    );
+
+    await waitFor(() => {
+      expect(onTipHydrated).toHaveBeenCalledWith({
+        amountBs: 45,
+        paymentMethod: 'pago_movil',
+      });
     });
   });
 });

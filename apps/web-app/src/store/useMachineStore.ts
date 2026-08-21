@@ -1,12 +1,11 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type {
-  MachineStatus,
   WashingMachine,
   WashingMachineDraft,
   WashingMachineUpdate,
 } from '@aqua-guest/domain';
-import supabase from '@/lib/supabaseClient';
+import { appRepositories } from '@/lib/app-repositories';
 import {
   enqueueOfflineWashingMachineCreate,
   enqueueOfflineWashingMachineDelete,
@@ -23,23 +22,6 @@ interface MachineState {
   loadWashingMachines: () => Promise<void>;
 }
 
-type WashingMachineUpdatePayload = {
-  name?: string;
-  kg?: number;
-  brand?: string;
-  status?: MachineStatus;
-  is_available?: boolean;
-};
-
-type WashingMachineRow = {
-  id: string;
-  name: string;
-  kg: number;
-  brand: string;
-  status: MachineStatus;
-  is_available: boolean;
-};
-
 export const useMachineStore = create<MachineState>()(
   persist(
     (set, get) => ({
@@ -55,18 +37,7 @@ export const useMachineStore = create<MachineState>()(
             return;
           }
 
-          const { data, error } = await supabase
-            .from('washing_machines')
-            .insert({
-              name: machine.name,
-              kg: machine.kg,
-              brand: machine.brand,
-              status: machine.status,
-              is_available: machine.isAvailable,
-            })
-            .select('*')
-            .single();
-          if (error) throw error;
+          const data = await appRepositories.washingMachinesRepository.create(machine);
           set((state) => ({
             washingMachines: [
               ...state.washingMachines,
@@ -76,7 +47,7 @@ export const useMachineStore = create<MachineState>()(
                 kg: data.kg,
                 brand: data.brand,
                 status: data.status,
-                isAvailable: data.is_available,
+                isAvailable: data.isAvailable,
               },
             ],
           }));
@@ -98,19 +69,7 @@ export const useMachineStore = create<MachineState>()(
             return;
           }
 
-          const payload: WashingMachineUpdatePayload = {};
-          if (updates.name !== undefined) payload.name = updates.name;
-          if (updates.kg !== undefined) payload.kg = updates.kg;
-          if (updates.brand !== undefined) payload.brand = updates.brand;
-          if (updates.status !== undefined) payload.status = updates.status;
-          if (updates.isAvailable !== undefined)
-            payload.is_available = updates.isAvailable;
-
-          const { error } = await supabase
-            .from('washing_machines')
-            .update(payload)
-            .eq('id', id);
-          if (error) throw error;
+          await appRepositories.washingMachinesRepository.update(id, updates);
 
           set((state) => ({
             washingMachines: state.washingMachines.map((m) =>
@@ -130,14 +89,10 @@ export const useMachineStore = create<MachineState>()(
             set((state) => ({
               washingMachines: state.washingMachines.filter((m) => m.id !== id),
             }));
-            return;
-          }
+              return;
+            }
 
-          const { error } = await supabase
-            .from('washing_machines')
-            .delete()
-            .eq('id', id);
-          if (error) throw error;
+          await appRepositories.washingMachinesRepository.delete(id);
           set((state) => ({
             washingMachines: state.washingMachines.filter((m) => m.id !== id),
           }));
@@ -149,21 +104,8 @@ export const useMachineStore = create<MachineState>()(
 
       loadWashingMachines: async () => {
         try {
-          const { data, error } = await supabase
-            .from('washing_machines')
-            .select('*');
-          if (error) throw error;
-          if (data) {
-            const machines = (data as WashingMachineRow[]).map((m) => ({
-              id: m.id,
-              name: m.name,
-              kg: m.kg,
-              brand: m.brand,
-              status: m.status,
-              isAvailable: m.is_available,
-            }));
-            set({ washingMachines: machines });
-          }
+          const machines = await appRepositories.washingMachinesRepository.getAll();
+          set({ washingMachines: machines });
         } catch (error) {
           console.error('Error loading washing machines:', error);
           throw error;
@@ -176,7 +118,6 @@ export const useMachineStore = create<MachineState>()(
   )
 );
 
-// Attempt to load initial data from Supabase on module import
 try {
   useMachineStore.getState().loadWashingMachines &&
     useMachineStore.getState().loadWashingMachines();

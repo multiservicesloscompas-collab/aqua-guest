@@ -30,6 +30,7 @@ import { ClientesMetricsPage } from '@/pages/ClientesMetricsPage/index';
 import { TopClientsPage } from '@/pages/TopClientsPage/index';
 import { EgresosMetricsPage } from '@/pages/EgresosMetricsPage/index';
 import { TipsPage } from '@/pages/TipsPage';
+import ConfiguracionTurnosPage from '@/pages/ConfiguracionTurnosPage';
 import { AppRoute, PaymentMethod } from '@/types';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { useViewportMode } from '@/hooks/responsive/useViewportMode';
@@ -38,7 +39,6 @@ import { moduleSubItems } from '@/components/layout/navigationItems';
 import { cn } from '@/lib/utils';
 import { RefreshCw } from 'lucide-react';
 
-// Routes that render their own Header (dynamic titles / back navigation)
 const SELF_HEADER_ROUTES: AppRoute[] = [
   'transacciones-hoy',
   'detalle-pago',
@@ -92,7 +92,10 @@ const routeHeaderMap: Record<AppRoute, RouteHeader> = {
     subtitle: 'Breakpoints por litro',
   },
   'config-tasa-cambio': { title: 'Tasa de Cambio', subtitle: 'Bs por USD' },
-  // Self-header routes — values here are fallbacks, never used by shell
+  'configuracion-turnos': {
+    title: 'Turnos de Alquiler',
+    subtitle: 'Catálogo dinámico',
+  },
   'historial-tasas': { title: 'Historial de Tasas' },
   'transacciones-hoy': { title: 'Transacciones' },
   'detalle-pago': { title: 'Detalle de Pago' },
@@ -203,6 +206,8 @@ const Index = () => {
         return <WaterPricingConfigPage />;
       case 'config-tasa-cambio':
         return <ExchangeRateConfigPage onNavigate={setRoute} />;
+      case 'configuracion-turnos':
+        return <ConfiguracionTurnosPage />;
       default:
         return <DashboardPage />;
     }

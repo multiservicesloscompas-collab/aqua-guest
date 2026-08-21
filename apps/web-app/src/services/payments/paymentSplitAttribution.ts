@@ -1,11 +1,11 @@
 import type {
   Expense,
   PaymentMethod,
+  PaymentSplit,
   Sale,
   SplitAware,
   WasherRental,
 } from '@aqua-guest/domain';
-import type { PaymentSplit } from '@/types/paymentSplits';
 import { hasValidMixedPaymentSplits } from '@/services/payments/paymentSplitValidity';
 
 function findSplitByMethod(

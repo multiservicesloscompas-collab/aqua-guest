@@ -82,8 +82,6 @@ const buildLegacySupabaseMutation = (
   action: GlobalSyncAction,
   tempIdToRealId: Map<string, string>
 ): Promise<SupabaseMutationResult> => {
-  // Legacy queue entries and not-yet-migrated actions still replay through
-  // the raw Supabase path. Repository-backed payloads are handled earlier.
   const tableClient = supabase.from(action.table);
 
   if (action.type === 'INSERT') {

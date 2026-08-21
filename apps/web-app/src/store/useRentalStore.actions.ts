@@ -1,8 +1,8 @@
-import supabase from '@/lib/supabaseClient';
 import type {
   WasherRental,
   WasherRentalDraft,
 } from '@aqua-guest/domain/modules/washer-rentals';
+import { appRepositories } from '@/lib/app-repositories';
 import { rentalsDataService } from '@/services/RentalsDataService';
 import {
   enqueueOfflineRental,
@@ -11,17 +11,7 @@ import {
   enqueueOfflineRentalTipDelete,
 } from '@/offline/enqueue/rentalsEnqueue';
 import { useCustomerStore } from './useCustomerStore';
-import {
-  type RentalState,
-  type RentalRow,
-  type RentalInsert,
-  buildRentalWriteContext,
-  mapRentalRowToWasherRental,
-} from './useRentalStore.core';
-import {
-  replaceRentalSplits,
-  fetchRentalSplits,
-} from './useRentalStore.supabase';
+import { type RentalState, buildRentalWriteContext } from './useRentalStore.core';
 import { useTipStore } from './useTipStore';
 import type { TipCaptureInput } from '@/types/tips';
 import {
@@ -56,26 +46,20 @@ export async function addRentalAction(
       if (existingCustomer) {
         customerId = existingCustomer.id;
       } else {
-        const { data: cdata, error: cerr } = await supabase
-          .from('customers')
-          .insert({
-            name: rental.customerName,
-            phone: rental.customerPhone,
-            address: rental.customerAddress,
-          })
-          .select('*')
-          .single();
-        if (cerr) throw cerr;
-        if (!cdata) throw new Error('Error al crear el cliente');
-        customerId = cdata.id;
+        const createdCustomer = await appRepositories.customersRepository.create({
+          name: rental.customerName,
+          phone: rental.customerPhone,
+          address: rental.customerAddress,
+        });
+        customerId = createdCustomer.id;
         useCustomerStore.setState((state) => ({
           customers: [
             ...state.customers,
             {
-              id: cdata.id,
-              name: cdata.name,
-              phone: cdata.phone,
-              address: cdata.address,
+              id: createdCustomer.id,
+              name: createdCustomer.name,
+              phone: createdCustomer.phone,
+              address: createdCustomer.address,
             },
           ],
         }));
@@ -102,31 +86,29 @@ export async function addRentalAction(
         tipPaymentMethod:
           tipInput?.capturePaymentMethod ?? rental.paymentMethod,
         exchangeRate,
-        principalUsd: rental.totalUsd, // Pass principal amount
+        principalUsd: rental.totalUsd,
       }),
       totalUsd: finalTotals.totalUsd,
     });
 
-    const payload: RentalInsert = {
-      date: rental.date,
-      customer_id: customerId,
-      machine_id: rental.machineId,
-      shift: rental.shift,
-      delivery_time: rental.deliveryTime,
-      pickup_time: rental.pickupTime,
-      pickup_date: rental.pickupDate,
-      delivery_fee: rental.deliveryFee,
-      total_usd: finalTotals.totalUsd,
-      payment_method: splitWrite.paymentMethod,
-      status: rental.status,
-      is_paid: rental.isPaid,
-      date_paid: rental.datePaid || null,
-      notes: rental.notes || undefined,
-    };
-
     if (!window.navigator.onLine) {
       const offlineRental = enqueueOfflineRental({
-        payload,
+        payload: {
+          date: rental.date,
+          customer_id: customerId,
+          machine_id: rental.machineId,
+          shift: rental.shift,
+          delivery_time: rental.deliveryTime,
+          pickup_time: rental.pickupTime,
+          pickup_date: rental.pickupDate,
+          delivery_fee: rental.deliveryFee,
+          total_usd: finalTotals.totalUsd,
+          payment_method: splitWrite.paymentMethod,
+          status: rental.status,
+          is_paid: rental.isPaid,
+          date_paid: rental.datePaid || null,
+          notes: rental.notes || undefined,
+        },
         rental: { ...rental, customerId, totalUsd: finalTotals.totalUsd },
         paymentSplits: splitWrite.paymentSplits,
       });
@@ -134,29 +116,17 @@ export async function addRentalAction(
       return offlineRental;
     }
 
-    const { data, error } = await supabase
-      .from('washer_rentals')
-      .insert(payload)
-      .select('*')
-      .single();
-    if (error) throw error;
-
-    const rentalRow = data as RentalRow | null;
-    if (!rentalRow) throw new Error('Error al crear el alquiler');
-
-    await replaceRentalSplits(rentalRow.id, splitWrite.paymentSplits);
-    const normalizedSplits = await fetchRentalSplits(rentalRow.id);
-    const newRental = mapRentalRowToWasherRental(
-      rentalRow,
-      normalizedSplits,
-      splitWrite.paymentMethod,
-      rental
-    );
+    const newRental = await appRepositories.washerRentalsRepository.create({
+      ...rental,
+      customerId,
+      totalUsd: finalTotals.totalUsd,
+      paymentMethod: splitWrite.paymentMethod,
+      paymentSplits: splitWrite.paymentSplits,
+    });
 
     set((state) => ({ rentals: [...state.rentals, newRental] }));
-    rentalsDataService.invalidateCache(rentalRow.date);
-    if (rentalRow.date_paid)
-      rentalsDataService.invalidateCache(rentalRow.date_paid);
+    rentalsDataService.invalidateCache(newRental.date);
+    if (newRental.datePaid) rentalsDataService.invalidateCache(newRental.datePaid);
     return newRental;
   } catch (err) {
     console.error('Failed to add rental to Supabase', err);
@@ -190,11 +160,7 @@ export async function deleteRentalAction(
       useTipStore.getState().removeTipByOrigin('rental', id);
     }
 
-    const { error } = await supabase
-      .from('washer_rentals')
-      .delete()
-      .eq('id', id);
-    if (error) throw error;
+    await appRepositories.washerRentalsRepository.delete(id);
     set((state) => ({ rentals: state.rentals.filter((r) => r.id !== id) }));
     if (rentalToDelete) {
       rentalsDataService.invalidateCache(rentalToDelete.date);

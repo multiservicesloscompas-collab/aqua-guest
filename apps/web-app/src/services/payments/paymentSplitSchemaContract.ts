@@ -1,4 +1,9 @@
-import type { PaymentMethod, PaymentSplit } from '@aqua-guest/domain';
+import type { PaymentSplit } from '@aqua-guest/domain';
+import type {
+  PaymentSplitInsertRow as SharedPaymentSplitInsertRow,
+  PaymentSplitRow,
+} from '@aqua-guest/product-domain/frontend';
+import { PAYMENT_SPLIT_READ_SELECT } from '@aqua-guest/product-domain/frontend';
 
 export const PAYMENT_SPLIT_SCHEMA = {
   salesTable: 'sales',
@@ -20,34 +25,22 @@ export const PAYMENT_SPLIT_SCHEMA = {
   },
 } as const;
 
-export interface PaymentSplitRow {
-  id?: string;
-  payment_method: PaymentMethod;
-  amount_bs: number;
-  amount_usd?: number | null;
-  exchange_rate_used?: number | null;
-  created_at?: string | null;
-  updated_at?: string | null;
-}
+export const PAYMENT_SPLIT_SELECTS = {
+  read: PAYMENT_SPLIT_READ_SELECT,
+  salesRelation: `paymentSplits:${PAYMENT_SPLIT_SCHEMA.salesSplitsTable}(${PAYMENT_SPLIT_READ_SELECT})`,
+  rentalsRelation: `paymentSplits:${PAYMENT_SPLIT_SCHEMA.rentalsSplitsTable}(${PAYMENT_SPLIT_READ_SELECT})`,
+  expensesRelation: `paymentSplits:${PAYMENT_SPLIT_SCHEMA.expensesSplitsTable}(${PAYMENT_SPLIT_READ_SELECT})`,
+} as const;
 
-export interface PaymentSplitInsertRow {
-  payment_method: PaymentMethod;
-  amount_bs: number;
-  amount_usd?: number;
-  exchange_rate_used?: number;
-}
+export type { PaymentSplitRow };
 
-export interface SalePaymentSplitInsertRow extends PaymentSplitInsertRow {
-  sale_id: string;
-}
+export type PaymentSplitInsertRow = Omit<SalePaymentSplitInsertRow, 'sale_id'>;
 
-export interface RentalPaymentSplitInsertRow extends PaymentSplitInsertRow {
-  rental_id: string;
-}
+export type SalePaymentSplitInsertRow = SharedPaymentSplitInsertRow<'sale_id'>;
 
-export interface ExpensePaymentSplitInsertRow extends PaymentSplitInsertRow {
-  expense_id: string;
-}
+export type RentalPaymentSplitInsertRow = SharedPaymentSplitInsertRow<'rental_id'>;
+
+export type ExpensePaymentSplitInsertRow = SharedPaymentSplitInsertRow<'expense_id'>;
 
 export interface PaymentSplitAdapter<TInsertRow> {
   toInsertRows(parentId: string, splits: readonly PaymentSplit[]): TInsertRow[];

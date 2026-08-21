@@ -53,6 +53,10 @@ Do not force all state into a single global store. AquaGuest already uses multip
 
 - Prefer small, explicit components over oversized page files.
 - Do not add memoization by reflex. Introduce `useMemo` or `useCallback` only for real expensive work or stable callback requirements.
+- Hoist static configuration, lookup tables, and option arrays to module scope rather than recalculating them in render or wrapping them in empty-dependency `useMemo`.
+- For edit sheets and modals, reset form state by mounting a keyed child component (`key={entity.id}`) rather than synchronizing props to state with `useEffect`.
+- Handle state invariants (such as method collision prevention) in event handlers and action transitions instead of reactive effects.
+- Subscribe to Zustand feature stores with atomic selectors (`useStore((state) => state.slice)`) to prevent unrelated store updates from triggering full re-renders.
 - Preserve responsive behavior and accessible semantics when editing UI.
 - Keep feature logic close to the feature until reuse or stability makes extraction obvious.
 

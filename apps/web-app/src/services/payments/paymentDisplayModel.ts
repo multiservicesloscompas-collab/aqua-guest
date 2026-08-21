@@ -7,7 +7,7 @@ import {
 import type {
   SplitAware,
   SplitPaymentCompatible,
-} from '@/types/paymentSplits';
+} from '@aqua-guest/domain';
 import {
   getRentalAmountForMethodBs,
   getRentalAmountForMethodUsd,

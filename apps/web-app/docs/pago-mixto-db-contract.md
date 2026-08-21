@@ -52,6 +52,8 @@ Se recomienda check transaccional en capa aplicación + validación DB diferida:
 
 En esta fase, la validación fuerte vive en frontend (helpers de split validation) y la migración SQL puede introducir constraints gradualmente.
 
+Además, las escrituras `create()` split-aware deben aplicar compensación best-effort en capa aplicación: si el registro root se crea pero falla el reemplazo o inserción de `paymentSplits`, se debe borrar el root recién creado y propagar el error. Las rutas `update()` no deben silenciar fallos del reemplazo de splits.
+
 ## Contrato frontend
 
 El frontend compila contra:
@@ -59,4 +61,8 @@ El frontend compila contra:
 - `apps/web-app/src/services/payments/paymentSplitSchemaContract.ts`
 - `apps/web-app/src/services/payments/paymentSplitSupabaseAdapters.ts`
 
-Ambos reflejan nombres de tablas/columnas esperados para el rollout.
+Detalles importantes:
+
+- `apps/web-app` reutiliza el contrato compartido de `libs/product-domain/frontend/shared/infrastructure/supabase/payment-split.supabase.ts` para evitar duplicación del shape de splits.
+- En lecturas Supabase, el frontend debe preferir aliases camelCase (`method:payment_method`, `amountBs:amount_bs`, etc.) y reservar `snake_case` para writes o límites impuestos por la DB.
+- `PAYMENT_SPLIT_SCHEMA` sigue siendo el punto local para nombres de tablas/columnas y `PAYMENT_SPLIT_SELECTS` concentra los `select` aliasados de lectura.

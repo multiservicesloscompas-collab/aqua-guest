@@ -1,63 +1,195 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import type {
   PaymentMethod,
   RentalShift,
   RentalStatus,
   WasherRental,
 } from '@/types';
-import { resolveRentalSplitState } from './editRentalSheetViewModel.helpers';
+import { SHIFT_UUID } from '@aqua-guest/domain';
+import { resolveRentalSplitState } from './rentalSheetViewModel.helpers';
 import { useTipCaptureState } from './useTipCaptureState';
+
+export interface CustomerSelection {
+  id: string;
+  name: string;
+  phone: string;
+  address: string;
+}
 
 interface UseEditRentalFormStateParams {
   rental: WasherRental | null;
   exchangeRate: number;
 }
 
+function resolveAlternativeMethod(method: PaymentMethod): PaymentMethod {
+  return method === 'efectivo' ? 'pago_movil' : 'efectivo';
+}
+
+function createInitialEditRentalFormState(
+  rental: WasherRental | null,
+  exchangeRate: number
+) {
+  if (!rental) {
+    return {
+      machineId: '',
+      shift: SHIFT_UUID.completo as RentalShift,
+      deliveryTime: '09:00',
+      deliveryFee: 0,
+      customerName: '',
+      customerPhone: '',
+      customerAddress: '',
+      selectedCustomerId: '',
+      paymentMethod: 'pago_movil' as PaymentMethod,
+      split2Method: 'efectivo' as PaymentMethod,
+      split1Amount: '',
+      isMixedPayment: false,
+      notes: '',
+      status: 'agendado' as RentalStatus,
+      isPaid: false,
+      datePaid: '',
+    };
+  }
+
+  const splitState = resolveRentalSplitState(rental, exchangeRate);
+
+  return {
+    machineId: rental.machineId,
+    shift: rental.shift,
+    deliveryTime: rental.deliveryTime.substring(0, 5),
+    deliveryFee: rental.deliveryFee,
+    customerName: rental.customerName,
+    customerPhone: rental.customerPhone,
+    customerAddress: rental.customerAddress,
+    selectedCustomerId: rental.customerId || '',
+    paymentMethod: splitState.paymentMethod || 'efectivo',
+    split2Method: splitState.split2Method,
+    split1Amount: splitState.split1Amount,
+    isMixedPayment: splitState.isMixedPayment,
+    notes: rental.notes || '',
+    status: rental.status,
+    isPaid: rental.isPaid,
+    datePaid: rental.datePaid || '',
+  };
+}
+
 export function useEditRentalFormState({
   rental,
   exchangeRate,
 }: UseEditRentalFormStateParams) {
-  const [machineId, setMachineId] = useState('');
-  const [shift, setShift] = useState<RentalShift>('completo');
-  const [deliveryTime, setDeliveryTime] = useState('09:00');
-  const [deliveryFee, setDeliveryFee] = useState(0);
-  const [customerName, setCustomerName] = useState('');
-  const [customerPhone, setCustomerPhone] = useState('');
-  const [customerAddress, setCustomerAddress] = useState('');
-  const [selectedCustomerId, setSelectedCustomerId] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('pago_movil');
-  const [split2Method, setSplit2Method] = useState<PaymentMethod>('efectivo');
-  const [split1Amount, setSplit1Amount] = useState('');
-  const [isMixedPayment, setIsMixedPayment] = useState(false);
-  const [notes, setNotes] = useState('');
-  const [status, setStatus] = useState<RentalStatus>('agendado');
-  const [isPaid, setIsPaid] = useState(false);
-  const [datePaid, setDatePaid] = useState('');
+  const [initialState] = useState(() =>
+    createInitialEditRentalFormState(rental, exchangeRate)
+  );
+
+  const [machineId, setMachineId] = useState(initialState.machineId);
+  const [shift, setShift] = useState<RentalShift>(initialState.shift);
+  const [deliveryTime, setDeliveryTime] = useState(initialState.deliveryTime);
+  const [deliveryFee, setDeliveryFee] = useState(initialState.deliveryFee);
+  const [customerName, setCustomerName] = useState(initialState.customerName);
+  const [customerPhone, setCustomerPhone] = useState(initialState.customerPhone);
+  const [customerAddress, setCustomerAddress] = useState(
+    initialState.customerAddress
+  );
+  const [selectedCustomerId, setSelectedCustomerId] = useState(
+    initialState.selectedCustomerId
+  );
+  const [paymentMethod, setPaymentMethodState] = useState<PaymentMethod>(
+    initialState.paymentMethod
+  );
+  const [split2Method, setSplit2MethodState] = useState<PaymentMethod>(
+    initialState.split2Method
+  );
+  const [split1Amount, setSplit1Amount] = useState(initialState.split1Amount);
+  const [isMixedPayment, setIsMixedPayment] = useState(
+    initialState.isMixedPayment
+  );
+  const [notes, setNotes] = useState(initialState.notes);
+  const [status, setStatus] = useState<RentalStatus>(initialState.status);
+  const [isPaid, setIsPaid] = useState(initialState.isPaid);
+  const [datePaid, setDatePaid] = useState(initialState.datePaid);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const tipCapture = useTipCaptureState();
 
-  useEffect(() => {
-    if (!rental) return;
+  const selectPrimaryPaymentMethod = useCallback(
+    (method: PaymentMethod) => {
+      setPaymentMethodState(method);
+      setSplit2MethodState((currentSecondary) =>
+        currentSecondary === method
+          ? resolveAlternativeMethod(method)
+          : currentSecondary
+      );
+    },
+    []
+  );
 
-    setMachineId(rental.machineId);
-    setShift(rental.shift);
-    setDeliveryTime(rental.deliveryTime.substring(0, 5));
-    setDeliveryFee(rental.deliveryFee);
-    setCustomerName(rental.customerName);
-    setCustomerPhone(rental.customerPhone);
-    setCustomerAddress(rental.customerAddress);
-    setSelectedCustomerId(rental.customerId || '');
-    const splitState = resolveRentalSplitState(rental, exchangeRate);
-    setPaymentMethod(splitState.paymentMethod || 'efectivo');
-    setSplit1Amount(splitState.split1Amount);
-    setSplit2Method(splitState.split2Method);
-    setIsMixedPayment(splitState.isMixedPayment);
+  const selectSecondaryPaymentMethod = useCallback(
+    (method: PaymentMethod) => {
+      setSplit2MethodState((currentSecondary) => {
+        if (paymentMethod === method) {
+          return resolveAlternativeMethod(method);
+        }
+        return method;
+      });
+    },
+    [paymentMethod]
+  );
 
-    setNotes(rental.notes || '');
-    setStatus(rental.status);
-    setIsPaid(rental.isPaid);
-    setDatePaid(rental.datePaid || '');
-  }, [rental, exchangeRate]);
+  const toggleMixedPayment = useCallback(() => {
+    setIsMixedPayment((current) => {
+      const next = !current;
+      if (!next) {
+        setSplit1Amount('');
+      }
+      return next;
+    });
+  }, []);
+
+  const selectCustomer = useCallback((customer: CustomerSelection | null) => {
+    if (!customer) {
+      setSelectedCustomerId('');
+      setCustomerName('');
+      setCustomerPhone('');
+      setCustomerAddress('');
+      return;
+    }
+
+    setSelectedCustomerId(customer.id);
+    setCustomerName(customer.name);
+    setCustomerPhone(customer.phone);
+    setCustomerAddress(customer.address);
+  }, []);
+
+  const clearCustomer = useCallback(() => {
+    setSelectedCustomerId('');
+    setCustomerName('');
+    setCustomerPhone('');
+    setCustomerAddress('');
+  }, []);
+
+  const changePaymentStatus = useCallback(
+    (nextStatus: 'paid' | 'pending', defaultDate?: string) => {
+      const paid = nextStatus === 'paid';
+      setIsPaid(paid);
+      if (paid && defaultDate) {
+        setDatePaid((currentDate) => currentDate || defaultDate);
+      }
+    },
+    []
+  );
+
+  const applyTipPaymentHydration = useCallback(
+    (splitState: {
+      paymentMethod?: PaymentMethod;
+      split1Amount: string;
+      split2Method: PaymentMethod;
+      isMixedPayment: boolean;
+    }) => {
+      setPaymentMethodState(splitState.paymentMethod || 'efectivo');
+      setSplit1Amount(splitState.split1Amount);
+      setSplit2MethodState(splitState.split2Method);
+      setIsMixedPayment(splitState.isMixedPayment);
+    },
+    []
+  );
 
   return {
     machineId,
@@ -77,13 +209,16 @@ export function useEditRentalFormState({
     selectedCustomerId,
     setSelectedCustomerId,
     paymentMethod,
-    setPaymentMethod,
+    setPaymentMethod: selectPrimaryPaymentMethod,
+    selectPrimaryPaymentMethod,
     split2Method,
-    setSplit2Method,
+    setSplit2Method: selectSecondaryPaymentMethod,
+    selectSecondaryPaymentMethod,
     split1Amount,
     setSplit1Amount,
     isMixedPayment,
     setIsMixedPayment,
+    toggleMixedPayment,
     notes,
     setNotes,
     status,
@@ -92,8 +227,12 @@ export function useEditRentalFormState({
     setIsPaid,
     datePaid,
     setDatePaid,
+    changePaymentStatus,
     isCalendarOpen,
     setIsCalendarOpen,
+    selectCustomer,
+    clearCustomer,
+    applyTipPaymentHydration,
     tipCapture,
   };
 }

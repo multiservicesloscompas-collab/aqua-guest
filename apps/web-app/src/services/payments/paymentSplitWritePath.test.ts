@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
+import type { PaymentSplit } from '@aqua-guest/domain';
 import {
   buildDualPaymentSplits,
   preparePaymentWritePayload,
 } from './paymentSplitWritePath';
-import type { PaymentSplit } from '@/types/paymentSplits';
 import type { PaymentMethod } from '@/types';
 
 describe('buildDualPaymentSplits', () => {

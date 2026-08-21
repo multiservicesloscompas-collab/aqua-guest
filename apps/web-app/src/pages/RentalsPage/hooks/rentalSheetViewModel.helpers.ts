@@ -1,11 +1,20 @@
 import { format, parse } from 'date-fns';
 import { es } from 'date-fns/locale';
-import type { PaymentMethod, RentalShift, WasherRental } from '@/types';
+import type {
+  PaymentMethod,
+  RentalShift,
+  RentalShiftConfig,
+  RentalStatus,
+  WasherRental,
+} from '@/types';
 import {
   BUSINESS_HOURS,
   PaymentMethodLabels,
-  RentalShiftConfig,
+  RentalShiftConfigMap,
+  RentalStatusLabels,
 } from '@/types';
+import { generateTimeSlots } from '@/utils/rentalSchedule';
+import { resolveSplitFormHydrationState } from '@/services/payments/paymentSplitFormHydration';
 
 export interface MachineItem {
   id: string;
@@ -25,6 +34,28 @@ export interface PaymentMethodOption {
   label: string;
 }
 
+export interface StatusOption {
+  value: RentalStatus;
+  label: string;
+}
+
+function resolveRentalTotalBs(
+  rental: WasherRental,
+  exchangeRate: number
+): number {
+  if (rental.paymentSplits?.length) {
+    const splitSumBs = rental.paymentSplits.reduce(
+      (sum, split) => sum + Number(split.amountBs || 0),
+      0
+    );
+    if (splitSumBs > 0) {
+      return splitSumBs;
+    }
+  }
+
+  return Number(rental.totalUsd || 0) * exchangeRate;
+}
+
 export const DELIVERY_FEE_OPTIONS = [0, 1, 2, 3, 4, 5];
 
 export const PAYMENT_METHOD_OPTIONS: PaymentMethodOption[] = [
@@ -33,6 +64,30 @@ export const PAYMENT_METHOD_OPTIONS: PaymentMethodOption[] = [
   { value: 'punto_venta', label: PaymentMethodLabels.punto_venta },
   { value: 'divisa', label: PaymentMethodLabels.divisa },
 ];
+
+export const RENTAL_TIME_SLOTS = generateTimeSlots();
+
+export const RENTAL_STATUS_OPTIONS: StatusOption[] = Object.entries(
+  RentalStatusLabels
+).map(([key, label]) => ({
+  value: key as RentalStatus,
+  label,
+}));
+
+export function resolveRentalSplitState(
+  rental: WasherRental,
+  exchangeRate: number,
+  tipAmountBs?: number,
+  tipPaymentMethod?: PaymentMethod
+) {
+  return resolveSplitFormHydrationState({
+    paymentMethod: rental.paymentMethod,
+    paymentSplits: rental.paymentSplits,
+    totalBs: resolveRentalTotalBs(rental, exchangeRate),
+    tipAmountBs,
+    tipPaymentMethod,
+  });
+}
 
 export function getDefaultDeliveryTime() {
   const now = new Date();
@@ -71,17 +126,36 @@ export function mapMachineItems(params: {
     }));
 }
 
-export function mapShiftOptions(paymentMethod: PaymentMethod): ShiftOption[] {
-  return (Object.keys(RentalShiftConfig) as RentalShift[]).map((key) => {
-    const config = RentalShiftConfig[key];
-    const price =
-      key === 'completo' && paymentMethod === 'divisa' ? 5 : config.priceUsd;
-    return {
-      value: key,
-      label: config.label,
-      priceText: `$${price}`,
-    };
-  });
+export function mapShiftOptions(
+  paymentMethod: PaymentMethod,
+  dynamicShifts?: ReadonlyArray<RentalShiftConfig>
+): ShiftOption[] {
+  const catalog =
+    dynamicShifts && dynamicShifts.length > 0
+      ? dynamicShifts
+      : (Object.values(RentalShiftConfigMap).map((entry) => ({
+          id: entry.label,
+          label: entry.label,
+          priceUsd: entry.priceUsd,
+          hours: entry.hours,
+          hasDivisaDiscount: false,
+          divisaDiscountAmount: 0,
+          isActive: true,
+        })) as RentalShiftConfig[]);
+
+  return catalog
+    .filter((config) => config.isActive !== false)
+    .map((config) => {
+      const price =
+        config.hasDivisaDiscount && paymentMethod === 'divisa'
+          ? Math.max(0, config.priceUsd - config.divisaDiscountAmount)
+          : config.priceUsd;
+      return {
+        value: config.id,
+        label: config.label,
+        priceText: `$${price}`,
+      };
+    });
 }
 
 export function getUnavailableMachineIds(params: {
@@ -90,6 +164,7 @@ export function getUnavailableMachineIds(params: {
   deliveryTime: string;
   pickupDate: string;
   pickupTime: string;
+  currentRentalId?: string;
 }): string[] {
   const requestedStart = new Date(
     `${params.selectedDate}T${params.deliveryTime}`
@@ -98,6 +173,7 @@ export function getUnavailableMachineIds(params: {
 
   return params.rentals
     .filter((rental) => {
+      if (rental.id === params.currentRentalId) return false;
       if (rental.status === 'finalizado') return false;
       const rentalStart = new Date(
         `${rental.date}T${rental.deliveryTime.substring(0, 5)}`

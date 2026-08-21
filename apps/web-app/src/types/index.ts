@@ -16,6 +16,7 @@ import type {
   Product as DomainProduct,
   RentalExtension,
   RentalShift,
+  RentalShiftConfig,
   RentalStatus,
   Sale,
   WasherRental,
@@ -35,20 +36,14 @@ export type { CartItem };
 export type { PaymentMethod };
 
 export const PaymentMethodLabels: Record<PaymentMethod, string> = {
-  // TODO: do not use snake_case!
   pago_movil: 'Pago Móvil',
-  // TODO: do not use snake_case!
   efectivo: 'Efectivo',
-  // TODO: do not use snake_case!
   punto_venta: 'Punto de Venta',
-  // TODO: do not use snake_case!
   divisa: 'Divisa',
 };
 
-// Registro de venta completo
 export type { Sale };
 
-// Registro de egreso/gasto
 export type { Expense, ExpenseCategory };
 
 export const ExpenseCategoryLabels: Record<ExpenseCategory, string> = {
@@ -60,11 +55,6 @@ export const ExpenseCategoryLabels: Record<ExpenseCategory, string> = {
   otros: 'Otros',
 };
 
-// ============================================
-// ALQUILER DE LAVADORAS
-// ============================================
-
-// Estado de la lavadora
 export type { MachineStatus };
 
 export const MachineStatusLabels: Record<MachineStatus, string> = {
@@ -79,14 +69,12 @@ export const MachineStatusColors: Record<MachineStatus, string> = {
   averiada: 'bg-red-500/10 text-red-600 border-red-500/20',
 };
 
-// Lavadora disponible
 export type { WashingMachine };
 
-// Tipo de jornada
-export type { RentalShift };
+export type { RentalShift, RentalShiftConfig };
 
-export const RentalShiftConfig: Record<
-  RentalShift,
+export const RentalShiftConfigMap: Record<
+  string,
   { label: string; priceUsd: number; hours: number }
 > = {
   medio: { label: 'Medio Turno', priceUsd: 4, hours: 8 },
@@ -94,7 +82,6 @@ export const RentalShiftConfig: Record<
   doble: { label: 'Doble', priceUsd: 12, hours: 48 },
 };
 
-// Estado del alquiler
 export type { RentalStatus };
 
 export const RentalStatusLabels: Record<RentalStatus, string> = {
@@ -103,26 +90,18 @@ export const RentalStatusLabels: Record<RentalStatus, string> = {
   finalizado: 'Finalizado',
 };
 
-// Cliente para autocompletado
 export type { Customer };
 
-// Registro de alquiler
 export type { WasherRental };
 
-// Extensión de alquiler
 export type { RentalExtension };
 
-// Horario comercial
 export const BUSINESS_HOURS = {
-  openHour: 9, // 9 AM
-  closeHour: 20, // 8 PM (20:00) Lunes-Sábado
-  sundayCloseHour: 14, // 2 PM (14:00) Domingo
-  workDays: [0, 1, 2, 3, 4, 5, 6], // Domingo a Sábado
+  openHour: 9,
+  closeHour: 20,
+  sundayCloseHour: 14,
+  workDays: [0, 1, 2, 3, 4, 5, 6],
 };
-
-// ============================================
-// CONFIGURACIÓN Y ESTADÍSTICAS
-// ============================================
 
 export type { LiterPricing };
 
@@ -138,17 +117,12 @@ export const DEFAULT_LITER_BREAKPOINTS: LiterPricing[] = [
 
 export type { ExchangeRateHistory };
 
-// Configuración global
 export interface AppConfig {
-  exchangeRate: number; // Tasa Bs/USD
+  exchangeRate: number;
   lastUpdated: string;
-  literPricing: LiterPricing[]; // Precios por litros
-  exchangeRateHistory: ExchangeRateHistory[]; // Historial de tasas
+  literPricing: LiterPricing[];
+  exchangeRateHistory: ExchangeRateHistory[];
 }
-
-// ============================================
-// AGUA PREPAGADA
-// ============================================
 
 export type { PrepaidOrder, PrepaidStatus };
 
@@ -162,20 +136,13 @@ export const PrepaidStatusColors: Record<PrepaidStatus, string> = {
   entregado: 'bg-green-500/10 text-green-600 border-green-500/20',
 };
 
-// ============================================
-// EQUILIBRIO DE TIPOS DE PAGO
-// ============================================
-
-// Transacción de equilibrio entre métodos de pago
 export type {
   PaymentBalanceTransaction,
   PaymentBalanceTransactionDraft,
   PaymentBalanceTransactionUpdate,
 };
 
-// Resumen de equilibrio por método de pago
 export type { PaymentBalanceSummary };
-// Navegación — tipos centralizados en navigation.ts
 export type { AppRoute, ModuleRoute, ModuleSubItem } from './navigation';
 export { routeToModule } from './navigation';
 export type {

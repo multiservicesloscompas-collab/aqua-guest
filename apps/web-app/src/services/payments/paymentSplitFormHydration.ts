@@ -5,6 +5,8 @@ interface ResolveSplitFormHydrationInput {
   paymentMethod: PaymentMethod;
   paymentSplits?: readonly PaymentSplit[];
   totalBs: number;
+  tipAmountBs?: number;
+  tipPaymentMethod?: PaymentMethod;
 }
 
 export interface SplitFormHydrationState {
@@ -34,10 +36,27 @@ function toAmountInput(amountBs: number): string {
 export function resolveSplitFormHydrationState(
   input: ResolveSplitFormHydrationInput
 ): SplitFormHydrationState {
-  const { paymentMethod, paymentSplits } = input;
+  const { paymentMethod, paymentSplits, tipAmountBs = 0, tipPaymentMethod } = input;
 
-  if (hasValidMixedPaymentSplits(paymentSplits)) {
-    const sortedSplits = sortSplitsByPriority(paymentSplits);
+  let processedSplits = paymentSplits ? [...paymentSplits] : undefined;
+
+  if (processedSplits && tipAmountBs > 0 && tipPaymentMethod) {
+    processedSplits = processedSplits
+      .map((split) => {
+        if (split.method === tipPaymentMethod) {
+          const nextAmount = Math.max(0, split.amountBs - tipAmountBs);
+          return {
+            ...split,
+            amountBs: nextAmount,
+          };
+        }
+        return split;
+      })
+      .filter((split) => split.amountBs > 0.01);
+  }
+
+  if (hasValidMixedPaymentSplits(processedSplits)) {
+    const sortedSplits = sortSplitsByPriority(processedSplits);
     const primarySplit = sortedSplits[0];
     const secondarySplit =
       sortedSplits.find((split) => split.method !== primarySplit.method) ??
@@ -52,7 +71,10 @@ export function resolveSplitFormHydrationState(
     };
   }
 
-  const fallbackPrimaryMethod = paymentMethod;
+  const splitsArray = processedSplits as readonly PaymentSplit[] | undefined;
+  const fallbackPrimaryMethod = (splitsArray && splitsArray.length > 0)
+    ? splitsArray[0].method
+    : paymentMethod;
 
   return {
     paymentMethod: fallbackPrimaryMethod,

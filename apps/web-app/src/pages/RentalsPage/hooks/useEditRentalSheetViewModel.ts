@@ -1,27 +1,24 @@
-import { useEffect, useMemo, useState } from 'react';
-import { toast } from 'sonner';
+import { useCallback, useMemo } from 'react';
 import { useCustomerStore } from '@/store/useCustomerStore';
 import { useRentalStore } from '@/store/useRentalStore';
 import { useMachineStore } from '@/store/useMachineStore';
 import { useConfigStore } from '@/store/useConfigStore';
 import { getVenezuelaDate } from '@/services/DateService';
-import { generateTimeSlots } from '@/utils/rentalSchedule';
-import { RentalStatus, RentalStatusLabels, WasherRental } from '@/types';
+import type { WasherRental } from '@/types';
 import { useEditRentalFormState } from './useEditRentalFormState';
-import {
-  getEditRentalValidationError,
-  notifyEditRentalValidationError,
-  submitEditRental,
-} from './editRentalSheetViewModel.submit';
 import {
   DELIVERY_FEE_OPTIONS,
   PAYMENT_METHOD_OPTIONS,
+  RENTAL_STATUS_OPTIONS,
+  RENTAL_TIME_SLOTS,
   getPaidDateLabel,
   mapMachineItems,
   mapShiftOptions,
-} from './editRentalSheetViewModel.helpers';
+  resolveRentalSplitState,
+} from './rentalSheetViewModel.helpers';
 import { useEditRentalSheetComputed } from './useEditRentalSheetComputed';
 import { useEditRentalTipHydration } from './useEditRentalTipHydration';
+import { useEditRentalSubmission } from './useEditRentalSubmission';
 
 interface EditRentalSheetViewModelProps {
   rental: WasherRental | null;
@@ -34,246 +31,161 @@ export function useEditRentalSheetViewModel({
   open,
   onOpenChange,
 }: EditRentalSheetViewModelProps) {
-  const { customers } = useCustomerStore();
+  const customers = useCustomerStore((state) => state.customers);
   const isMixedPaymentEnabled = useConfigStore((state) =>
     state.isMixedPaymentEnabled('rentals')
   );
   const exchangeRate = useConfigStore((state) => state.config.exchangeRate);
-  const { updateRental, rentals } = useRentalStore();
-  const { washingMachines } = useMachineStore();
+  const updateRental = useRentalStore((state) => state.updateRental);
+  const rentals = useRentalStore((state) => state.rentals);
+  const dynamicShifts = useRentalStore((state) => state.shifts);
+  const washingMachines = useMachineStore((state) => state.washingMachines);
+
   const form = useEditRentalFormState({ rental, exchangeRate });
-
-  const {
-    machineId,
-    shift,
-    deliveryTime,
-    deliveryFee,
-    customerName,
-    setCustomerName,
-    customerPhone,
-    setCustomerPhone,
-    customerAddress,
-    setCustomerAddress,
-    selectedCustomerId,
-    setSelectedCustomerId,
-    paymentMethod,
-    split2Method,
-    setSplit2Method,
-    split1Amount,
-    setSplit1Amount,
-    isMixedPayment,
-    setIsMixedPayment,
-    notes,
-    status,
-    isPaid,
-    setIsPaid,
-    datePaid,
-    setDatePaid,
-    tipCapture,
-  } = form;
-
-  const [isLoading, setIsLoading] = useState(false);
 
   useEditRentalTipHydration({
     open,
     rental,
-    tipCapture,
+    tipCapture: form.tipCapture,
+    onTipHydrated: ({ amountBs, paymentMethod: tipMethod }) => {
+      if (!rental) return;
+      const splitState = resolveRentalSplitState(
+        rental,
+        exchangeRate,
+        amountBs,
+        tipMethod
+      );
+      form.applyTipPaymentHydration(splitState);
+    },
   });
 
-  const timeSlots = useMemo(() => generateTimeSlots(), []);
+  const tipAmountBsNumeric = form.tipCapture.tipEnabled
+    ? Number(form.tipCapture.tipAmount) || 0
+    : 0;
 
-  const tipAmountBsNumeric = useMemo(
-    () => (tipCapture.tipEnabled ? Number(tipCapture.tipAmount) || 0 : 0),
-    [tipCapture.tipAmount, tipCapture.tipEnabled]
-  );
+  const hasMixedPaymentEnabled = isMixedPaymentEnabled && form.isMixedPayment;
 
-  const hasMixedPaymentEnabled = isMixedPaymentEnabled && isMixedPayment;
-  const {
-    pickupInfo,
-    pickupLabel,
-    subtotalUsd,
-    subtotalBs,
-    totalUsd,
-    totalBs,
-    paymentSplits,
-    unavailableMachines,
-  } = useEditRentalSheetComputed({
+  const computed = useEditRentalSheetComputed({
     rental,
-    shift,
-    paymentMethod,
-    deliveryFee,
-    deliveryTime,
-    split2Method,
-    split1Amount,
+    shift: form.shift,
+    paymentMethod: form.paymentMethod,
+    deliveryFee: form.deliveryFee,
+    deliveryTime: form.deliveryTime,
+    split2Method: form.split2Method,
+    split1Amount: form.split1Amount,
     hasMixedPaymentEnabled,
     tipAmountBs: tipAmountBsNumeric,
     exchangeRate,
     rentals,
+    dynamicShifts,
   });
-
-  useEffect(() => {
-    if (split2Method === paymentMethod) {
-      setSplit2Method(paymentMethod === 'efectivo' ? 'pago_movil' : 'efectivo');
-    }
-  }, [paymentMethod, setSplit2Method, split2Method]);
 
   const machineItems = useMemo(
     () =>
       mapMachineItems({
         washingMachines,
-        unavailableMachineIds: unavailableMachines,
+        unavailableMachines: computed.unavailableMachines,
       }),
-    [washingMachines, unavailableMachines]
+    [washingMachines, computed.unavailableMachines]
   );
 
   const shiftOptions = useMemo(
-    () => mapShiftOptions(paymentMethod),
-    [paymentMethod]
+    () => mapShiftOptions(form.paymentMethod, dynamicShifts),
+    [form.paymentMethod, dynamicShifts]
   );
 
-  const paymentMethodOptions = useMemo(() => PAYMENT_METHOD_OPTIONS, []);
+  const paidDateLabel = useMemo(
+    () => getPaidDateLabel(form.datePaid),
+    [form.datePaid]
+  );
 
-  const paidDateLabel = useMemo(() => getPaidDateLabel(datePaid), [datePaid]);
+  const { isLoading, handleSubmit } = useEditRentalSubmission({
+    rentalId: rental?.id ?? '',
+    form,
+    computed,
+    tipCapture: form.tipCapture,
+    updateRental,
+    onSuccess: () => onOpenChange(false),
+  });
 
-  const handleCustomerSelect = (customerId: string | null) => {
-    if (!customerId) {
-      setSelectedCustomerId('');
-      setCustomerName('');
-      setCustomerPhone('');
-      setCustomerAddress('');
-      return;
-    }
-    const customer = customers.find((c) => c.id === customerId);
-    if (!customer) return;
-    setSelectedCustomerId(customerId);
-    setCustomerName(customer.name);
-    setCustomerPhone(customer.phone);
-    setCustomerAddress(customer.address);
-  };
+  const handleCustomerSelect = useCallback(
+    (customerId: string | null) => {
+      if (!customerId) {
+        form.clearCustomer();
+        return;
+      }
+      const customer = customers.find((c) => c.id === customerId);
+      if (!customer) return;
+      form.selectCustomer(customer);
+    },
+    [customers, form]
+  );
 
-  const handleSubmit = async () => {
-    if (!rental) return;
+  const handlePaymentStatusChange = useCallback(
+    (value: 'paid' | 'pending') => {
+      form.changePaymentStatus(value, getVenezuelaDate());
+    },
+    [form]
+  );
 
-    const validationError = getEditRentalValidationError({
-      machineId,
-      customerName,
-      customerAddress,
-      unavailableMachines,
-    });
-    if (validationError) {
-      notifyEditRentalValidationError(validationError);
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      const tipInput = tipCapture.buildTipInput();
-      
-      // We pass the Principal Splits and Subtotal to submitEditRental.
-      // The store (updateRentalAction) will handle merging the tip.
-      await submitEditRental({
-        rentalId: rental.id,
-        paymentSplits: paymentSplits, // Principal splits
-        totalBs: subtotalBs,          // Subtotal Bs (principal)
-        totalUsd: subtotalUsd,        // Subtotal Usd (principal)
-        updates: {
-          machineId,
-          shift,
-          deliveryTime,
-          pickupTime: pickupInfo.pickupTime,
-          pickupDate: pickupInfo.pickupDate,
-          deliveryFee,
-          totalUsd: subtotalUsd,      // Principal Usd
-          paymentMethod,
-          paymentSplits: paymentSplits,
-          selectedCustomerId,
-          customerName,
-          customerPhone,
-          customerAddress,
-          notes,
-          status,
-          isPaid,
-          datePaid,
-        },
-        tipInput: tipCapture.tipEnabled ? tipInput : null,
-        updateRental,
-        onSuccess: () => onOpenChange(false),
-      });
-    } catch (error: unknown) {
-      console.error('Error al actualizar el alquiler:', error);
-      const message = error instanceof Error ? error.message : undefined;
-      toast.error(message || 'Error al actualizar el alquiler');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const handleToggleTip = useCallback(() => {
+    form.tipCapture.onToggleTip(form.paymentMethod);
+  }, [form.paymentMethod, form.tipCapture]);
 
   return {
     ...form,
     customers,
     machineItems,
     shiftOptions,
-    paymentMethodOptions,
-    timeSlots,
+    paymentMethodOptions: PAYMENT_METHOD_OPTIONS,
+    timeSlots: RENTAL_TIME_SLOTS,
     deliveryFeeOptions: DELIVERY_FEE_OPTIONS,
-    pickupLabel,
+    pickupLabel: computed.pickupLabel,
     paidDateLabel,
-    subtotalUsdText: subtotalUsd.toFixed(2),
+    subtotalUsdText: computed.subtotalUsd.toFixed(2),
     tipAmountBs: tipAmountBsNumeric,
-    totalUsdText: totalUsd.toFixed(2),
+    totalUsdText: computed.totalUsd.toFixed(2),
     isLoading,
-    selectedMachineId: machineId,
-    selectedShift: shift,
-    selectedPaymentMethod: paymentMethod,
-    totalBs,
-    split2Method,
-    split1Amount,
+    selectedMachineId: form.machineId,
+    selectedShift: form.shift,
+    selectedPaymentMethod: form.paymentMethod,
+    totalBs: computed.totalBs,
+    split2Method: form.split2Method,
+    split1Amount: form.split1Amount,
     isMixedPaymentEnabled,
-    isMixedPayment,
-    deliveryTime,
-    deliveryFee,
-    customerName,
-    customerPhone,
-    customerAddress,
-    selectedCustomerId: selectedCustomerId || null,
-    notes,
-    tipEnabled: tipCapture.tipEnabled,
-    tipAmount: tipCapture.tipAmount,
-    tipPaymentMethod: tipCapture.tipPaymentMethod,
-    tipNotes: tipCapture.tipNotes,
+    isMixedPayment: form.isMixedPayment,
+    deliveryTime: form.deliveryTime,
+    deliveryFee: form.deliveryFee,
+    customerName: form.customerName,
+    customerPhone: form.customerPhone,
+    customerAddress: form.customerAddress,
+    selectedCustomerId: form.selectedCustomerId || null,
+    notes: form.notes,
+    tipEnabled: form.tipCapture.tipEnabled,
+    tipAmount: form.tipCapture.tipAmount,
+    tipPaymentMethod: form.tipCapture.tipPaymentMethod,
+    tipNotes: form.tipCapture.tipNotes,
     onSelectMachine: form.setMachineId,
     onSelectShift: form.setShift,
-    onSelectPaymentMethod: form.setPaymentMethod,
-    onSelectSplit2Method: setSplit2Method,
-    onChangeSplit1Amount: setSplit1Amount,
+    onSelectPaymentMethod: form.selectPrimaryPaymentMethod,
+    onSelectSplit2Method: form.selectSecondaryPaymentMethod,
+    onChangeSplit1Amount: form.setSplit1Amount,
     onSelectDeliveryTime: form.setDeliveryTime,
     onSelectDeliveryFee: form.setDeliveryFee,
-    onChangeCustomerName: setCustomerName,
-    onChangeCustomerPhone: setCustomerPhone,
-    onChangeCustomerAddress: setCustomerAddress,
+    onChangeCustomerName: form.setCustomerName,
+    onChangeCustomerPhone: form.setCustomerPhone,
+    onChangeCustomerAddress: form.setCustomerAddress,
     onChangeNotes: form.setNotes,
     onChangeStatus: form.setStatus,
-    onChangeDatePaid: setDatePaid,
+    onChangeDatePaid: form.setDatePaid,
     onSelectCustomer: handleCustomerSelect,
-    onToggleTip: () => tipCapture.onToggleTip(paymentMethod),
-    onChangeTipAmount: tipCapture.onChangeTipAmount,
-    onChangeTipPaymentMethod: tipCapture.onChangeTipPaymentMethod,
-    onChangeTipNotes: tipCapture.onChangeTipNotes,
-    onToggleMixedPayment: () =>
-      setIsMixedPayment((current) => {
-        const next = !current;
-        if (!next) setSplit1Amount('');
-        return next;
-      }),
-    onChangePaymentStatus: (value: 'paid' | 'pending') => {
-      const paid = value === 'paid';
-      setIsPaid(paid);
-      if (paid && !datePaid) setDatePaid(getVenezuelaDate());
-    },
+    onToggleTip: handleToggleTip,
+    onChangeTipAmount: form.tipCapture.onChangeTipAmount,
+    onChangeTipPaymentMethod: form.tipCapture.onChangeTipPaymentMethod,
+    onChangeTipNotes: form.tipCapture.onChangeTipNotes,
+    onToggleMixedPayment: form.toggleMixedPayment,
+    onChangePaymentStatus: handlePaymentStatusChange,
     onSubmit: handleSubmit,
-    statusOptions: Object.entries(RentalStatusLabels).map(([key, label]) => ({
-      value: key as RentalStatus,
-      label,
-    })),
+    statusOptions: RENTAL_STATUS_OPTIONS,
   };
 }

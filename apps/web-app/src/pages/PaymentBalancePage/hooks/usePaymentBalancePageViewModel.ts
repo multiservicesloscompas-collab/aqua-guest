@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
+import type { PaymentBalanceOperationType } from '@aqua-guest/domain';
 import { toast } from 'sonner';
 import { useAppStore } from '@/store/useAppStore';
 import { useConfigStore } from '@/store/useConfigStore';
@@ -8,8 +9,6 @@ import {
   mapTransactionToFormData,
   validatePaymentBalanceForm,
 } from './paymentBalanceFormLogic';
-
-export type PaymentBalanceOperationType = 'equilibrio' | 'avance';
 
 export interface PaymentBalanceFormData {
   operationType: PaymentBalanceOperationType;

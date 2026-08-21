@@ -69,4 +69,84 @@ describe('resolveSplitFormHydrationState', () => {
     expect(salesState.split2Method).toBe('divisa');
     expect(salesState.isMixedPayment).toBe(true);
   });
+
+  describe('Tip Hydration Scenarios (SDD Specs)', () => {
+    it('Escenario 1: Pago único sin propina', () => {
+      const state = resolveSplitFormHydrationState({
+        paymentMethod: 'efectivo',
+        paymentSplits: [{ method: 'efectivo', amountBs: 100, amountUsd: 2 }],
+        totalBs: 100,
+        tipAmountBs: 0,
+      });
+      expect(state.isMixedPayment).toBe(false);
+      expect(state.paymentMethod).toBe('efectivo');
+      expect(state.split1Amount).toBe('');
+    });
+
+    it('Escenario 2: Pago único con propina en método diferente', () => {
+      const state = resolveSplitFormHydrationState({
+        paymentMethod: 'efectivo',
+        paymentSplits: [
+          { method: 'efectivo', amountBs: 100, amountUsd: 2 },
+          { method: 'pago_movil', amountBs: 20, amountUsd: 0.4 },
+        ],
+        totalBs: 120,
+        tipAmountBs: 20,
+        tipPaymentMethod: 'pago_movil',
+      });
+      expect(state.isMixedPayment).toBe(false);
+      expect(state.paymentMethod).toBe('efectivo');
+      expect(state.split1Amount).toBe('');
+    });
+
+    it('Escenario 3: Pago mixto real sin propina', () => {
+      const state = resolveSplitFormHydrationState({
+        paymentMethod: 'pago_movil',
+        paymentSplits: [
+          { method: 'efectivo', amountBs: 60, amountUsd: 1.2 },
+          { method: 'pago_movil', amountBs: 40, amountUsd: 0.8 },
+        ],
+        totalBs: 100,
+      });
+      expect(state.isMixedPayment).toBe(true);
+      expect(state.paymentMethod).toBe('efectivo');
+      expect(state.split1Amount).toBe('40');
+      expect(state.split2Method).toBe('pago_movil');
+    });
+
+    it('Escenario 4: Pago mixto con propina en un tercer método de pago', () => {
+      const state = resolveSplitFormHydrationState({
+        paymentMethod: 'efectivo',
+        paymentSplits: [
+          { method: 'efectivo', amountBs: 60, amountUsd: 1.2 },
+          { method: 'punto_venta', amountBs: 40, amountUsd: 0.8 },
+          { method: 'pago_movil', amountBs: 15, amountUsd: 0.3 },
+        ],
+        totalBs: 115,
+        tipAmountBs: 15,
+        tipPaymentMethod: 'pago_movil',
+      });
+      expect(state.isMixedPayment).toBe(true);
+      expect(state.paymentMethod).toBe('efectivo');
+      expect(state.split1Amount).toBe('40');
+      expect(state.split2Method).toBe('punto_venta');
+    });
+
+    it('Escenario 5: Pago mixto con propina en el mismo método que el split secundario', () => {
+      const state = resolveSplitFormHydrationState({
+        paymentMethod: 'efectivo',
+        paymentSplits: [
+          { method: 'efectivo', amountBs: 60, amountUsd: 1.2 },
+          { method: 'pago_movil', amountBs: 55, amountUsd: 1.1 },
+        ],
+        totalBs: 115,
+        tipAmountBs: 15,
+        tipPaymentMethod: 'pago_movil',
+      });
+      expect(state.isMixedPayment).toBe(true);
+      expect(state.paymentMethod).toBe('efectivo');
+      expect(state.split1Amount).toBe('40');
+      expect(state.split2Method).toBe('pago_movil');
+    });
+  });
 });

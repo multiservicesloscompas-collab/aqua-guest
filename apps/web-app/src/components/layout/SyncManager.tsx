@@ -73,7 +73,6 @@ export const SyncManager: React.FC = () => {
       return;
     }
 
-    // Path legado para rollout backward-safe cuando GLOBAL_OFFLINE_ORCHESTRATOR = false
     const pendingActions = [...currentQueue]
       .filter((action) => !inFlightActionIdsRef.current.has(action.id))
       .sort((a, b) => a.enqueuedAt - b.enqueuedAt);
@@ -85,7 +84,6 @@ export const SyncManager: React.FC = () => {
         if (action.table === 'sales' && action.type === 'INSERT') {
           const { tempId, ...payload } = action.payload;
 
-          // 1. Insertar la venta principal
           const { data: saleData, error: saleError } = await supabase
             .from('sales')
             .insert(payload)
@@ -94,7 +92,6 @@ export const SyncManager: React.FC = () => {
 
           if (saleError) throw saleError;
 
-          // 2. Buscar si hay splits pendientes para esta venta (tempId)
           const splitAction = pendingActions.find(
             (a) => a.payload?.parentId === tempId && a.payload?.isSplit
           );
@@ -104,10 +101,9 @@ export const SyncManager: React.FC = () => {
             if (!Array.isArray(splits)) {
               continue;
             }
-            // Reemplazar tempId por el ID real de Supabase
             const finalSplits = splits.map((s) => ({
               ...s,
-              sale_id: saleData.id, // Asumiendo que sale_id es la FK
+              sale_id: saleData.id,
             }));
 
             const { error: splitError } = await supabase
@@ -116,25 +112,17 @@ export const SyncManager: React.FC = () => {
 
             if (splitError) {
               console.error('Error sincronizando splits:', splitError);
-              // No arrojamos para no trabar la venta, pero el usuario debería saberlo
             } else {
               removeFromQueue(splitAction.id);
               inFlightActionIdsRef.current.delete(splitAction.id);
             }
           }
 
-          // 3. Actualizar el estado local (Zustand) reemplazando la venta temporal por la real
-          // Nota: Esto requiere que useWaterSalesStore tenga una forma de actualizar IDs o simplemente refrescar
-          // Por ahora, solo informamos el éxito
           removeFromQueue(action.id);
           inFlightActionIdsRef.current.delete(action.id);
         }
-
-        // Otras tablas se pueden agregar aquí
       } catch (error) {
         console.error('Error sincronizando acción:', action, error);
-        // Si falla uno, paramos el procesamiento para evitar inconsistencias?
-        // O seguimos con el siguiente? Por seguridad, paramos.
         break;
       }
     }
@@ -143,8 +131,6 @@ export const SyncManager: React.FC = () => {
     setIsSyncing(false);
     if (queueRef.current.length === 0) {
       toast.success('Sincronización completada con éxito.');
-      // Refrescar datos globales para asegurar consistencia
-      // useWaterSalesStore.getState().loadSalesByDate(today);
     }
   }, [processorMode, removeFromQueue, replaceQueue]);
 
@@ -159,5 +145,5 @@ export const SyncManager: React.FC = () => {
     }
   }, [isOnline, isSyncing, processorMode, processQueue, queue.length]);
 
-  return null; // Componente lógico, no renderiza nada
+  return null;
 };

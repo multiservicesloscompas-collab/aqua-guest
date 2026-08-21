@@ -62,7 +62,15 @@ Washer-rental transactions.
   - Parent of `rental_payment_splits.rental_id`
 - Implicit relationships:
   - `machine_id` behaves like a logical link to `washing_machines.id`, but no FK is currently present
+  - `shift` behaves like a logical link to `rental_shifts.id` or legacy shift keys
   - Can be referenced by `tips` when `tips.origin_type = 'rental'`
+
+### `rental_shifts`
+Dynamic shift configuration catalog for washer rentals.
+
+- PK: `id uuid`
+- Core fields: `label`, `price_usd`, `hours`, `has_divisa_discount`, `divisa_discount_amount`, `is_active`
+- Lifecycle fields: `created_at`, `updated_at`, `deleted_at`
 
 ### `expenses`
 Expense header records.
@@ -117,7 +125,7 @@ Exchange-rate history.
 Payment-balance transfers and adjustments across payment methods.
 
 - PK: `id uuid`
-- Core fields: `date`, `from_method`, `to_method`, `amount`, `amount_bs`, `amount_usd`, `amount_in_bs`, `amount_out_bs`, `difference_bs`, `notes`, `operation_type`
+- Core fields: `date`, `from_method`, `to_method`, `amount`, `amount_bs`, `amount_usd`, `amount_in_bs`, `amount_in_usd`, `amount_out_bs`, `amount_out_usd`, `difference_bs`, `difference_usd`, `notes`, `operation_type`
 - Lifecycle fields: `created_at`, `updated_at`, `deleted_at`
 
 ### `sale_payment_splits`
@@ -182,6 +190,7 @@ Real foreign keys in `public`:
 Important implicit relationships without FK enforcement:
 
 - `washer_rentals.machine_id -> washing_machines.id`
+- `washer_rentals.shift -> rental_shifts.id`
 - `tips.origin_type + tips.origin_id -> sales.id | washer_rentals.id`
 - `tip_payout_idempotency.tip_id -> tips.id`
 
@@ -213,12 +222,9 @@ Current constrained value sets in `public`:
 
 Current numeric guards in `public`:
 
-- `*_payment_splits.amount_bs >= 0`
-- `*_payment_splits.amount_usd IS NULL OR >= 0`
-- `*_payment_splits.exchange_rate_used IS NULL OR > 0`
-- `tips.amount_bs >= 0`
-- `tips.amount_usd IS NULL OR >= 0`
-- `tips.exchange_rate_used IS NULL OR > 0`
+- `rental_shifts.price_usd >= 0`, `rental_shifts.hours > 0`, `rental_shifts.divisa_discount_amount >= 0`
+- `*_payment_splits.amount_bs >= 0`, `*_payment_splits.amount_usd IS NULL OR >= 0`, `*_payment_splits.exchange_rate_used IS NULL OR > 0`
+- `tips.amount_bs >= 0`, `tips.amount_usd IS NULL OR >= 0`, `tips.exchange_rate_used IS NULL OR > 0`
 
 ## Cross-Table Patterns
 

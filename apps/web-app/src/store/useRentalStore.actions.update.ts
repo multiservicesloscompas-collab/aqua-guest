@@ -1,8 +1,8 @@
-import supabase from '@/lib/supabaseClient';
 import type {
   CustomerUpdate,
   WasherRentalUpdate,
 } from '@aqua-guest/domain';
+import { appRepositories } from '@/lib/app-repositories';
 import type { TipCaptureInput } from '@/types/tips';
 import { preparePaymentWritePayload } from '@/services/payments/paymentSplitWritePath';
 import {
@@ -14,10 +14,8 @@ import {
   calculateFinalRentalTotals,
   mergeTipIntoPaymentSplits,
 } from '@/services/transactions/transactionTotals';
-import { replaceRentalSplits } from './useRentalStore.supabase';
 import {
   type RentalState,
-  type RentalUpdate,
   buildRentalWriteContext,
 } from './useRentalStore.core';
 
@@ -34,7 +32,6 @@ export async function updateRentalAction(
   get: GetFn
 ): Promise<void> {
   try {
-    const payload: RentalUpdate = {};
     const nowIso = new Date().toISOString();
     const currentRental = get().rentals.find((r) => r.id === id);
     if (!currentRental) throw new Error('Alquiler no encontrado');
@@ -47,7 +44,6 @@ export async function updateRentalAction(
           (split) => split.exchangeRateUsed
         )?.exchangeRateUsed ?? 1;
 
-      // Ensure we have the correct principal amount to add the tip to
       const principalUsd = updates.totalUsd ?? currentRental.totalUsd;
 
       const finalTotals = calculateFinalRentalTotals({
@@ -58,7 +54,6 @@ export async function updateRentalAction(
 
       effectiveUpdates.totalUsd = finalTotals.totalUsd;
 
-      // Merge tip into payment splits
       effectiveUpdates.paymentSplits = mergeTipIntoPaymentSplits({
         paymentSplits: updates.paymentSplits ?? currentRental.paymentSplits,
         fallbackMethod:
@@ -66,7 +61,7 @@ export async function updateRentalAction(
         tipAmountBs: tipInput.amountBs,
         tipPaymentMethod: tipInput.capturePaymentMethod,
         exchangeRate,
-        principalUsd, // Pass principal amount in USD
+        principalUsd,
       });
     }
 
@@ -89,37 +84,6 @@ export async function updateRentalAction(
           ?.exchangeRateUsed ?? 1
       );
     }
-
-    if (effectiveUpdates.machineId !== undefined)
-      payload.machine_id = effectiveUpdates.machineId;
-    if (effectiveUpdates.shift !== undefined)
-      payload.shift = effectiveUpdates.shift;
-    if (effectiveUpdates.date !== undefined)
-      payload.date = effectiveUpdates.date;
-    if (effectiveUpdates.deliveryTime !== undefined)
-      payload.delivery_time = effectiveUpdates.deliveryTime;
-    if (effectiveUpdates.pickupTime !== undefined)
-      payload.pickup_time = effectiveUpdates.pickupTime;
-    if (effectiveUpdates.pickupDate !== undefined)
-      payload.pickup_date = effectiveUpdates.pickupDate;
-    if (effectiveUpdates.deliveryFee !== undefined)
-      payload.delivery_fee = effectiveUpdates.deliveryFee;
-    if (effectiveUpdates.totalUsd !== undefined)
-      payload.total_usd = effectiveUpdates.totalUsd;
-    if (effectiveUpdates.paymentMethod !== undefined)
-      payload.payment_method =
-        splitWrite?.paymentMethod ?? effectiveUpdates.paymentMethod;
-    if (effectiveUpdates.status !== undefined)
-      payload.status = effectiveUpdates.status;
-    if (effectiveUpdates.isPaid !== undefined)
-      payload.is_paid = effectiveUpdates.isPaid;
-    if ('datePaid' in effectiveUpdates)
-      payload.date_paid = effectiveUpdates.datePaid || null;
-    if (effectiveUpdates.notes !== undefined)
-      payload.notes = effectiveUpdates.notes;
-    if (effectiveUpdates.customerId !== undefined)
-      payload.customer_id = effectiveUpdates.customerId;
-    payload.updated_at = nowIso;
 
     const customerUpdates: CustomerUpdate = {};
     if (effectiveUpdates.customerName !== undefined)
@@ -163,7 +127,55 @@ export async function updateRentalAction(
     };
 
     if (!window.navigator.onLine) {
-      enqueueOfflineRentalUpdate({ id, payload });
+      enqueueOfflineRentalUpdate({
+        id,
+        payload: {
+          ...(effectiveUpdates.machineId !== undefined
+            ? { machine_id: effectiveUpdates.machineId }
+            : {}),
+          ...(effectiveUpdates.shift !== undefined
+            ? { shift: effectiveUpdates.shift }
+            : {}),
+          ...(effectiveUpdates.date !== undefined ? { date: effectiveUpdates.date } : {}),
+          ...(effectiveUpdates.deliveryTime !== undefined
+            ? { delivery_time: effectiveUpdates.deliveryTime }
+            : {}),
+          ...(effectiveUpdates.pickupTime !== undefined
+            ? { pickup_time: effectiveUpdates.pickupTime }
+            : {}),
+          ...(effectiveUpdates.pickupDate !== undefined
+            ? { pickup_date: effectiveUpdates.pickupDate }
+            : {}),
+          ...(effectiveUpdates.deliveryFee !== undefined
+            ? { delivery_fee: effectiveUpdates.deliveryFee }
+            : {}),
+          ...(effectiveUpdates.totalUsd !== undefined
+            ? { total_usd: effectiveUpdates.totalUsd }
+            : {}),
+          ...(effectiveUpdates.paymentMethod !== undefined
+            ? {
+                payment_method:
+                  splitWrite?.paymentMethod ?? effectiveUpdates.paymentMethod,
+              }
+            : {}),
+          ...(effectiveUpdates.status !== undefined
+            ? { status: effectiveUpdates.status }
+            : {}),
+          ...(effectiveUpdates.isPaid !== undefined
+            ? { is_paid: effectiveUpdates.isPaid }
+            : {}),
+          ...('datePaid' in effectiveUpdates
+            ? { date_paid: effectiveUpdates.datePaid || null }
+            : {}),
+          ...(effectiveUpdates.notes !== undefined
+            ? { notes: effectiveUpdates.notes }
+            : {}),
+          ...(effectiveUpdates.customerId !== undefined
+            ? { customer_id: effectiveUpdates.customerId }
+            : {}),
+          updated_at: nowIso,
+        },
+      });
       if (splitWrite)
         enqueueOfflineRentalPaymentSplitsReplace(id, splitWrite.paymentSplits);
       applyLocal();
@@ -175,19 +187,21 @@ export async function updateRentalAction(
       Object.keys(customerUpdates).length > 0 &&
       effectiveUpdates.customerId
     ) {
-      const { error: customerError } = await supabase
-        .from('customers')
-        .update(customerUpdates)
-        .eq('id', effectiveUpdates.customerId);
-      if (customerError) throw customerError;
+      await appRepositories.customersRepository.update(
+        effectiveUpdates.customerId,
+        customerUpdates
+      );
     }
 
-    const { error } = await supabase
-      .from('washer_rentals')
-      .update(payload)
-      .eq('id', id);
-    if (error) throw error;
-    if (splitWrite) await replaceRentalSplits(id, splitWrite.paymentSplits);
+    await appRepositories.washerRentalsRepository.update(id, {
+      ...effectiveUpdates,
+      ...(splitWrite
+        ? {
+            paymentMethod: splitWrite.paymentMethod,
+            paymentSplits: splitWrite.paymentSplits,
+          }
+        : {}),
+    });
     applyLocal();
     invalidate();
   } catch (err) {

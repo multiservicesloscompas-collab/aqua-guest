@@ -1,8 +1,6 @@
+import type { PaymentBalanceOperationType } from '@aqua-guest/domain';
 import type { PaymentBalanceTransaction } from '@/types';
-import type {
-  PaymentBalanceFormData,
-  PaymentBalanceOperationType,
-} from './usePaymentBalancePageViewModel';
+import type { PaymentBalanceFormData } from './usePaymentBalancePageViewModel';
 
 type ValidatedPayload = {
   operationType: PaymentBalanceOperationType;
@@ -106,7 +104,7 @@ export const validatePaymentBalanceForm = (
       operationType: formData.operationType,
       amount: amountOutBs,
       amountBs: amountOutBs,
-      amountUsd: amountOutUsd, // Use the "out" value as the principal reference
+      amountUsd: amountOutUsd,
       amountOutBs,
       amountOutUsd,
       amountInBs,
