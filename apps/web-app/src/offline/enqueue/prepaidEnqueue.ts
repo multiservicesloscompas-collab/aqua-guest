@@ -1,5 +1,9 @@
 import type { PrepaidOrder, PrepaidOrderDraft } from '@aqua-guest/domain';
-import { useSyncStore } from '@/store/useSyncStore';
+import {
+  enqueueOfflineRepositoryCreate,
+  enqueueOfflineRepositoryDelete,
+  enqueueOfflineRepositoryUpdate,
+} from './enqueueEntityHelpers';
 
 interface EnqueueOfflinePrepaidCreateInput {
   payload: Record<string, unknown>;
@@ -26,9 +30,13 @@ export const enqueueOfflinePrepaidCreate = (
   const tempId = generateTempId();
   const businessKey = buildEntityBusinessKey(tempId);
 
-  useSyncStore.getState().addToQueue({
-    type: 'INSERT',
+  enqueueOfflineRepositoryCreate({
     table: 'prepaid_orders',
+    repository: 'prepaidOrders',
+    input: {
+      tempId,
+      ...input.order,
+    },
     payload: { ...input.payload, tempId },
     enqueueSource: input.actionSource ?? 'prepaid/addPrepaidOrder',
     businessKey,
@@ -47,16 +55,14 @@ export const enqueueOfflinePrepaidUpdate = (
 ) => {
   const businessKey = buildEntityBusinessKey(input.id);
 
-  useSyncStore.getState().addToQueue({
-    type: 'UPDATE',
+  enqueueOfflineRepositoryUpdate({
     table: 'prepaid_orders',
-    payload: {
-      id: input.id,
-      ...input.payload,
-    },
+    repository: 'prepaidOrders',
+    id: input.id,
+    updates: input.payload,
+    payload: input.payload,
     enqueueSource: input.actionSource ?? 'prepaid/updatePrepaidOrder',
     businessKey,
-    dependencyKeys: input.id.startsWith('temp-') ? [businessKey] : undefined,
   });
 };
 
@@ -66,12 +72,11 @@ export const enqueueOfflinePrepaidDelete = (
 ) => {
   const businessKey = buildEntityBusinessKey(id);
 
-  useSyncStore.getState().addToQueue({
-    type: 'DELETE',
+  enqueueOfflineRepositoryDelete({
     table: 'prepaid_orders',
-    payload: { id },
+    repository: 'prepaidOrders',
+    id,
     enqueueSource: actionSource,
     businessKey,
-    dependencyKeys: id.startsWith('temp-') ? [businessKey] : undefined,
   });
 };

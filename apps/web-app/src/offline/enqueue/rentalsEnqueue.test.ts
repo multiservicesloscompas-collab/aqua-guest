@@ -93,11 +93,24 @@ describe('enqueueOfflineRental', () => {
     ]);
 
     const splitPayload = split?.payload as {
-      parentId?: string;
-      splits?: Array<{ rental_id: string }>;
+      __repository?: string;
+      __operation?: string;
+      __input?: {
+        id: string;
+        updates: {
+          paymentSplits: Array<{ method: string; amountBs: number; amountUsd: number }>;
+        };
+      };
     };
-    expect(splitPayload.parentId).toBe(rental.id);
-    expect(splitPayload.splits?.[0]?.rental_id).toBe(rental.id);
+    expect(splitPayload.__repository).toBe('washerRentals');
+    expect(splitPayload.__operation).toBe('update');
+    expect(splitPayload.__input?.id).toBe(rental.id);
+    expect(splitPayload.__input?.updates.paymentSplits[0]).toEqual({
+      method: 'pago_movil',
+      amountBs: 70,
+      amountUsd: 1.4,
+      exchangeRateUsed: 50,
+    });
   });
 
   it('enqueues scoped tip deletion by rental origin', () => {
@@ -107,9 +120,7 @@ describe('enqueueOfflineRental', () => {
     expect(queue).toHaveLength(1);
     expect(queue[0].table).toBe('tips');
     expect(queue[0].type).toBe('DELETE');
-    expect(queue[0].payload.__op).toBe('delete_by_parent_id');
-    expect(queue[0].payload.parentColumn).toBe('origin_id');
-    expect(queue[0].payload.parentScopeColumn).toBe('origin_type');
-    expect(queue[0].payload.parentScopeValue).toBe('rental');
+    expect(queue[0].payload.__repository).toBe('tips');
+    expect(queue[0].payload.__operation).toBe('deleteByOrigin');
   });
 });

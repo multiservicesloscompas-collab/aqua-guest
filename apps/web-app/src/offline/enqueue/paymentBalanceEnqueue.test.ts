@@ -33,6 +33,8 @@ describe('paymentBalanceEnqueue', () => {
     expect(queue).toHaveLength(1);
     expect(queue[0].table).toBe('payment_balance_transactions');
     expect(queue[0].type).toBe('INSERT');
+    expect(queue[0].payload.__repository).toBe('paymentBalance');
+    expect(queue[0].payload.__operation).toBe('create');
     expect(queue[0].payload).toMatchObject({
       operation_type: 'equilibrio',
       amount_out_bs: 500,
@@ -69,6 +71,7 @@ describe('paymentBalanceEnqueue', () => {
 
     const queue = useSyncStore.getState().queue;
     expect(queue).toHaveLength(1);
+    expect(queue[0].payload.__repository).toBe('paymentBalance');
     expect(queue[0].payload).toMatchObject({
       operation_type: 'avance',
       amount_out_bs: 1000,
@@ -113,6 +116,7 @@ describe('paymentBalanceEnqueue', () => {
 
     const queue = useSyncStore.getState().queue;
     expect(queue).toHaveLength(1);
+    expect(queue[0].payload.__operation).toBe('update');
     expect(queue[0].payload).toMatchObject({
       id: existing.id,
       amount: 1000,
@@ -143,9 +147,11 @@ describe('paymentBalanceEnqueue', () => {
     expect(queue[0].dependencies.dependsOn).toEqual([
       `payment-balance:${tempId}`,
     ]);
+    expect(queue[0].payload.__repository).toBe('paymentBalance');
     expect(queue[1].type).toBe('DELETE');
     expect(queue[1].dependencies.dependsOn).toEqual([
       `payment-balance:${tempId}`,
     ]);
+    expect(queue[1].payload.__repository).toBe('paymentBalance');
   });
 });

@@ -3,7 +3,11 @@ import type {
   WashingMachineDraft,
   WashingMachineUpdate,
 } from '@aqua-guest/domain';
-import { useSyncStore } from '@/store/useSyncStore';
+import {
+  enqueueOfflineRepositoryCreate,
+  enqueueOfflineRepositoryDelete,
+  enqueueOfflineRepositoryUpdate,
+} from './enqueueEntityHelpers';
 
 const generateTempId = () =>
   `temp-${Math.random().toString(36).substring(2, 15)}`;
@@ -17,9 +21,13 @@ export const enqueueOfflineWashingMachineCreate = (
   const tempId = generateTempId();
   const businessKey = buildEntityBusinessKey(tempId);
 
-  useSyncStore.getState().addToQueue({
-    type: 'INSERT',
+  enqueueOfflineRepositoryCreate({
     table: 'washing_machines',
+    repository: 'washingMachines',
+    input: {
+      tempId,
+      ...machine,
+    },
     payload: {
       tempId,
       name: machine.name,
@@ -45,11 +53,12 @@ export const enqueueOfflineWashingMachineUpdate = (
 ) => {
   const businessKey = buildEntityBusinessKey(id);
 
-  useSyncStore.getState().addToQueue({
-    type: 'UPDATE',
+  enqueueOfflineRepositoryUpdate({
     table: 'washing_machines',
+    repository: 'washingMachines',
+    id,
+    updates,
     payload: {
-      id,
       ...(updates.name !== undefined ? { name: updates.name } : {}),
       ...(updates.kg !== undefined ? { kg: updates.kg } : {}),
       ...(updates.brand !== undefined ? { brand: updates.brand } : {}),
@@ -60,7 +69,6 @@ export const enqueueOfflineWashingMachineUpdate = (
     },
     enqueueSource: actionSource,
     businessKey,
-    dependencyKeys: id.startsWith('temp-') ? [businessKey] : undefined,
   });
 };
 
@@ -70,12 +78,11 @@ export const enqueueOfflineWashingMachineDelete = (
 ) => {
   const businessKey = buildEntityBusinessKey(id);
 
-  useSyncStore.getState().addToQueue({
-    type: 'DELETE',
+  enqueueOfflineRepositoryDelete({
     table: 'washing_machines',
-    payload: { id },
+    repository: 'washingMachines',
+    id,
     enqueueSource: actionSource,
     businessKey,
-    dependencyKeys: id.startsWith('temp-') ? [businessKey] : undefined,
   });
 };

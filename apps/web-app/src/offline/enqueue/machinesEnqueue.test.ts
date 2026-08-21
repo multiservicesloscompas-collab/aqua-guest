@@ -25,6 +25,7 @@ describe('machinesEnqueue', () => {
     expect(queue).toHaveLength(1);
     expect(queue[0].table).toBe('washing_machines');
     expect(queue[0].type).toBe('INSERT');
+    expect(queue[0].payload.__repository).toBe('washingMachines');
     expect(queue[0].idempotency.businessKey).toBe(`machine:${created.id}`);
   });
 
@@ -38,7 +39,9 @@ describe('machinesEnqueue', () => {
     expect(queue).toHaveLength(2);
     expect(queue[0].type).toBe('UPDATE');
     expect(queue[0].dependencies.dependsOn).toEqual([`machine:${tempId}`]);
+    expect(queue[0].payload.__repository).toBe('washingMachines');
     expect(queue[1].type).toBe('DELETE');
     expect(queue[1].dependencies.dependsOn).toEqual([`machine:${tempId}`]);
+    expect(queue[1].payload.__repository).toBe('washingMachines');
   });
 });

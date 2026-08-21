@@ -64,7 +64,12 @@ describe('useConfigStore offline queueing', () => {
     const queue = useSyncStore.getState().queue;
     expect(queue).toHaveLength(1);
     expect(queue[0].table).toBe('exchange_rates');
-    expect(queue[0].payload.__op).toBe('upsert_on_date');
+    expect(queue[0].payload.__repository).toBe('exchangeRates');
+    expect(queue[0].payload.__operation).toBe('upsert');
+    expect(queue[0].payload.__input).toMatchObject({
+      date: '2026-03-09',
+      rate: 52,
+    });
   });
 
   it('queues liter pricing replace operations when offline', async () => {
@@ -76,9 +81,22 @@ describe('useConfigStore offline queueing', () => {
     expect(selectMock).not.toHaveBeenCalled();
     const queue = useSyncStore.getState().queue;
     expect(queue).toHaveLength(3);
-    expect(queue.filter((item) => item.table === 'liter_pricing')).toHaveLength(
-      3
-    );
-    expect(queue.some((item) => item.type === 'DELETE')).toBe(true);
+
+    const upserts = queue.filter((item) => item.type === 'INSERT');
+    const deletions = queue.filter((item) => item.type === 'DELETE');
+
+    expect(queue.filter((item) => item.table === 'liter_pricing')).toHaveLength(3);
+    expect(upserts).toHaveLength(2);
+    expect(deletions).toHaveLength(1);
+    expect(
+      upserts.every(
+        (item) =>
+          item.payload.__repository === 'literPricing' &&
+          item.payload.__operation === 'replace'
+      )
+    ).toBe(true);
+    expect(deletions[0].payload.__repository).toBe('literPricing');
+    expect(deletions[0].payload.__operation).toBe('delete');
+    expect(deletions[0].payload.__input).toEqual({ id: 2 });
   });
 });

@@ -1,8 +1,17 @@
-import type { Expense, ExpenseDraft, ExpenseUpdate } from '@aqua-guest/domain';
-import type { PaymentSplit } from '@/types/paymentSplits';
+import type {
+  Expense,
+  ExpenseDraft,
+  ExpenseUpdate,
+  PaymentSplit,
+} from '@aqua-guest/domain';
 import { PAYMENT_SPLIT_SCHEMA } from '@/services/payments/paymentSplitSchemaContract';
 import { expensePaymentSplitAdapter } from '@/services/payments/paymentSplitSupabaseAdapters';
-import { useSyncStore } from '@/store/useSyncStore';
+import {
+  enqueueOfflineRepositoryCreate,
+  enqueueOfflineRepositoryDelete,
+  enqueueOfflineRepositoryMutation,
+  enqueueOfflineRepositoryUpdate,
+} from './enqueueEntityHelpers';
 
 type ExpenseCreateInput = ExpenseDraft;
 type ExpenseUpdateInput = ExpenseUpdate;
@@ -20,9 +29,13 @@ export const enqueueOfflineExpenseCreate = (
   const tempId = generateTempId();
   const businessKey = buildEntityBusinessKey(tempId);
 
-  useSyncStore.getState().addToQueue({
-    type: 'INSERT',
+  enqueueOfflineRepositoryCreate({
     table: 'expenses',
+    repository: 'expenses',
+    input: {
+      tempId,
+      ...expense,
+    },
     payload: {
       tempId,
       date: expense.date,
@@ -37,17 +50,16 @@ export const enqueueOfflineExpenseCreate = (
   });
 
   if (expense.paymentSplits?.length) {
-    useSyncStore.getState().addToQueue({
-      type: 'INSERT',
+    enqueueOfflineRepositoryMutation({
+      type: 'UPDATE',
       table: PAYMENT_SPLIT_SCHEMA.expensesSplitsTable,
-      payload: {
-        splits: expensePaymentSplitAdapter.toInsertRows(
-          tempId,
-          expense.paymentSplits
-        ),
-        isSplit: true,
-        parentId: tempId,
+      repository: 'expenses',
+      operation: 'update',
+      input: {
+        id: tempId,
+        updates: { paymentSplits: expense.paymentSplits },
       },
+      payload: { id: tempId },
       enqueueSource: actionSource,
       businessKey: `expense-splits:${tempId}`,
       dependencyKeys: [businessKey],
@@ -68,11 +80,12 @@ export const enqueueOfflineExpenseUpdate = (
 ) => {
   const businessKey = buildEntityBusinessKey(id);
 
-  useSyncStore.getState().addToQueue({
-    type: 'UPDATE',
+  enqueueOfflineRepositoryUpdate({
     table: 'expenses',
+    repository: 'expenses',
+    id,
+    updates,
     payload: {
-      id,
       ...(updates.description !== undefined
         ? { description: updates.description }
         : {}),
@@ -86,7 +99,6 @@ export const enqueueOfflineExpenseUpdate = (
     },
     enqueueSource: actionSource,
     businessKey,
-    dependencyKeys: id.startsWith('temp-') ? [businessKey] : undefined,
   });
 };
 
@@ -96,13 +108,12 @@ export const enqueueOfflineExpenseDelete = (
 ) => {
   const businessKey = buildEntityBusinessKey(id);
 
-  useSyncStore.getState().addToQueue({
-    type: 'DELETE',
+  enqueueOfflineRepositoryDelete({
     table: 'expenses',
-    payload: { id },
+    repository: 'expenses',
+    id,
     enqueueSource: actionSource,
     businessKey,
-    dependencyKeys: id.startsWith('temp-') ? [businessKey] : undefined,
   });
 };
 
@@ -113,26 +124,19 @@ export const enqueueOfflineExpensePaymentSplitsReplace = (
 ) => {
   const businessKey = `expense-splits:${expenseId}`;
 
-  useSyncStore.getState().addToQueue({
-    type: 'DELETE',
+  enqueueOfflineRepositoryMutation({
+    type: 'UPDATE',
     table: PAYMENT_SPLIT_SCHEMA.expensesSplitsTable,
-    payload: {
-      id: `expense_id:${expenseId}`,
-      parentId: expenseId,
-      parentColumn: 'expense_id',
-      __op: 'delete_by_parent_id',
+    repository: 'expenses',
+    operation: 'update',
+    input: {
+      id: expenseId,
+      updates: { paymentSplits: splits },
     },
-    enqueueSource: actionSource,
-    businessKey,
-  });
-
-  useSyncStore.getState().addToQueue({
-    type: 'INSERT',
-    table: PAYMENT_SPLIT_SCHEMA.expensesSplitsTable,
     payload: {
+      id: expenseId,
       splits: expensePaymentSplitAdapter.toInsertRows(expenseId, splits),
-      isSplit: true,
-      parentId: expenseId,
+      __legacyRepositorySemantic: true,
     },
     enqueueSource: actionSource,
     businessKey,

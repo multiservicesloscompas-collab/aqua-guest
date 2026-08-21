@@ -45,6 +45,7 @@ describe('prepaidEnqueue', () => {
     expect(queue).toHaveLength(1);
     expect(queue[0].table).toBe('prepaid_orders');
     expect(queue[0].type).toBe('INSERT');
+    expect(queue[0].payload.__repository).toBe('prepaidOrders');
     expect(queue[0].idempotency.businessKey).toBe(`prepaid:${created.id}`);
   });
 
@@ -64,7 +65,9 @@ describe('prepaidEnqueue', () => {
     expect(queue).toHaveLength(2);
     expect(queue[0].type).toBe('UPDATE');
     expect(queue[0].dependencies.dependsOn).toEqual([`prepaid:${tempId}`]);
+    expect(queue[0].payload.__repository).toBe('prepaidOrders');
     expect(queue[1].type).toBe('DELETE');
     expect(queue[1].dependencies.dependsOn).toEqual([`prepaid:${tempId}`]);
+    expect(queue[1].payload.__repository).toBe('prepaidOrders');
   });
 });

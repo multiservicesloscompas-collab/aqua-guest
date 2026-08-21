@@ -12,20 +12,6 @@ export interface OfflineTableCoveragePolicy {
 
 export const OFFLINE_COVERAGE_MATRIX: OfflineTableCoveragePolicy[] = [
   {
-    table: 'companies',
-    domain: 'tenant/platform',
-    mutationContract: 'read-sync-only',
-    queueReconcileRequirement: 'refresh-on-reconnect',
-    dependencyGroup: 'root-tenant-context',
-  },
-  {
-    table: 'user_profiles',
-    domain: 'identity',
-    mutationContract: 'read-sync-only',
-    queueReconcileRequirement: 'refresh-on-reconnect',
-    dependencyGroup: 'root-user-context',
-  },
-  {
     table: 'customers',
     domain: 'customers',
     mutationContract: 'offline-mutation-enabled',

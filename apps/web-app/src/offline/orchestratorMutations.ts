@@ -1,5 +1,9 @@
 import { supabase } from '@/lib/supabaseClient';
 import type { GlobalSyncAction } from './types';
+import {
+  dispatchRepositoryMutation,
+  type RepositoryMutationResult,
+} from './orchestratorRepositoryMutations';
 
 interface GlobalSyncProcessResult {
   actionId: string;
@@ -8,17 +12,19 @@ interface GlobalSyncProcessResult {
   reason?: string;
 }
 
-interface SupabaseMutationResult {
-  error: unknown;
-  insertedId?: string;
-}
+type SupabaseMutationResult = RepositoryMutationResult;
 
 const resolveInsertPayload = (
   action: GlobalSyncAction,
   tempIdToRealId: Map<string, string>
 ): Record<string, unknown> => {
+  if ('__repository' in action.payload) {
+    return action.payload;
+  }
+
   if (!action.payload.isSplit || !Array.isArray(action.payload.splits)) {
-    const { tempId: _tempId, ...payload } = action.payload;
+    const payload = { ...action.payload };
+    delete payload.tempId;
     return payload;
   }
 
@@ -56,7 +62,8 @@ const resolveOperationHint = (
 const stripInternalPayloadFields = (
   payload: Record<string, unknown>
 ): Record<string, unknown> => {
-  const { __op: _op, ...rest } = payload;
+  const rest = { ...payload };
+  delete rest.__op;
   return rest;
 };
 
@@ -71,10 +78,12 @@ const resolveMutationId = (
   return tempIdToRealId.get(value) ?? value;
 };
 
-export const buildSupabaseMutation = (
+const buildLegacySupabaseMutation = (
   action: GlobalSyncAction,
   tempIdToRealId: Map<string, string>
 ): Promise<SupabaseMutationResult> => {
+  // Legacy queue entries and not-yet-migrated actions still replay through
+  // the raw Supabase path. Repository-backed payloads are handled earlier.
   const tableClient = supabase.from(action.table);
 
   if (action.type === 'INSERT') {
@@ -135,7 +144,8 @@ export const buildSupabaseMutation = (
       return Promise.resolve({ error: { status: 400, message: 'Missing id' } });
     }
 
-    const { id: _, ...changes } = action.payload;
+    const changes = { ...action.payload };
+    delete changes.id;
     return Promise.resolve(
       tableClient
         .update(changes)
@@ -152,10 +162,7 @@ export const buildSupabaseMutation = (
         typeof action.payload.parentColumn === 'string'
           ? action.payload.parentColumn
           : null;
-      const parentId = resolveMutationId(
-        action.payload.parentId,
-        tempIdToRealId
-      );
+      const parentId = resolveMutationId(action.payload.parentId, tempIdToRealId);
       const parentScopeColumn =
         typeof action.payload.parentScopeColumn === 'string'
           ? action.payload.parentScopeColumn
@@ -218,6 +225,23 @@ export const buildSupabaseMutation = (
   }
 
   throw new Error(`Unsupported operation: ${action.type}`);
+};
+
+export const buildSupabaseMutation = (
+  action: GlobalSyncAction,
+  tempIdToRealId: Map<string, string>
+): Promise<SupabaseMutationResult> => {
+  return (async () => {
+    const repositoryMutation = await dispatchRepositoryMutation(
+      action,
+      tempIdToRealId
+    );
+    if (repositoryMutation) {
+      return repositoryMutation;
+    }
+
+    return buildLegacySupabaseMutation(action, tempIdToRealId);
+  })();
 };
 
 export const dedupeByIdempotencyKey = (

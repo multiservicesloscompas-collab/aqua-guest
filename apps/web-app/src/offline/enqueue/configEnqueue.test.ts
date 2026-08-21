@@ -11,7 +11,7 @@ describe('configEnqueue', () => {
     useSyncStore.getState().clearQueue();
   });
 
-  it('enqueues exchange-rate upsert with operation hint', () => {
+  it('enqueues exchange-rate upsert as repository operation', () => {
     enqueueOfflineExchangeRateUpsert({
       date: '2026-03-09',
       rate: 52,
@@ -22,7 +22,8 @@ describe('configEnqueue', () => {
     expect(queue).toHaveLength(1);
     expect(queue[0].table).toBe('exchange_rates');
     expect(queue[0].type).toBe('INSERT');
-    expect(queue[0].payload.__op).toBe('upsert_on_date');
+    expect(queue[0].payload.__repository).toBe('exchangeRates');
+    expect(queue[0].payload.__operation).toBe('upsert');
   });
 
   it('enqueues liter pricing upserts and deletes removed breakpoints', () => {
@@ -45,9 +46,13 @@ describe('configEnqueue', () => {
     expect(upserts).toHaveLength(2);
     expect(deletions).toHaveLength(1);
     expect(
-      upserts.every((item) => item.payload.__op === 'upsert_on_breakpoint')
+      upserts.every((item) => item.payload.__repository === 'literPricing')
     ).toBe(true);
-    expect(deletions[0].payload.__op).toBe('delete_by_breakpoint');
+    expect(
+      upserts.every((item) => item.payload.__operation === 'replace')
+    ).toBe(true);
+    expect(deletions[0].payload.__repository).toBe('literPricing');
+    expect(deletions[0].payload.__operation).toBe('delete');
     expect(deletions[0].payload.breakpoint).toBe(2);
   });
 

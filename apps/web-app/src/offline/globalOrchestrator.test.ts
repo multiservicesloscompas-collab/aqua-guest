@@ -2,6 +2,16 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { GlobalSyncAction } from './types';
 import { processGlobalOfflineQueue } from './globalOrchestrator';
 
+const repositoryMocks = vi.hoisted(() => ({
+  repositoryCreateMock: vi.fn(),
+  repositoryUpdateMock: vi.fn(),
+  repositoryDeleteMock: vi.fn(),
+  repositoryReplaceMock: vi.fn(),
+  tipDeleteByOriginMock: vi.fn(),
+  tipUpsertByOriginMock: vi.fn(),
+  exchangeRateRepositoryUpsertMock: vi.fn(),
+}));
+
 const insertMock = vi.fn();
 const upsertMock = vi.fn();
 const insertSelectSingleMock = vi.fn();
@@ -27,6 +37,65 @@ vi.mock('@/lib/supabaseClient', () => {
     supabase: client,
   };
 });
+
+vi.mock('@/lib/app-repositories', () => ({
+  appRepositories: {
+    salesRepository: {
+      create: repositoryMocks.repositoryCreateMock,
+      update: repositoryMocks.repositoryUpdateMock,
+      delete: repositoryMocks.repositoryDeleteMock,
+    },
+    expensesRepository: {
+      create: repositoryMocks.repositoryCreateMock,
+      update: repositoryMocks.repositoryUpdateMock,
+      delete: repositoryMocks.repositoryDeleteMock,
+    },
+    paymentBalanceRepository: {
+      create: repositoryMocks.repositoryCreateMock,
+      update: repositoryMocks.repositoryUpdateMock,
+      delete: repositoryMocks.repositoryDeleteMock,
+    },
+    exchangeRatesRepository: {
+      create: repositoryMocks.repositoryCreateMock,
+      update: repositoryMocks.repositoryUpdateMock,
+      delete: repositoryMocks.repositoryDeleteMock,
+      upsert: repositoryMocks.exchangeRateRepositoryUpsertMock,
+    },
+    literPricingRepository: {
+      create: repositoryMocks.repositoryCreateMock,
+      update: repositoryMocks.repositoryUpdateMock,
+      delete: repositoryMocks.repositoryDeleteMock,
+      replace: repositoryMocks.repositoryReplaceMock,
+    },
+    tipsRepository: {
+      create: repositoryMocks.repositoryCreateMock,
+      update: repositoryMocks.repositoryUpdateMock,
+      delete: repositoryMocks.repositoryDeleteMock,
+      deleteByOrigin: repositoryMocks.tipDeleteByOriginMock,
+      upsertByOrigin: repositoryMocks.tipUpsertByOriginMock,
+    },
+    customersRepository: {
+      create: repositoryMocks.repositoryCreateMock,
+      update: repositoryMocks.repositoryUpdateMock,
+      delete: repositoryMocks.repositoryDeleteMock,
+    },
+    washingMachinesRepository: {
+      create: repositoryMocks.repositoryCreateMock,
+      update: repositoryMocks.repositoryUpdateMock,
+      delete: repositoryMocks.repositoryDeleteMock,
+    },
+    prepaidOrdersRepository: {
+      create: repositoryMocks.repositoryCreateMock,
+      update: repositoryMocks.repositoryUpdateMock,
+      delete: repositoryMocks.repositoryDeleteMock,
+    },
+    washerRentalsRepository: {
+      create: repositoryMocks.repositoryCreateMock,
+      update: repositoryMocks.repositoryUpdateMock,
+      delete: repositoryMocks.repositoryDeleteMock,
+    },
+  },
+}));
 
 const baseAction = (
   overrides: Partial<GlobalSyncAction>
@@ -67,6 +136,13 @@ describe('processGlobalOfflineQueue', () => {
     deleteEqMock.mockReset();
     deleteEqBreakpointMock.mockReset();
     deleteEqRouterMock.mockReset();
+    repositoryMocks.repositoryCreateMock.mockReset();
+    repositoryMocks.repositoryUpdateMock.mockReset();
+    repositoryMocks.repositoryDeleteMock.mockReset();
+    repositoryMocks.repositoryReplaceMock.mockReset();
+    repositoryMocks.tipDeleteByOriginMock.mockReset();
+    repositoryMocks.tipUpsertByOriginMock.mockReset();
+    repositoryMocks.exchangeRateRepositoryUpsertMock.mockReset();
 
     insertMock.mockImplementation((payload: unknown) => {
       if (Array.isArray(payload)) {
@@ -85,6 +161,19 @@ describe('processGlobalOfflineQueue', () => {
     updateEqMock.mockResolvedValue({ error: null });
     deleteEqMock.mockResolvedValue({ error: null });
     deleteEqBreakpointMock.mockResolvedValue({ error: null });
+    repositoryMocks.repositoryCreateMock.mockImplementation(async (input: Record<string, unknown>) => ({
+      id:
+        typeof input.tempId === 'string'
+          ? input.tempId.replace('temp-', 'real-')
+          : 'repo-created-1',
+      ...input,
+    }));
+    repositoryMocks.repositoryUpdateMock.mockResolvedValue(undefined);
+    repositoryMocks.repositoryDeleteMock.mockResolvedValue(undefined);
+    repositoryMocks.repositoryReplaceMock.mockResolvedValue(undefined);
+    repositoryMocks.tipDeleteByOriginMock.mockResolvedValue(undefined);
+    repositoryMocks.tipUpsertByOriginMock.mockResolvedValue({ id: 'tip-1' });
+    repositoryMocks.exchangeRateRepositoryUpsertMock.mockResolvedValue(undefined);
 
     deleteEqRouterMock.mockImplementation((column: string, value: unknown) => {
       if (column === 'breakpoint') {
@@ -384,6 +473,90 @@ describe('processGlobalOfflineQueue', () => {
       },
       { onConflict: 'date' }
     );
+    expect(result.nextQueue).toHaveLength(0);
+  });
+
+  it('dispatches repository-backed sale replay without raw supabase mutations', async () => {
+    const queue = [
+      baseAction({
+        id: 'sale-create',
+        table: 'sales',
+        payload: {
+          __repository: 'sales',
+          __operation: 'create',
+          __input: {
+            tempId: 'temp-sale-1',
+            dailyNumber: 1,
+            date: '2026-03-09',
+            items: [],
+            paymentMethod: 'efectivo',
+            totalBs: 120,
+            totalUsd: 2.4,
+            exchangeRate: 50,
+          },
+        },
+      }),
+    ];
+
+    const result = await processGlobalOfflineQueue({ queue });
+
+    expect(repositoryMocks.repositoryCreateMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tempId: 'temp-sale-1',
+        dailyNumber: 1,
+      })
+    );
+    expect(insertMock).not.toHaveBeenCalled();
+    expect(result.nextQueue).toHaveLength(0);
+    expect(result.results[0]?.status).toBe('succeeded');
+  });
+
+  it('dispatches repository-backed update with resolved temp id', async () => {
+    repositoryMocks.repositoryCreateMock.mockResolvedValueOnce({ id: 'sale-real-1' });
+
+    const queue = [
+      baseAction({
+        id: 'sale-create',
+        table: 'sales',
+        payload: {
+          __repository: 'sales',
+          __operation: 'create',
+          __input: {
+            tempId: 'temp-sale-1',
+            dailyNumber: 1,
+            date: '2026-03-09',
+            items: [],
+            paymentMethod: 'efectivo',
+            totalBs: 120,
+            totalUsd: 2.4,
+            exchangeRate: 50,
+          },
+        },
+      }),
+      baseAction({
+        id: 'sale-update',
+        type: 'UPDATE',
+        table: 'sales',
+        payload: {
+          __repository: 'sales',
+          __operation: 'update',
+          __input: {
+            id: 'temp-sale-1',
+            updates: {
+              notes: 'updated',
+            },
+          },
+        },
+        dependencies: { dependsOn: ['sale-create'] },
+        enqueuedAt: 2,
+      }),
+    ];
+
+    const result = await processGlobalOfflineQueue({ queue });
+
+    expect(repositoryMocks.repositoryUpdateMock).toHaveBeenCalledWith('sale-real-1', {
+      notes: 'updated',
+    });
     expect(result.nextQueue).toHaveLength(0);
   });
 

@@ -1,5 +1,7 @@
 import type { ExchangeRateHistory, LiterPricing } from '@aqua-guest/domain';
-import { useSyncStore } from '@/store/useSyncStore';
+import {
+  enqueueOfflineRepositoryMutation,
+} from './enqueueEntityHelpers';
 
 interface EnqueueExchangeRateInput {
   date: string;
@@ -24,14 +26,20 @@ export const enqueueOfflineExchangeRateUpsert = (
 ) => {
   const businessKey = buildExchangeRateBusinessKey(input.date);
 
-  useSyncStore.getState().addToQueue({
+  enqueueOfflineRepositoryMutation({
     type: 'INSERT',
     table: 'exchange_rates',
+    repository: 'exchangeRates',
+    operation: 'upsert',
+    input: {
+      date: input.date,
+      rate: input.rate,
+      updatedAt: input.updatedAt,
+    },
     payload: {
       date: input.date,
       rate: input.rate,
       updated_at: input.updatedAt,
-      __op: 'upsert_on_date',
     },
     enqueueSource: actionSource,
     businessKey,
@@ -49,13 +57,17 @@ export const enqueueOfflineLiterPricingReplace = (
   for (const item of input.pricing) {
     const businessKey = buildLiterPricingBusinessKey(item.breakpoint);
 
-    useSyncStore.getState().addToQueue({
+    enqueueOfflineRepositoryMutation({
       type: 'INSERT',
       table: 'liter_pricing',
+      repository: 'literPricing',
+      operation: 'replace',
+      input: {
+        items: input.pricing,
+      },
       payload: {
         breakpoint: item.breakpoint,
         price: item.price,
-        __op: 'upsert_on_breakpoint',
       },
       enqueueSource: actionSource,
       businessKey,
@@ -70,14 +82,13 @@ export const enqueueOfflineLiterPricingReplace = (
     const syntheticId = `bp:${previous.breakpoint}`;
     const businessKey = buildLiterPricingBusinessKey(previous.breakpoint);
 
-    useSyncStore.getState().addToQueue({
+    enqueueOfflineRepositoryMutation({
       type: 'DELETE',
       table: 'liter_pricing',
-      payload: {
-        id: syntheticId,
-        breakpoint: previous.breakpoint,
-        __op: 'delete_by_breakpoint',
-      },
+      repository: 'literPricing',
+      operation: 'delete',
+      input: { id: previous.breakpoint },
+      payload: { id: syntheticId, breakpoint: previous.breakpoint },
       enqueueSource: actionSource,
       businessKey,
     });

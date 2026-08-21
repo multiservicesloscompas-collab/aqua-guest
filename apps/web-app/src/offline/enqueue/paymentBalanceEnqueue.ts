@@ -4,7 +4,11 @@ import type {
   PaymentBalanceTransactionDraft,
   PaymentBalanceTransactionUpdate,
 } from '@aqua-guest/domain';
-import { useSyncStore } from '@/store/useSyncStore';
+import {
+  enqueueOfflineRepositoryCreate,
+  enqueueOfflineRepositoryDelete,
+  enqueueOfflineRepositoryUpdate,
+} from './enqueueEntityHelpers';
 
 type PaymentBalanceCreateInput = PaymentBalanceTransactionDraft;
 type PaymentBalanceUpdateInput = PaymentBalanceTransactionUpdate;
@@ -53,9 +57,26 @@ export const enqueueOfflinePaymentBalanceCreate = (
   const businessKey = buildEntityBusinessKey(tempId);
   const normalized = normalizePaymentBalanceAmounts(transaction);
 
-  useSyncStore.getState().addToQueue({
-    type: 'INSERT',
+  enqueueOfflineRepositoryCreate({
     table: 'payment_balance_transactions',
+    repository: 'paymentBalance',
+    input: {
+      tempId,
+      date: transaction.date,
+      fromMethod: transaction.fromMethod,
+      toMethod: transaction.toMethod,
+      operationType: normalized.operationType,
+      amount: normalized.amount,
+      amountBs: normalized.amountBs,
+      amountUsd: normalized.amountUsd,
+      amountOutBs: normalized.amountOutBs,
+      amountOutUsd: normalized.amountOutUsd,
+      amountInBs: normalized.amountInBs,
+      amountInUsd: normalized.amountInUsd,
+      differenceBs: normalized.differenceBs,
+      differenceUsd: normalized.differenceUsd,
+      notes: transaction.notes,
+    },
     payload: {
       tempId,
       date: transaction.date,
@@ -121,11 +142,28 @@ export const enqueueOfflinePaymentBalanceUpdate = (
     ? normalizePaymentBalanceAmounts(mergedTransaction)
     : undefined;
 
-  useSyncStore.getState().addToQueue({
-    type: 'UPDATE',
+  enqueueOfflineRepositoryUpdate({
     table: 'payment_balance_transactions',
+    repository: 'paymentBalance',
+    id,
+    updates: {
+      ...updates,
+      ...(normalized !== undefined && hasAmountMutation
+        ? {
+            amount: normalized.amount,
+            amountBs: normalized.amountBs,
+            amountUsd: normalized.amountUsd,
+            amountOutBs: normalized.amountOutBs,
+            amountOutUsd: normalized.amountOutUsd,
+            amountInBs: normalized.amountInBs,
+            amountInUsd: normalized.amountInUsd,
+            differenceBs: normalized.differenceBs,
+            differenceUsd: normalized.differenceUsd,
+          }
+        : {}),
+      updatedAt,
+    },
     payload: {
-      id,
       ...(updates.fromMethod !== undefined
         ? { from_method: updates.fromMethod }
         : {}),
@@ -179,7 +217,6 @@ export const enqueueOfflinePaymentBalanceUpdate = (
     },
     enqueueSource: actionSource,
     businessKey,
-    dependencyKeys: id.startsWith('temp-') ? [businessKey] : undefined,
   });
 };
 
@@ -189,12 +226,11 @@ export const enqueueOfflinePaymentBalanceDelete = (
 ) => {
   const businessKey = buildEntityBusinessKey(id);
 
-  useSyncStore.getState().addToQueue({
-    type: 'DELETE',
+  enqueueOfflineRepositoryDelete({
     table: 'payment_balance_transactions',
-    payload: { id },
+    repository: 'paymentBalance',
+    id,
     enqueueSource: actionSource,
     businessKey,
-    dependencyKeys: id.startsWith('temp-') ? [businessKey] : undefined,
   });
 };

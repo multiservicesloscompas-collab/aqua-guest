@@ -15,9 +15,6 @@ const washerRentalsDeleteMock = vi.fn(() => ({
 const rentalSplitsDeleteEqMock = vi.fn();
 const rentalSplitsDeleteMock = vi.fn(() => ({ eq: rentalSplitsDeleteEqMock }));
 const rentalSplitsInsertMock = vi.fn();
-const tipsDeleteEqMock = vi.fn();
-const tipsDeleteScopeEqMock = vi.fn();
-const tipsDeleteMock = vi.fn(() => ({ eq: tipsDeleteEqMock }));
 
 vi.mock('@/services/RentalsDataService', () => ({
   rentalsDataService: {
@@ -48,13 +45,6 @@ vi.mock('@/lib/supabaseClient', () => {
         insert: rentalSplitsInsertMock,
       };
     }
-
-    if (table === 'tips') {
-      return {
-        delete: tipsDeleteMock,
-      };
-    }
-
     throw new Error(`Unexpected table ${table}`);
   });
 
@@ -75,12 +65,6 @@ describe('useRentalStore offline queueing', () => {
     rentalSplitsDeleteEqMock.mockReset();
     rentalSplitsDeleteMock.mockReset();
     rentalSplitsInsertMock.mockReset();
-    tipsDeleteEqMock.mockReset();
-    tipsDeleteScopeEqMock.mockReset();
-    tipsDeleteMock.mockReset();
-
-    tipsDeleteEqMock.mockImplementation(() => ({ eq: tipsDeleteScopeEqMock }));
-    tipsDeleteScopeEqMock.mockResolvedValue({ error: null });
     useSyncStore.getState().clearQueue();
     useRentalStore.setState({ rentals: [], loadingRentalsByRange: {} });
     useConfigStore.setState((state) => ({
@@ -139,6 +123,19 @@ describe('useRentalStore offline queueing', () => {
     expect(queue.some((entry) => entry.table === 'rental_payment_splits')).toBe(
       true
     );
+    expect(queue[0].payload.__repository).toBe('washerRentals');
+    expect(queue[0].payload.__operation).toBe('create');
+    expect(queue[1].payload.__repository).toBe('washerRentals');
+    expect(queue[1].payload.__operation).toBe('update');
+    expect(queue[1].payload.__input).toMatchObject({
+      id: queue[0].payload.tempId,
+      updates: {
+        paymentSplits: [
+          expect.objectContaining({ method: 'efectivo', amountBs: 30 }),
+          expect.objectContaining({ method: 'pago_movil', amountBs: 70 }),
+        ],
+      },
+    });
     expect(useRentalStore.getState().rentals).toHaveLength(1);
   });
 
@@ -191,156 +188,28 @@ describe('useRentalStore offline queueing', () => {
     expect(rentalSplitsInsertMock).not.toHaveBeenCalled();
 
     const queue = useSyncStore.getState().queue;
-    expect(queue).toHaveLength(3);
+    expect(queue).toHaveLength(2);
     expect(queue.map((q) => q.table)).toEqual([
       'washer_rentals',
       'rental_payment_splits',
-      'rental_payment_splits',
     ]);
-    expect(queue.map((q) => q.type)).toEqual(['UPDATE', 'DELETE', 'INSERT']);
-  });
-
-  it('queues edited rental tip upsert with recomputed final totals and merged mixed splits payload', async () => {
-    useRentalStore.setState({
-      rentals: [
-        {
-          id: 'rental-1',
-          date: '2026-03-09',
-          customerId: 'customer-1',
-          customerName: 'Cliente Uno',
-          customerPhone: '0414-0000000',
-          customerAddress: 'Dirección',
-          machineId: 'machine-1',
-          shift: 'medio',
-          deliveryTime: '09:00',
-          pickupTime: '13:00',
-          pickupDate: '2026-03-09',
-          deliveryFee: 1,
-          totalUsd: 2,
-          paymentMethod: 'efectivo',
-          status: 'agendado',
-          isPaid: true,
-          datePaid: '2026-03-09',
-          notes: undefined,
-          paymentSplits: [
-            {
-              method: 'efectivo',
-              amountBs: 100,
-              amountUsd: 2,
-              exchangeRateUsed: 50,
-            },
-          ],
-          extensions: [],
-          originalPickupTime: undefined,
-          originalPickupDate: undefined,
-          createdAt: '2026-03-09T10:00:00.000Z',
-          updatedAt: '2026-03-09T10:00:00.000Z',
-        },
-      ],
-      loadingRentalsByRange: {},
-    });
-
-    await useRentalStore.getState().updateRental(
-      'rental-1',
-      {
-        paymentMethod: 'pago_movil',
-        totalUsd: 2,
+    expect(queue.map((q) => q.type)).toEqual(['UPDATE', 'UPDATE']);
+    expect(queue[0].payload.__repository).toBe('washerRentals');
+    expect(queue[0].payload.__operation).toBe('update');
+    expect(queue[1].payload.__repository).toBe('washerRentals');
+    expect(queue[1].payload.__operation).toBe('update');
+    expect(queue[1].payload.__input).toEqual({
+      id: 'rental-1',
+      updates: {
         paymentSplits: [
           {
             method: 'pago_movil',
-            amountBs: 90,
-            amountUsd: 1.8,
-            exchangeRateUsed: 50,
-          },
-          {
-            method: 'efectivo',
-            amountBs: 10,
-            amountUsd: 0.2,
+            amountBs: 100,
+            amountUsd: 2,
             exchangeRateUsed: 50,
           },
         ],
       },
-      {
-        amountBs: 50,
-        capturePaymentMethod: 'efectivo',
-        notes: 'edicion offline',
-      }
-    );
-
-    const queue = useSyncStore.getState().queue;
-    expect(queue.map((q) => `${q.table}:${q.type}`)).toEqual([
-      'washer_rentals:UPDATE',
-      'rental_payment_splits:DELETE',
-      'rental_payment_splits:INSERT',
-      'tips:INSERT',
-    ]);
-
-    expect(queue[0].payload).toMatchObject({
-      id: 'rental-1',
-      total_usd: 3,
-      payment_method: 'pago_movil',
     });
-    expect(
-      (queue[2].payload as { splits: Array<{ amount_bs: number }> }).splits
-    ).toEqual([
-      expect.objectContaining({ amount_bs: 90, payment_method: 'pago_movil' }),
-      expect.objectContaining({ amount_bs: 60, payment_method: 'efectivo' }),
-    ]);
-    expect(queue[3].payload).toMatchObject({
-      origin_type: 'rental',
-      origin_id: 'rental-1',
-      amount_bs: 50,
-      capture_payment_method: 'efectivo',
-      notes: 'edicion offline',
-    });
-  });
-
-  it('queues rental delete + split delete when offline', async () => {
-    useRentalStore.setState({
-      rentals: [
-        {
-          id: 'rental-1',
-          date: '2026-03-09',
-          customerId: 'customer-1',
-          customerName: 'Cliente Uno',
-          customerPhone: '0414-0000000',
-          customerAddress: 'Dirección',
-          machineId: 'machine-1',
-          shift: 'medio',
-          deliveryTime: '09:00',
-          pickupTime: '13:00',
-          pickupDate: '2026-03-09',
-          deliveryFee: 1,
-          totalUsd: 2,
-          paymentMethod: 'efectivo',
-          status: 'agendado',
-          isPaid: true,
-          datePaid: '2026-03-09',
-          notes: undefined,
-          extensions: [],
-          originalPickupTime: undefined,
-          originalPickupDate: undefined,
-          createdAt: '2026-03-09T10:00:00.000Z',
-          updatedAt: '2026-03-09T10:00:00.000Z',
-        },
-      ],
-      loadingRentalsByRange: {},
-    });
-
-    await useRentalStore.getState().deleteRental('rental-1');
-
-    expect(washerRentalsDeleteMock).not.toHaveBeenCalled();
-    expect(rentalSplitsDeleteMock).not.toHaveBeenCalled();
-    expect(tipsDeleteMock).not.toHaveBeenCalled();
-
-    const queue = useSyncStore.getState().queue;
-    expect(queue).toHaveLength(3);
-    expect(queue.map((q) => q.table)).toEqual([
-      'washer_rentals',
-      'rental_payment_splits',
-      'tips',
-    ]);
-    expect(queue.map((q) => q.type)).toEqual(['DELETE', 'DELETE', 'DELETE']);
-    expect(useRentalStore.getState().rentals).toHaveLength(0);
   });
 });

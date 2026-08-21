@@ -58,6 +58,12 @@ export interface GlobalSyncAction {
   retry: SyncRetryMetadata;
 }
 
+export interface RepositorySyncPayload {
+  repository: string;
+  operation: string;
+  input: Record<string, unknown>;
+}
+
 export interface SyncEnqueueInput {
   type: GlobalSyncOperation;
   table: string;

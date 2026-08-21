@@ -5,7 +5,15 @@ import type {
 } from '@aqua-guest/domain/modules/washer-rentals';
 import { PAYMENT_SPLIT_SCHEMA } from '@/services/payments/paymentSplitSchemaContract';
 import { rentalPaymentSplitAdapter } from '@/services/payments/paymentSplitSupabaseAdapters';
-import { useSyncStore } from '@/store/useSyncStore';
+import {
+  createOfflineTempId,
+  enqueueOfflineOriginTipDelete,
+  enqueueOfflineOriginTipUpsert,
+  enqueueOfflineRepositoryCreate,
+  enqueueOfflineRepositoryDelete,
+  enqueueOfflineRepositoryMutation,
+  enqueueOfflineRepositoryUpdate,
+} from './enqueueEntityHelpers';
 
 interface EnqueueOfflineRentalInput {
   payload: Record<string, unknown>;
@@ -25,9 +33,6 @@ interface EnqueueOfflineRentalDeleteInput {
   actionSource?: string;
 }
 
-const generateTempId = () =>
-  `temp-${Math.random().toString(36).substring(2, 15)}`;
-
 const buildRentalBusinessKey = (
   rental: WasherRentalDraft
 ) =>
@@ -38,30 +43,35 @@ const buildRentalBusinessKey = (
 export const enqueueOfflineRental = (
   input: EnqueueOfflineRentalInput
 ): WasherRental => {
-  const tempId = generateTempId();
+  const tempId = createOfflineTempId();
   const rentalBusinessKey = buildRentalBusinessKey(input.rental);
+  const enqueueSource = input.actionSource ?? 'rentals/addRental';
 
-  useSyncStore.getState().addToQueue({
-    type: 'INSERT',
+  enqueueOfflineRepositoryCreate({
     table: 'washer_rentals',
+    repository: 'washerRentals',
+    input: {
+      tempId,
+      ...input.rental,
+      paymentSplits: input.paymentSplits,
+    },
     payload: { ...input.payload, tempId },
-    enqueueSource: input.actionSource ?? 'rentals/addRental',
+    enqueueSource,
     businessKey: rentalBusinessKey,
   });
 
   if (input.paymentSplits?.length) {
-    useSyncStore.getState().addToQueue({
-      type: 'INSERT',
+    enqueueOfflineRepositoryMutation({
+      type: 'UPDATE',
       table: PAYMENT_SPLIT_SCHEMA.rentalsSplitsTable,
-      payload: {
-        splits: rentalPaymentSplitAdapter.toInsertRows(
-          tempId,
-          input.paymentSplits
-        ),
-        isSplit: true,
-        parentId: tempId,
+      repository: 'washerRentals',
+      operation: 'update',
+      input: {
+        id: tempId,
+        updates: { paymentSplits: input.paymentSplits },
       },
-      enqueueSource: input.actionSource ?? 'rentals/addRental',
+      payload: { id: tempId },
+      enqueueSource,
       businessKey: `rental-splits:${tempId}`,
       dependencyKeys: [rentalBusinessKey],
     });
@@ -85,16 +95,14 @@ export const enqueueOfflineRentalUpdate = (
 ) => {
   const businessKey = buildRentalEntityBusinessKey(input.id);
 
-  useSyncStore.getState().addToQueue({
-    type: 'UPDATE',
+  enqueueOfflineRepositoryUpdate({
     table: 'washer_rentals',
-    payload: {
-      id: input.id,
-      ...input.payload,
-    },
+    repository: 'washerRentals',
+    id: input.id,
+    updates: input.payload,
+    payload: input.payload,
     enqueueSource: input.actionSource ?? 'rentals/updateRental',
     businessKey,
-    dependencyKeys: input.id.startsWith('temp-') ? [businessKey] : undefined,
   });
 };
 
@@ -103,13 +111,12 @@ export const enqueueOfflineRentalDelete = (
 ) => {
   const businessKey = buildRentalEntityBusinessKey(input.id);
 
-  useSyncStore.getState().addToQueue({
-    type: 'DELETE',
+  enqueueOfflineRepositoryDelete({
     table: 'washer_rentals',
-    payload: { id: input.id },
+    repository: 'washerRentals',
+    id: input.id,
     enqueueSource: input.actionSource ?? 'rentals/deleteRental',
     businessKey,
-    dependencyKeys: input.id.startsWith('temp-') ? [businessKey] : undefined,
   });
 };
 
@@ -118,31 +125,22 @@ export const enqueueOfflineRentalPaymentSplitsReplace = (
   splits: PaymentSplit[],
   actionSource = 'rentals/updateRental'
 ) => {
-  const businessKey = `rental-splits:${rentalId}`;
-
-  useSyncStore.getState().addToQueue({
-    type: 'DELETE',
+  enqueueOfflineRepositoryMutation({
+    type: 'UPDATE',
     table: PAYMENT_SPLIT_SCHEMA.rentalsSplitsTable,
-    payload: {
-      id: `rental_id:${rentalId}`,
-      parentId: rentalId,
-      parentColumn: 'rental_id',
-      __op: 'delete_by_parent_id',
+    repository: 'washerRentals',
+    operation: 'update',
+    input: {
+      id: rentalId,
+      updates: { paymentSplits: splits },
     },
-    enqueueSource: actionSource,
-    businessKey,
-  });
-
-  useSyncStore.getState().addToQueue({
-    type: 'INSERT',
-    table: PAYMENT_SPLIT_SCHEMA.rentalsSplitsTable,
     payload: {
+      id: rentalId,
       splits: rentalPaymentSplitAdapter.toInsertRows(rentalId, splits),
-      isSplit: true,
-      parentId: rentalId,
+      __legacyRepositorySemantic: true,
     },
     enqueueSource: actionSource,
-    businessKey,
+    businessKey: `rental-splits:${rentalId}`,
   });
 };
 
@@ -150,15 +148,16 @@ export const enqueueOfflineRentalPaymentSplitsDelete = (
   rentalId: string,
   actionSource = 'rentals/deleteRental'
 ) => {
-  useSyncStore.getState().addToQueue({
-    type: 'DELETE',
+  enqueueOfflineRepositoryMutation({
+    type: 'UPDATE',
     table: PAYMENT_SPLIT_SCHEMA.rentalsSplitsTable,
-    payload: {
-      id: `rental_id:${rentalId}`,
-      parentId: rentalId,
-      parentColumn: 'rental_id',
-      __op: 'delete_by_parent_id',
+    repository: 'washerRentals',
+    operation: 'update',
+    input: {
+      id: rentalId,
+      updates: { paymentSplits: [] },
     },
+    payload: { id: rentalId, __legacyRepositorySemantic: true },
     enqueueSource: actionSource,
     businessKey: `rental-splits:${rentalId}`,
   });
@@ -168,17 +167,9 @@ export const enqueueOfflineRentalTipDelete = (
   rentalId: string,
   actionSource = 'rentals/deleteRental'
 ) => {
-  useSyncStore.getState().addToQueue({
-    type: 'DELETE',
-    table: 'tips',
-    payload: {
-      id: `rental_tip:${rentalId}`,
-      parentId: rentalId,
-      parentColumn: 'origin_id',
-      parentScopeColumn: 'origin_type',
-      parentScopeValue: 'rental',
-      __op: 'delete_by_parent_id',
-    },
+  enqueueOfflineOriginTipDelete({
+    entityId: rentalId,
+    originType: 'rental',
     enqueueSource: actionSource,
     businessKey: `tip-origin-rental:${rentalId}`,
   });
@@ -198,26 +189,17 @@ interface EnqueueOfflineRentalTipUpsertInput {
 export const enqueueOfflineRentalTipUpsert = (
   input: EnqueueOfflineRentalTipUpsertInput
 ) => {
-  const businessKey = `tip-origin-rental:${input.rentalId}`;
-
-  useSyncStore.getState().addToQueue({
-    type: 'INSERT',
-    table: 'tips',
-    payload: {
-      origin_type: 'rental',
-      origin_id: input.rentalId,
-      tip_date: input.tipDate,
-      amount_bs: input.amountBs,
-      amount_usd: input.amountUsd,
-      exchange_rate_used: input.exchangeRateUsed,
-      capture_payment_method: input.capturePaymentMethod,
-      notes: input.notes,
-      __op: 'upsert_on_origin',
-    },
+  enqueueOfflineOriginTipUpsert({
+    entityId: input.rentalId,
+    originType: 'rental',
+    tipDate: input.tipDate,
+    amountBs: input.amountBs,
+    amountUsd: input.amountUsd,
+    exchangeRateUsed: input.exchangeRateUsed,
+    capturePaymentMethod: input.capturePaymentMethod,
+    notes: input.notes,
     enqueueSource: input.actionSource ?? 'rentals/updateRental',
-    businessKey,
-    dependencyKeys: input.rentalId.startsWith('temp-')
-      ? [`rental:${input.rentalId}`]
-      : undefined,
+    businessKey: `tip-origin-rental:${input.rentalId}`,
+    tempDependencyBusinessKey: `rental:${input.rentalId}`,
   });
 };

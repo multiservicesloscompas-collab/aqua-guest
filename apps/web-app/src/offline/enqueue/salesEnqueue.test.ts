@@ -35,9 +35,23 @@ describe('salesEnqueue', () => {
     ]);
 
     const queue = useSyncStore.getState().queue;
-    expect(queue).toHaveLength(2);
-    expect(queue.map((entry) => entry.type)).toEqual(['DELETE', 'INSERT']);
-    expect(queue[0].payload.__op).toBe('delete_by_parent_id');
+    expect(queue).toHaveLength(1);
+    expect(queue[0].type).toBe('UPDATE');
+    expect(queue[0].payload.__repository).toBe('sales');
+    expect(queue[0].payload.__operation).toBe('update');
+    expect(queue[0].payload.__input).toEqual({
+      id: 'sale-1',
+      updates: {
+        paymentSplits: [
+          {
+            method: 'efectivo',
+            amountBs: 100,
+            amountUsd: 2,
+            exchangeRateUsed: 50,
+          },
+        ],
+      },
+    });
   });
 
   it('enqueues scoped tip deletion by sale origin', () => {
@@ -47,9 +61,7 @@ describe('salesEnqueue', () => {
     expect(queue).toHaveLength(1);
     expect(queue[0].table).toBe('tips');
     expect(queue[0].type).toBe('DELETE');
-    expect(queue[0].payload.__op).toBe('delete_by_parent_id');
-    expect(queue[0].payload.parentColumn).toBe('origin_id');
-    expect(queue[0].payload.parentScopeColumn).toBe('origin_type');
-    expect(queue[0].payload.parentScopeValue).toBe('sale');
+    expect(queue[0].payload.__repository).toBe('tips');
+    expect(queue[0].payload.__operation).toBe('deleteByOrigin');
   });
 });

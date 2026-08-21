@@ -1,5 +1,9 @@
 import type { Customer, CustomerDraft, CustomerUpdate } from '@aqua-guest/domain';
-import { useSyncStore } from '@/store/useSyncStore';
+import {
+  enqueueOfflineRepositoryCreate,
+  enqueueOfflineRepositoryDelete,
+  enqueueOfflineRepositoryUpdate,
+} from './enqueueEntityHelpers';
 
 const generateTempId = () =>
   `temp-${Math.random().toString(36).substring(2, 15)}`;
@@ -13,9 +17,13 @@ export const enqueueOfflineCustomerCreate = (
   const tempId = generateTempId();
   const businessKey = buildEntityBusinessKey(tempId);
 
-  useSyncStore.getState().addToQueue({
-    type: 'INSERT',
+  enqueueOfflineRepositoryCreate({
     table: 'customers',
+    repository: 'customers',
+    input: {
+      tempId,
+      ...customer,
+    },
     payload: {
       tempId,
       name: customer.name,
@@ -41,16 +49,14 @@ export const enqueueOfflineCustomerUpdate = (
 ) => {
   const businessKey = buildEntityBusinessKey(id);
 
-  useSyncStore.getState().addToQueue({
-    type: 'UPDATE',
+  enqueueOfflineRepositoryUpdate({
     table: 'customers',
-    payload: {
-      id,
-      ...updates,
-    },
+    repository: 'customers',
+    id,
+    updates,
+    payload: updates,
     enqueueSource: actionSource,
     businessKey,
-    dependencyKeys: id.startsWith('temp-') ? [businessKey] : undefined,
   });
 };
 
@@ -60,12 +66,11 @@ export const enqueueOfflineCustomerDelete = (
 ) => {
   const businessKey = buildEntityBusinessKey(id);
 
-  useSyncStore.getState().addToQueue({
-    type: 'DELETE',
+  enqueueOfflineRepositoryDelete({
     table: 'customers',
-    payload: { id },
+    repository: 'customers',
+    id,
     enqueueSource: actionSource,
     businessKey,
-    dependencyKeys: id.startsWith('temp-') ? [businessKey] : undefined,
   });
 };

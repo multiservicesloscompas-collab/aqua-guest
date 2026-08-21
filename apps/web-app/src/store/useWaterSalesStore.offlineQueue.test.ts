@@ -125,13 +125,35 @@ describe('useWaterSalesStore offline queueing', () => {
     expect(saleSplitsInsertMock).not.toHaveBeenCalled();
 
     const queue = useSyncStore.getState().queue;
-    expect(queue).toHaveLength(3);
+    expect(queue).toHaveLength(2);
     expect(queue.map((q) => q.table)).toEqual([
       'sales',
       'sale_payment_splits',
-      'sale_payment_splits',
     ]);
-    expect(queue.map((q) => q.type)).toEqual(['UPDATE', 'DELETE', 'INSERT']);
+    expect(queue.map((q) => q.type)).toEqual(['UPDATE', 'UPDATE']);
+    expect(queue[0].payload.__repository).toBe('sales');
+    expect(queue[0].payload.__operation).toBe('update');
+    expect(queue[1].payload.__repository).toBe('sales');
+    expect(queue[1].payload.__operation).toBe('update');
+    expect(queue[1].payload.__input).toEqual({
+      id: 'sale-1',
+      updates: {
+        paymentSplits: [
+          {
+            method: 'pago_movil',
+            amountBs: 60,
+            amountUsd: 1.2,
+            exchangeRateUsed: 50,
+          },
+          {
+            method: 'efectivo',
+            amountBs: 40,
+            amountUsd: 0.8,
+            exchangeRateUsed: 50,
+          },
+        ],
+      },
+    });
   });
 
   it('queues edited tip upsert with recomputed final totals and merged mixed splits payload', async () => {
@@ -166,8 +188,7 @@ describe('useWaterSalesStore offline queueing', () => {
     const queue = useSyncStore.getState().queue;
     expect(queue.map((q) => `${q.table}:${q.type}`)).toEqual([
       'sales:UPDATE',
-      'sale_payment_splits:DELETE',
-      'sale_payment_splits:INSERT',
+      'sale_payment_splits:UPDATE',
       'tips:INSERT',
     ]);
 
@@ -176,19 +197,33 @@ describe('useWaterSalesStore offline queueing', () => {
       total_bs: 140,
       total_usd: 2.8,
       payment_method: 'pago_movil',
+      __repository: 'sales',
+      __operation: 'update',
     });
     expect(
-      (queue[2].payload as { splits: Array<{ amount_bs: number }> }).splits
+      (
+        queue[1].payload as {
+          __input: { updates: { paymentSplits: Array<{ amountBs: number }> } };
+        }
+      ).__input.updates.paymentSplits
     ).toEqual([
-      expect.objectContaining({ amount_bs: 80, payment_method: 'pago_movil' }),
-      expect.objectContaining({ amount_bs: 60, payment_method: 'efectivo' }),
+      expect.objectContaining({ amountBs: 80, method: 'pago_movil' }),
+      expect.objectContaining({ amountBs: 60, method: 'efectivo' }),
     ]);
-    expect(queue[3].payload).toMatchObject({
-      origin_type: 'sale',
-      origin_id: 'sale-1',
-      amount_bs: 40,
-      capture_payment_method: 'efectivo',
-      notes: 'edicion offline',
+    expect(queue[1].payload).toMatchObject({
+      __repository: 'sales',
+      __operation: 'update',
+    });
+    expect(queue[2].payload).toMatchObject({
+      __repository: 'tips',
+      __operation: 'upsertByOrigin',
+      __input: {
+        originType: 'sale',
+        originId: 'sale-1',
+        amountBs: 40,
+        capturePaymentMethod: 'efectivo',
+        notes: 'edicion offline',
+      },
     });
   });
 
@@ -206,7 +241,17 @@ describe('useWaterSalesStore offline queueing', () => {
       'sale_payment_splits',
       'tips',
     ]);
-    expect(queue.map((q) => q.type)).toEqual(['DELETE', 'DELETE', 'DELETE']);
+    expect(queue.map((q) => q.type)).toEqual(['DELETE', 'UPDATE', 'DELETE']);
+    expect(queue[0].payload.__repository).toBe('sales');
+    expect(queue[0].payload.__operation).toBe('delete');
+    expect(queue[1].payload.__repository).toBe('sales');
+    expect(queue[1].payload.__operation).toBe('update');
+    expect(queue[1].payload.__input).toEqual({
+      id: 'sale-1',
+      updates: { paymentSplits: [] },
+    });
+    expect(queue[2].payload.__repository).toBe('tips');
+    expect(queue[2].payload.__operation).toBe('deleteByOrigin');
     expect(useWaterSalesStore.getState().sales).toHaveLength(0);
   });
 });

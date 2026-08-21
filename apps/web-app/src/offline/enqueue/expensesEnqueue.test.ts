@@ -30,6 +30,8 @@ describe('expensesEnqueue', () => {
     expect(queue[0].table).toBe('expenses');
     expect(queue[0].type).toBe('INSERT');
     expect(queue[0].idempotency.businessKey).toBe(`expense:${created.id}`);
+    expect(queue[0].payload.__repository).toBe('expenses');
+    expect(queue[0].payload.__operation).toBe('create');
   });
 
   it('enqueues update/delete with temp dependency key', () => {
@@ -42,7 +44,9 @@ describe('expensesEnqueue', () => {
     expect(queue).toHaveLength(2);
     expect(queue[0].type).toBe('UPDATE');
     expect(queue[0].dependencies.dependsOn).toEqual([`expense:${tempId}`]);
+    expect(queue[0].payload.__repository).toBe('expenses');
     expect(queue[1].type).toBe('DELETE');
     expect(queue[1].dependencies.dependsOn).toEqual([`expense:${tempId}`]);
+    expect(queue[1].payload.__repository).toBe('expenses');
   });
 });

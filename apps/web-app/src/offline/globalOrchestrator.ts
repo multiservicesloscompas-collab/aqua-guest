@@ -109,6 +109,24 @@ const markForRetryOrFailure = (
   };
 };
 
+const getActionTempId = (action: GlobalSyncAction): string | null => {
+  if (typeof action.payload.tempId === 'string') {
+    return action.payload.tempId;
+  }
+
+  const repositoryInput = action.payload.__input;
+  if (
+    repositoryInput &&
+    typeof repositoryInput === 'object' &&
+    'tempId' in repositoryInput &&
+    typeof repositoryInput.tempId === 'string'
+  ) {
+    return repositoryInput.tempId;
+  }
+
+  return null;
+};
+
 export const processGlobalOfflineQueue = async ({
   queue,
   inFlightActionIds = new Set<string>(),
@@ -162,12 +180,9 @@ export const processGlobalOfflineQueue = async ({
       }
 
       completedIds.add(action.id);
-      if (
-        action.type === 'INSERT' &&
-        typeof action.payload.tempId === 'string' &&
-        response.insertedId
-      ) {
-        tempIdToRealId.set(action.payload.tempId, response.insertedId);
+      const tempId = getActionTempId(action);
+      if (action.type === 'INSERT' && tempId && response.insertedId) {
+        tempIdToRealId.set(tempId, response.insertedId);
       }
       results.push({
         actionId: action.id,

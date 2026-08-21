@@ -5,8 +5,6 @@ import {
 } from './coverageMatrix';
 
 const REQUIRED_TABLES = [
-  'companies',
-  'user_profiles',
   'customers',
   'products',
   'sales',
@@ -32,7 +30,6 @@ describe('offline/coverageMatrix', () => {
 
   it('exposes offline mutation table list', () => {
     expect(OFFLINE_MUTATION_TABLES).toContain('sales');
-    expect(OFFLINE_MUTATION_TABLES).not.toContain('companies');
     expect(OFFLINE_MUTATION_TABLES).not.toContain('products');
   });
 });

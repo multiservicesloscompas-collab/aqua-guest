@@ -8,8 +8,6 @@ const getOfflineFeatureFlagsMock = vi.fn();
 const resolveOfflineSyncProcessorModeMock = vi.fn();
 const toastErrorMock = vi.fn();
 const toastSuccessMock = vi.fn();
-const companiesSelectMock = vi.fn();
-const userProfilesSelectMock = vi.fn();
 
 let onlineState = true;
 
@@ -36,17 +34,7 @@ vi.mock('sonner', () => ({
 }));
 
 vi.mock('@/lib/supabaseClient', () => {
-  const from = vi.fn((table: string) => {
-    if (table === 'companies') {
-      return { select: companiesSelectMock };
-    }
-
-    if (table === 'user_profiles') {
-      return { select: userProfilesSelectMock };
-    }
-
-    return { select: vi.fn() };
-  });
+  const from = vi.fn(() => ({ select: vi.fn() }));
 
   const client = { from };
   return {
@@ -75,11 +63,6 @@ describe('SyncManager', () => {
     resolveOfflineSyncProcessorModeMock.mockReset();
     toastErrorMock.mockReset();
     toastSuccessMock.mockReset();
-    companiesSelectMock.mockReset();
-    userProfilesSelectMock.mockReset();
-
-    companiesSelectMock.mockResolvedValue({ data: [], error: null });
-    userProfilesSelectMock.mockResolvedValue({ data: [], error: null });
 
     getOfflineFeatureFlagsMock.mockReturnValue({
       GLOBAL_OFFLINE_ORCHESTRATOR: true,
@@ -162,27 +145,5 @@ describe('SyncManager', () => {
     });
 
     expect(processGlobalOfflineQueueMock).not.toHaveBeenCalled();
-  });
-
-  it('refreshes companies and user profiles on reconnect', async () => {
-    onlineState = false;
-
-    const { rerender } = render(<SyncManager />);
-
-    await act(async () => {
-      await Promise.resolve();
-    });
-
-    expect(companiesSelectMock).not.toHaveBeenCalled();
-    expect(userProfilesSelectMock).not.toHaveBeenCalled();
-
-    onlineState = true;
-    rerender(<SyncManager />);
-
-    await waitFor(() => {
-      expect(companiesSelectMock).toHaveBeenCalledWith('*');
-    });
-
-    expect(userProfilesSelectMock).toHaveBeenCalledWith('*');
   });
 });

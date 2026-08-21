@@ -6,7 +6,15 @@ import type {
 } from '@aqua-guest/domain';
 import { PAYMENT_SPLIT_SCHEMA } from '@/services/payments/paymentSplitSchemaContract';
 import { salePaymentSplitAdapter } from '@/services/payments/paymentSplitSupabaseAdapters';
-import { useSyncStore } from '@/store/useSyncStore';
+import {
+  createOfflineTempId,
+  enqueueOfflineOriginTipDelete,
+  enqueueOfflineOriginTipUpsert,
+  enqueueOfflineRepositoryCreate,
+  enqueueOfflineRepositoryDelete,
+  enqueueOfflineRepositoryMutation,
+  enqueueOfflineRepositoryUpdate,
+} from './enqueueEntityHelpers';
 
 interface EnqueueOfflineSaleInput {
   newSalePayload: Record<string, unknown>;
@@ -35,35 +43,45 @@ interface EnqueueOfflineSaleDeleteInput {
   actionSource?: string;
 }
 
-const generateTempId = () =>
-  `temp-${Math.random().toString(36).substring(2, 15)}`;
-
 export const enqueueOfflineSale = (input: EnqueueOfflineSaleInput): Sale => {
-  const tempId = generateTempId();
+  const tempId = createOfflineTempId();
+  const businessKey = `sale:${input.date}:${input.dailyNumber}`;
+  const enqueueSource = input.actionSource ?? 'water-sales/completeSale';
 
-  useSyncStore.getState().addToQueue({
-    type: 'INSERT',
+  enqueueOfflineRepositoryCreate({
     table: 'sales',
+    repository: 'sales',
+    input: {
+      tempId,
+      dailyNumber: input.dailyNumber,
+      date: input.date,
+      items: input.items,
+      paymentMethod: input.paymentMethod,
+      paymentSplits: input.paymentSplits,
+      totalBs: input.totalBs,
+      totalUsd: input.totalUsd,
+      exchangeRate: input.exchangeRate,
+      notes: input.notes,
+    },
     payload: { ...input.newSalePayload, tempId },
-    enqueueSource: input.actionSource ?? 'water-sales/completeSale',
-    businessKey: `sale:${input.date}:${input.dailyNumber}`,
+    enqueueSource,
+    businessKey,
   });
 
   if (input.paymentSplits?.length) {
-    useSyncStore.getState().addToQueue({
-      type: 'INSERT',
+    enqueueOfflineRepositoryMutation({
+      type: 'UPDATE',
       table: PAYMENT_SPLIT_SCHEMA.salesSplitsTable,
-      payload: {
-        splits: salePaymentSplitAdapter.toInsertRows(
-          tempId,
-          input.paymentSplits
-        ),
-        isSplit: true,
-        parentId: tempId,
+      repository: 'sales',
+      operation: 'update',
+      input: {
+        id: tempId,
+        updates: { paymentSplits: input.paymentSplits },
       },
-      enqueueSource: input.actionSource ?? 'water-sales/completeSale',
+      payload: { id: tempId },
+      enqueueSource,
       businessKey: `sale-splits:${tempId}`,
-      dependencyKeys: [`sale:${input.date}:${input.dailyNumber}`],
+      dependencyKeys: [businessKey],
     });
   }
 
@@ -90,16 +108,14 @@ export const enqueueOfflineSaleUpdate = (
 ) => {
   const businessKey = buildSaleBusinessKey(input.id);
 
-  useSyncStore.getState().addToQueue({
-    type: 'UPDATE',
+  enqueueOfflineRepositoryUpdate({
     table: 'sales',
-    payload: {
-      id: input.id,
-      ...input.payload,
-    },
+    repository: 'sales',
+    id: input.id,
+    updates: input.payload,
+    payload: input.payload,
     enqueueSource: input.actionSource ?? 'water-sales/updateSale',
     businessKey,
-    dependencyKeys: input.id.startsWith('temp-') ? [businessKey] : undefined,
   });
 };
 
@@ -108,13 +124,12 @@ export const enqueueOfflineSaleDelete = (
 ) => {
   const businessKey = buildSaleBusinessKey(input.id);
 
-  useSyncStore.getState().addToQueue({
-    type: 'DELETE',
+  enqueueOfflineRepositoryDelete({
     table: 'sales',
-    payload: { id: input.id },
+    repository: 'sales',
+    id: input.id,
     enqueueSource: input.actionSource ?? 'water-sales/deleteSale',
     businessKey,
-    dependencyKeys: input.id.startsWith('temp-') ? [businessKey] : undefined,
   });
 };
 
@@ -123,31 +138,22 @@ export const enqueueOfflineSalePaymentSplitsReplace = (
   splits: PaymentSplit[],
   actionSource = 'water-sales/updateSale'
 ) => {
-  const businessKey = `sale-splits:${saleId}`;
-
-  useSyncStore.getState().addToQueue({
-    type: 'DELETE',
+  enqueueOfflineRepositoryMutation({
+    type: 'UPDATE',
     table: PAYMENT_SPLIT_SCHEMA.salesSplitsTable,
-    payload: {
-      id: `sale_id:${saleId}`,
-      parentId: saleId,
-      parentColumn: 'sale_id',
-      __op: 'delete_by_parent_id',
+    repository: 'sales',
+    operation: 'update',
+    input: {
+      id: saleId,
+      updates: { paymentSplits: splits },
     },
-    enqueueSource: actionSource,
-    businessKey,
-  });
-
-  useSyncStore.getState().addToQueue({
-    type: 'INSERT',
-    table: PAYMENT_SPLIT_SCHEMA.salesSplitsTable,
     payload: {
+      id: saleId,
       splits: salePaymentSplitAdapter.toInsertRows(saleId, splits),
-      isSplit: true,
-      parentId: saleId,
+      __legacyRepositorySemantic: true,
     },
     enqueueSource: actionSource,
-    businessKey,
+    businessKey: `sale-splits:${saleId}`,
   });
 };
 
@@ -155,15 +161,16 @@ export const enqueueOfflineSalePaymentSplitsDelete = (
   saleId: string,
   actionSource = 'water-sales/deleteSale'
 ) => {
-  useSyncStore.getState().addToQueue({
-    type: 'DELETE',
+  enqueueOfflineRepositoryMutation({
+    type: 'UPDATE',
     table: PAYMENT_SPLIT_SCHEMA.salesSplitsTable,
-    payload: {
-      id: `sale_id:${saleId}`,
-      parentId: saleId,
-      parentColumn: 'sale_id',
-      __op: 'delete_by_parent_id',
+    repository: 'sales',
+    operation: 'update',
+    input: {
+      id: saleId,
+      updates: { paymentSplits: [] },
     },
+    payload: { id: saleId, __legacyRepositorySemantic: true },
     enqueueSource: actionSource,
     businessKey: `sale-splits:${saleId}`,
   });
@@ -173,17 +180,9 @@ export const enqueueOfflineSaleTipDelete = (
   saleId: string,
   actionSource = 'water-sales/deleteSale'
 ) => {
-  useSyncStore.getState().addToQueue({
-    type: 'DELETE',
-    table: 'tips',
-    payload: {
-      id: `sale_tip:${saleId}`,
-      parentId: saleId,
-      parentColumn: 'origin_id',
-      parentScopeColumn: 'origin_type',
-      parentScopeValue: 'sale',
-      __op: 'delete_by_parent_id',
-    },
+  enqueueOfflineOriginTipDelete({
+    entityId: saleId,
+    originType: 'sale',
     enqueueSource: actionSource,
     businessKey: `tip-origin-sale:${saleId}`,
   });
@@ -203,26 +202,17 @@ interface EnqueueOfflineSaleTipUpsertInput {
 export const enqueueOfflineSaleTipUpsert = (
   input: EnqueueOfflineSaleTipUpsertInput
 ) => {
-  const businessKey = `tip-origin-sale:${input.saleId}`;
-
-  useSyncStore.getState().addToQueue({
-    type: 'INSERT',
-    table: 'tips',
-    payload: {
-      origin_type: 'sale',
-      origin_id: input.saleId,
-      tip_date: input.tipDate,
-      amount_bs: input.amountBs,
-      amount_usd: input.amountUsd,
-      exchange_rate_used: input.exchangeRateUsed,
-      capture_payment_method: input.capturePaymentMethod,
-      notes: input.notes,
-      __op: 'upsert_on_origin',
-    },
+  enqueueOfflineOriginTipUpsert({
+    entityId: input.saleId,
+    originType: 'sale',
+    tipDate: input.tipDate,
+    amountBs: input.amountBs,
+    amountUsd: input.amountUsd,
+    exchangeRateUsed: input.exchangeRateUsed,
+    capturePaymentMethod: input.capturePaymentMethod,
+    notes: input.notes,
     enqueueSource: input.actionSource ?? 'water-sales/updateSale',
-    businessKey,
-    dependencyKeys: input.saleId.startsWith('temp-')
-      ? [`sale:${input.saleId}`]
-      : undefined,
+    businessKey: `tip-origin-sale:${input.saleId}`,
+    tempDependencyBusinessKey: `sale:${input.saleId}`,
   });
 };

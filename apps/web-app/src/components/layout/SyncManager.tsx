@@ -18,7 +18,6 @@ export const SyncManager: React.FC = () => {
   const { queue, removeFromQueue, replaceQueue } = useSyncStore();
   const [isSyncing, setIsSyncing] = useState(false);
   const inFlightActionIdsRef = useRef<Set<string>>(new Set());
-  const wasOnlineRef = useRef(false);
   const queueRef = useRef(queue);
   const flags = getOfflineFeatureFlags();
   const processorMode = resolveOfflineSyncProcessorMode(flags);
@@ -159,28 +158,6 @@ export const SyncManager: React.FC = () => {
       void processQueue();
     }
   }, [isOnline, isSyncing, processorMode, processQueue, queue.length]);
-
-  useEffect(() => {
-    const wasOnline = wasOnlineRef.current;
-    wasOnlineRef.current = isOnline;
-
-    if (!isOnline || wasOnline) {
-      return;
-    }
-
-    const refreshReadSyncRoots = async () => {
-      try {
-        await Promise.all([
-          supabase.from('companies').select('*'),
-          supabase.from('user_profiles').select('*'),
-        ]);
-      } catch (error) {
-        console.error('[offline-sync] reconnect read-sync failed', error);
-      }
-    };
-
-    void refreshReadSyncRoots();
-  }, [isOnline]);
 
   return null; // Componente lógico, no renderiza nada
 };
