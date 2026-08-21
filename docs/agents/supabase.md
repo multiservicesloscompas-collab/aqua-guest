@@ -15,6 +15,10 @@ AquaGuest talks to Supabase directly from repository code.
 ## Data Access Rules
 
 - Keep Supabase access inside repository code such as `src/lib`, `src/services`, store actions, or closely related feature code.
+- Repository-first rule: when a new Supabase-backed service, query flow, or persistence path is needed, define the repository contract first in `libs/product-domain/frontend/{context}/domain`.
+- After the contract exists, implement the concrete Supabase adapter in the matching `libs/product-domain/frontend/{context}/infrastructure/supabase` folder.
+- Only after the repository boundary is in place should `apps/web-app` services, stores, or hooks consume that data access.
+- Do not start by adding raw Supabase calls directly in `apps/web-app` when the flow belongs to a reusable domain boundary.
 - Keep persistence contracts explicit. If a table shape or join contract changes, update the related documentation.
 - Use task-appropriate error handling around Supabase calls and keep failure paths visible to the UI.
 - When changing mixed-payment persistence, also load `apps/web-app/docs/pago-mixto-db-contract.md`.

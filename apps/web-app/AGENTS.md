@@ -71,7 +71,9 @@ Load shared docs from the repository root only when the task needs them.
 - Treat `src/components/ui` as the base UI layer. Keep feature-specific composition in `src/components` and `src/pages`.
 - When changing Water Sales or Washer Rentals, review impact on dashboard totals, transaction summaries, payment-method summaries, and tip/expense flows.
 - Do not introduce Edge Functions. Keep Supabase interactions inside repository code.
+- Before adding a new Supabase service or query flow in `apps/web-app`, check whether the access belongs behind a repository in `libs/product-domain/frontend`. Prefer repository-first design over introducing new raw Supabase access directly in app code.
 - Organize new code so future extraction into `libs/` remains possible.
+- Use strict TDD by default for behavior changes. Only skip test-first when the task is purely structural or when no reliable test seam exists yet.
 
 ## Verification
 

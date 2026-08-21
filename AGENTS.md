@@ -52,10 +52,13 @@ npx nx typecheck web-app
 
 - Write full TypeScript and keep code type-safe. Do not use `any`.
 - Prefer existing interfaces, types, helpers, hooks, services, use cases, and other reusable code before creating new abstractions.
+- Prefer canonical types from `libs/domain` first, then derive app/context contracts from them with `extends`, `Pick`, `Omit`, and small shared aliases. Do not mirror entity shapes property by property when the structure can be reused directly.
+- Avoid `snake_case` in internal TypeScript contracts whenever possible. If Supabase columns use `snake_case`, prefer aliasing them in the `select` so rows and mappers can stay in camelCase. Keep `snake_case` mainly at write payload boundaries or where the external API forces it.
+- When adding a new Supabase-backed data access flow, define or update the repository contract first in `libs/product-domain/frontend/{context}/domain`, then implement the concrete Supabase adapter under the matching `infrastructure/supabase` folder, and only then wire it into app consumers.
 - Use dependency injection for services, use cases, and other logic that depends on external collaborators.
 - Respect SOLID principles, but keep the implementation simple and pragmatic under KISS.
 - Avoid duplication. Search the codebase first and reuse what already exists when it fits the task.
-- Default to TDD when implementing or fixing behavior.
+- Use strict TDD by default for behavior changes. Only skip test-first when the task is purely structural or when no reliable test seam exists yet.
 - Structure tests with the Arrange, Act, Assert pattern.
 - For this repository, the expected test runner is the one already used by the target workspace. In `apps/web-app`, write and run Jest-style unit tests using the existing Vitest stack instead of introducing a second test framework.
 
