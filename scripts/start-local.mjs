@@ -1,8 +1,7 @@
 import { execSync, spawn } from 'node:child_process';
 
 const DEFAULT_LOCAL_URL = 'http://127.0.0.1:54321';
-const DEFAULT_LOCAL_ANON_KEY =
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0';
+const DEFAULT_STUDIO_URL = 'http://127.0.0.1:54323';
 
 function getLocalSupabaseConfig() {
   try {
@@ -14,20 +13,42 @@ function getLocalSupabaseConfig() {
     const jsonMatch = rawOutput.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       const parsed = JSON.parse(jsonMatch[0]);
-      return {
-        url: parsed.API_URL || DEFAULT_LOCAL_URL,
-        anonKey: parsed.ANON_KEY || DEFAULT_LOCAL_ANON_KEY,
-        studioUrl: parsed.STUDIO_URL || 'http://127.0.0.1:54323',
-      };
+      const url = parsed.API_URL || DEFAULT_LOCAL_URL;
+      const anonKey =
+        parsed.ANON_KEY ||
+        process.env.VITE_SUPABASE_ANON_KEY ||
+        process.env.SUPABASE_ANON_KEY;
+      const studioUrl = parsed.STUDIO_URL || DEFAULT_STUDIO_URL;
+
+      if (!anonKey) {
+        throw new Error('No se pudo obtener la clave anónima desde Supabase status.');
+      }
+
+      return { url, anonKey, studioUrl };
     }
-  } catch {
-    // Fall back to defaults if status parsing fails
+  } catch (err) {
+    console.warn(
+      '⚠️ No se pudo leer la configuración dinámica desde "supabase status". Usando variables de entorno si están disponibles.',
+      err.message
+    );
+  }
+
+  const fallbackUrl =
+    process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || DEFAULT_LOCAL_URL;
+  const fallbackAnonKey =
+    process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
+
+  if (!fallbackAnonKey) {
+    console.error(
+      '❌ No se encontró una clave anónima válida para Supabase. Asegúrate de que el contenedor de Supabase esté corriendo.'
+    );
+    process.exit(1);
   }
 
   return {
-    url: DEFAULT_LOCAL_URL,
-    anonKey: DEFAULT_LOCAL_ANON_KEY,
-    studioUrl: 'http://127.0.0.1:54323',
+    url: fallbackUrl,
+    anonKey: fallbackAnonKey,
+    studioUrl: DEFAULT_STUDIO_URL,
   };
 }
 
@@ -37,7 +58,9 @@ async function startLocal() {
   try {
     execSync('npx supabase start', { stdio: 'inherit' });
   } catch (err) {
-    console.error('❌ Failed to start Supabase. Please ensure Docker is running.');
+    console.error(
+      '❌ Failed to start Supabase. Please ensure Docker is running.'
+    );
     process.exit(err.status ?? 1);
   }
 
@@ -47,9 +70,13 @@ async function startLocal() {
   console.log('✅ Supabase local stack ready:');
   console.log(`   - API URL:    ${url}`);
   console.log(`   - Studio:     ${studioUrl}`);
-  console.log(`   - Database:   postgresql://postgres:postgres@127.0.0.1:54322/postgres`);
+  console.log(
+    `   - Database:   postgresql://postgres:postgres@127.0.0.1:54322/postgres`
+  );
   console.log('=============================================\n');
-  console.log('🌐 [AquaGuest] Launching web-app with local Supabase configuration...\n');
+  console.log(
+    '🌐 [AquaGuest] Launching web-app with local Supabase configuration...\n'
+  );
 
   const env = {
     ...process.env,
@@ -62,7 +89,6 @@ async function startLocal() {
   const child = spawn('npx', ['nx', 'serve', 'web-app'], {
     stdio: 'inherit',
     env,
-    shell: true,
   });
 
   const forwardSignal = (signal) => {
