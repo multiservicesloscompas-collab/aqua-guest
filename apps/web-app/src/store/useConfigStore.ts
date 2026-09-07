@@ -35,6 +35,7 @@ interface ConfigState {
   getPriceForLiters: (liters: number) => number;
   setMixedPaymentFlags: (flags: Partial<MixedPaymentFeatureFlags>) => void;
   isMixedPaymentEnabled: (module: PaymentSplitModule) => boolean;
+  setProductPrice: (productId: string, price: number) => Promise<void>;
 
   setConfigData: (
     configUpdates: Partial<AppConfig>,
@@ -216,6 +217,37 @@ export const useConfigStore = create<ConfigState>()(
       isMixedPaymentEnabled: (module) => {
         const { mixedPaymentFlags } = get();
         return isMixedPaymentEnabledForModule(mixedPaymentFlags, module);
+      },
+
+      setProductPrice: async (productId: string, price: number) => {
+        const currentProducts = get().products;
+        const updatedProducts = currentProducts.map((p) =>
+          p.id === productId ? { ...p, defaultPrice: price } : p
+        );
+
+        set({ products: updatedProducts });
+
+        if (!window.navigator.onLine) {
+          return;
+        }
+
+        try {
+          const product = updatedProducts.find((p) => p.id === productId);
+          if (!product) return;
+
+          const { error } = await supabase
+            .from('products')
+            .update({
+              default_price: price,
+            })
+            .eq('id', productId);
+
+          if (error) {
+            console.error('Failed to update product price in Supabase', error);
+          }
+        } catch (err) {
+          console.error('Failed to update product price in Supabase', err);
+        }
       },
     }),
     {

@@ -17,11 +17,21 @@ The codebase should be shaped so these modules can be extracted into `libs/` lat
 ## Quick Commands
 
 ```bash
+# Local development (starts Supabase stack + web-app)
+npm run local
+
+# Web App
 npx nx serve web-app
 npx nx build web-app
 npx nx test web-app
 npx nx lint web-app
 npx nx typecheck web-app
+
+# Supabase Local
+npm run supabase:start
+npm run supabase:stop
+npm run supabase:status
+npm run supabase:reset
 ```
 
 ## Project Map

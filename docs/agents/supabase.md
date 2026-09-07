@@ -30,6 +30,19 @@ AquaGuest talks to Supabase directly from repository code.
 - Never expose credentials or `.env` contents in documentation, logs, or responses.
 - Keep authentication and authorization changes explicit and reviewable.
 
+## Local Development Workflow
+
+- Run `npm run local` to spin up the local Supabase container stack and launch the web app with local configuration.
+- Local endpoints:
+  - **Supabase Studio:** `http://127.0.0.1:54323`
+  - **REST API:** `http://127.0.0.1:54321/rest/v1`
+  - **PostgreSQL Database:** `postgresql://postgres:postgres@127.0.0.1:54322/postgres`
+- Management scripts:
+  - `npm run supabase:start`: Starts local Supabase stack in background.
+  - `npm run supabase:stop`: Stops local Supabase containers.
+  - `npm run supabase:status`: Prints local endpoints and keys.
+  - `npm run supabase:reset`: Resets database and applies migrations and seeds.
+
 ## Documentation Sync
 
 Update the relevant doc whenever you change:

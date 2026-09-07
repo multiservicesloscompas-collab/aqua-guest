@@ -25,11 +25,11 @@ export const defaultProducts: Product[] = [
     icon: '🔵',
   },
   {
-    id: 'dispensador',
-    name: 'Dispensador',
-    defaultPrice: 15.0,
+    id: 'lavado-profundo',
+    name: 'Lavado profundo',
+    defaultPrice: 1800.0,
     requiresLiters: false,
-    icon: '🚰',
+    icon: '🧼',
   },
   {
     id: 'botella-600ml',
