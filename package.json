@@ -3,6 +3,12 @@
   "version": "0.0.0",
   "license": "MIT",
   "scripts": {
+    "local": "node scripts/start-local.mjs",
+    "serve": "npx nx serve web-app",
+    "supabase:start": "supabase start",
+    "supabase:stop": "supabase stop",
+    "supabase:status": "supabase status",
+    "supabase:reset": "supabase db reset",
     "playwright:install": "playwright install chromium",
     "e2e:web-app": "npx nx run web-app-e2e:e2e",
     "e2e:web-app:ci": "npx nx run web-app-e2e:e2e-ci"

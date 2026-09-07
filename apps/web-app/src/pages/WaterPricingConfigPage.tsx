@@ -7,15 +7,31 @@ import { useConfigStore } from '@/store/useConfigStore';
 import { LiterPricing, DEFAULT_LITER_BREAKPOINTS } from '@/types';
 
 export function WaterPricingConfigPage() {
-  const { config, setLiterPricing } = useConfigStore();
+  const { config, setLiterPricing, products, setProductPrice } = useConfigStore();
   const [literPrices, setLiterPrices] = useState<LiterPricing[]>(
     config.literPricing || DEFAULT_LITER_BREAKPOINTS
   );
   const [isSaving, setIsSaving] = useState(false);
 
+  const deepWashProduct = products.find(
+    (p) => p.id === 'lavado-profundo' || p.name.toLowerCase().includes('lavado')
+  );
+  const [deepWashPrice, setDeepWashPrice] = useState<string>(
+    (deepWashProduct?.defaultPrice ?? 1800).toString()
+  );
+  const [isSavingDeepWash, setIsSavingDeepWash] = useState(false);
+
+  const deepWashPriceValue = deepWashProduct?.defaultPrice;
+
   useEffect(() => {
     setLiterPrices(config.literPricing || DEFAULT_LITER_BREAKPOINTS);
   }, [config.literPricing]);
+
+  useEffect(() => {
+    if (deepWashPriceValue !== undefined) {
+      setDeepWashPrice(deepWashPriceValue.toString());
+    }
+  }, [deepWashPriceValue]);
 
   const handleLiterPriceChange = (breakpoint: number, newPrice: string) => {
     const price = Number(newPrice);
@@ -43,9 +59,29 @@ export function WaterPricingConfigPage() {
     }
   };
 
+  const handleSaveDeepWash = async () => {
+    const price = Number(deepWashPrice);
+    if (isNaN(price) || price <= 0) {
+      toast.error('El precio debe ser mayor a 0');
+      return;
+    }
+    setIsSavingDeepWash(true);
+    try {
+      const targetId = deepWashProduct?.id || 'lavado-profundo';
+      await setProductPrice(targetId, price);
+      toast.success('Precio de Lavado Profundo actualizado');
+    } catch (err) {
+      console.error('Error saving deep wash price', err);
+      toast.error('Error al guardar el precio. Se guardó localmente');
+    } finally {
+      setIsSavingDeepWash(false);
+    }
+  };
+
   return (
     <div className="flex flex-col min-h-screen pb-20">
       <main className="flex-1 px-4 py-4 space-y-4 max-w-lg mx-auto w-full">
+        {/* Precios por Litros */}
         <div className="bg-card rounded-xl p-5 border shadow-card space-y-4">
           <div className="flex items-center gap-3">
             <div className="p-3 bg-blue-500 rounded-xl">
@@ -107,6 +143,65 @@ export function WaterPricingConfigPage() {
 
           <p className="text-xs text-muted-foreground text-center">
             El precio se asigna al breakpoint superior más cercano
+          </p>
+        </div>
+
+        {/* Precio de Lavado Profundo */}
+        <div className="bg-card rounded-xl p-5 border shadow-card space-y-4">
+          <div className="flex items-center gap-3">
+            <div className="p-3 bg-primary/10 rounded-xl flex items-center justify-center text-2xl">
+              <span>{deepWashProduct?.icon || '🧼'}</span>
+            </div>
+            <div>
+              <h2 className="text-base font-bold text-foreground">
+                {deepWashProduct?.name || 'Lavado profundo'}
+              </h2>
+              <p className="text-xs text-muted-foreground">
+                Precio unitario por servicio de lavado
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex items-center gap-3">
+              <div className="w-16 h-10 bg-muted rounded-lg flex items-center justify-center">
+                <span className="text-sm font-bold text-foreground">
+                  Unidad
+                </span>
+              </div>
+              <div className="flex-1">
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                    Bs
+                  </span>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={deepWashPrice}
+                    onChange={(e) => setDeepWashPrice(e.target.value)}
+                    className="h-10 pl-10 text-right font-semibold"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <Button
+            onClick={handleSaveDeepWash}
+            disabled={isSavingDeepWash}
+            className="w-full h-12 gradient-primary rounded-xl font-semibold"
+          >
+            {isSavingDeepWash ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <Save className="w-4 h-4 mr-2" />
+            )}
+            {isSavingDeepWash ? 'Guardando...' : 'Guardar Precio'}
+          </Button>
+
+          <p className="text-xs text-muted-foreground text-center">
+            Este precio se aplicará al agregar el producto desde el drawer de ventas
           </p>
         </div>
       </main>
