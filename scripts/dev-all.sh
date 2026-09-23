@@ -16,15 +16,18 @@ cleanup() {
   echo ""
   echo "🛑 [AquaGuest] Deteniendo servicios..."
   
-  # 1. Detener el proceso del frontend (Nx web-app)
+  # 1. Detener el proceso del frontend (Nx web-app) y todos sus subprocesos (Vite, esbuild)
   if [ -n "$NX_PID" ] && kill -0 "$NX_PID" 2>/dev/null; then
-    echo "⏹️  Deteniendo web-app (PID: $NX_PID)..."
-    kill -TERM "$NX_PID" 2>/dev/null || true
-    wait "$NX_PID" 2>/dev/null || true
+    echo "⏹️  Deteniendo web-app y procesos hijos (PID: $NX_PID)..."
+    kill -TERM -- -"$NX_PID" 2>/dev/null || kill -TERM "$NX_PID" 2>/dev/null || true
+    pkill -P "$NX_PID" 2>/dev/null || true
   fi
 
+  # Asegurar liberación del puerto 4200 si quedó algún proceso huérfano de Vite
+  lsof -ti:4200 2>/dev/null | xargs kill -9 2>/dev/null || true
+
   # 2. Detener Supabase local
-  echo "⏹️  Deteniendo Supabase local..."
+  echo "⏹️  Deteniendo Supabase local (esto puede tardar unos segundos mientras bajan los contenedores)..."
   npx supabase stop 2>/dev/null || true
 
   echo "✨ Todos los servicios se han detenido correctamente."
@@ -55,7 +58,11 @@ fi
 
 # 3. Levantar Supabase local
 echo "⚡ [3/5] Iniciando Supabase local..."
-npx supabase start
+if ! npx supabase status >/dev/null 2>&1; then
+  npx supabase start
+else
+  echo "  -> Supabase ya se encontraba en ejecución."
+fi
 
 # 4. Esperar y verificar que Supabase esté activo
 echo "🔍 [4/5] Verificando que Supabase esté listo..."
@@ -67,6 +74,8 @@ echo "✅ Supabase local está activo y respondiendo."
 
 # 5. Levantar la aplicación web con Nx
 echo "🚀 [5/5] Levantando web-app (Nx)..."
+# Habilitar control de jobs para aislar Nx y sus hijos en su propio Process Group (PGID)
+set -m
 npx nx serve web-app &
 NX_PID=$!
 

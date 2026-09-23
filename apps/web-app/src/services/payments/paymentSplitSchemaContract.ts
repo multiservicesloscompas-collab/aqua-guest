@@ -20,6 +20,7 @@ export const PAYMENT_SPLIT_SCHEMA = {
     amountBs: 'amount_bs',
     amountUsd: 'amount_usd',
     exchangeRateUsed: 'exchange_rate_used',
+    kind: 'payment_kind',
     createdAt: 'created_at',
     updatedAt: 'updated_at',
   },

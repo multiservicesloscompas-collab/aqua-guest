@@ -202,6 +202,7 @@ describe('useRentalStore payment split persistence', () => {
         amount_bs: 30,
         amount_usd: 0.6,
         exchange_rate_used: 50,
+        payment_kind: 'payment',
       },
       {
         rental_id: 'rental-1',
@@ -209,6 +210,7 @@ describe('useRentalStore payment split persistence', () => {
         amount_bs: 70,
         amount_usd: 1.4,
         exchange_rate_used: 50,
+        payment_kind: 'payment',
       },
     ]);
   });
@@ -263,6 +265,7 @@ describe('useRentalStore payment split persistence', () => {
         amount_bs: 100,
         amount_usd: 2,
         exchange_rate_used: 50,
+        payment_kind: 'payment',
       },
     ]);
 

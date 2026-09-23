@@ -7,7 +7,11 @@ import {
   normalizeAndValidatePaymentSplits,
   type PaymentSplitValidationResult,
 } from './paymentSplitValidation';
-import { roundToCurrency } from './paymentSplitRounding';
+import {
+  preferNonDivisaChangeLeg,
+  roundToCurrency,
+} from './paymentSplitRounding';
+import { hasChangeSplits } from './paymentSplitValidity';
 
 interface PreparePaymentWriteInput {
   paymentMethod: PaymentMethod;
@@ -39,7 +43,7 @@ function enrichSplits(
   exchangeRate: number
 ): PaymentSplit[] {
   return splits
-    .filter((split) => split.amountBs > 0)
+    .filter((split) => split.amountBs !== 0)
     .map((split) => ({
       ...split,
       amountUsd:
@@ -64,10 +68,19 @@ export function preparePaymentWritePayload(
 
   const enrichedSplits = enrichSplits(baseSplits, input.exchangeRate);
 
+  // A divisa-with-change payload carries a change leg (negative amountBs);
+  // any rounding residual must land there instead of on the physically
+  // exact tendered leg. Every other payload (the vast majority) has no
+  // change split, so this is a no-op and behavior is unchanged.
+  const residualTarget = hasChangeSplits(enrichedSplits)
+    ? preferNonDivisaChangeLeg
+    : undefined;
+
   const { splits, validation } = normalizeAndValidatePaymentSplits({
     splits: enrichedSplits,
     totalBs: input.totalBs,
     totalUsd: input.totalUsd,
+    residualTarget,
   });
 
   if (!validation.ok) {

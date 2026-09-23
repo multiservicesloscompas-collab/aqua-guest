@@ -17,14 +17,18 @@ const fromRows = (rows: readonly PaymentSplitRow[]): PaymentSplit[] =>
 export const salePaymentSplitAdapter: PaymentSplitAdapter<SalePaymentSplitInsertRow> =
   {
     toInsertRows: (saleId, splits) =>
-      toPaymentSplitInsertRows('sale_id', saleId, splits),
+      toPaymentSplitInsertRows('sale_id', saleId, splits, {
+        emitKind: true,
+      }),
     fromRows,
   };
 
 export const rentalPaymentSplitAdapter: PaymentSplitAdapter<RentalPaymentSplitInsertRow> =
   {
     toInsertRows: (rentalId, splits) =>
-      toPaymentSplitInsertRows('rental_id', rentalId, splits),
+      toPaymentSplitInsertRows('rental_id', rentalId, splits, {
+        emitKind: true,
+      }),
     fromRows,
   };
 

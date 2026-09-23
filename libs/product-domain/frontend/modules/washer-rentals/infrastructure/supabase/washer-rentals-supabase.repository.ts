@@ -123,7 +123,9 @@ const replaceRentalPaymentSplits = async (
   }
 
   const { error: insertError } = await table.insert(
-    toPaymentSplitInsertRows('rental_id', rentalId, paymentSplits)
+    toPaymentSplitInsertRows('rental_id', rentalId, paymentSplits, {
+      emitKind: true,
+    })
   );
   if (insertError) {
     throw insertError;

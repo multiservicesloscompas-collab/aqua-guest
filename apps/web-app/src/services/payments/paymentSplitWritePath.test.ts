@@ -156,4 +156,90 @@ describe('preparePaymentWritePayload', () => {
       })
     ).toThrow();
   });
+
+  it('accepts a divisa payment with change (negative splits) and keeps divisa as the legacy method', () => {
+    const payload = preparePaymentWritePayload({
+      paymentMethod: 'divisa',
+      paymentSplits: [
+        {
+          method: 'divisa',
+          amountBs: 4250,
+          amountUsd: 5,
+          exchangeRateUsed: 850,
+          kind: 'payment',
+        },
+        {
+          method: 'divisa',
+          amountBs: -3400,
+          amountUsd: -4,
+          exchangeRateUsed: 850,
+          kind: 'change',
+        },
+        {
+          method: 'efectivo',
+          amountBs: -250,
+          amountUsd: -0.29,
+          exchangeRateUsed: 850,
+          kind: 'change',
+        },
+      ],
+      totalBs: 600,
+      totalUsd: 0.71,
+      exchangeRate: 850,
+    });
+
+    expect(payload.validation.ok).toBe(true);
+    expect(payload.paymentMethod).toBe('divisa');
+    expect(payload.paymentSplits).toHaveLength(3);
+
+    const sumBs = payload.paymentSplits.reduce((s, x) => s + x.amountBs, 0);
+    expect(sumBs).toBe(600);
+  });
+
+  it('lands a forced USD rounding residual on the non-divisa change leg for a divisa-with-change payload', () => {
+    const payload = preparePaymentWritePayload({
+      paymentMethod: 'divisa',
+      paymentSplits: [
+        {
+          method: 'divisa',
+          amountBs: 4250,
+          amountUsd: 5,
+          exchangeRateUsed: 850,
+          kind: 'payment',
+        },
+        {
+          method: 'divisa',
+          amountBs: -3400,
+          amountUsd: -4,
+          exchangeRateUsed: 850,
+          kind: 'change',
+        },
+        {
+          method: 'efectivo',
+          amountBs: -250,
+          amountUsd: -0.29,
+          exchangeRateUsed: 850,
+          kind: 'change',
+        },
+      ],
+      totalBs: 600,
+      // Force a 0.01 USD residual against the splits' own sum of 0.71.
+      totalUsd: 0.72,
+      exchangeRate: 850,
+    });
+
+    const tendered = payload.paymentSplits.find(
+      (s) => s.method === 'divisa' && s.amountBs > 0
+    );
+    const divisaChange = payload.paymentSplits.find(
+      (s) => s.method === 'divisa' && s.amountBs < 0
+    );
+    const remainder = payload.paymentSplits.find(
+      (s) => s.method === 'efectivo'
+    );
+
+    expect(tendered?.amountUsd).toBe(5);
+    expect(divisaChange?.amountUsd).toBe(-4);
+    expect(remainder?.amountUsd).toBe(-0.28);
+  });
 });

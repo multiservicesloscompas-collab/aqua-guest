@@ -46,12 +46,14 @@ describe('core supabase mappers', () => {
         {
           method: 'efectivo',
           amountBs: 20,
+          kind: 'payment',
         },
         {
           method: 'divisa',
           amountBs: 30,
           amountUsd: 0.6,
           exchangeRateUsed: 50,
+          kind: 'payment',
         },
       ],
       notes: 'caja 1',

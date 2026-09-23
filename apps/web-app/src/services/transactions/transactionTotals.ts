@@ -1,4 +1,6 @@
 import type { PaymentMethod, PaymentSplit } from '@aqua-guest/domain';
+import { hasChangeSplits } from '@/services/payments/paymentSplitValidity';
+
 interface FinalSaleTotalsInput {
   principalBs: number;
   exchangeRate: number;
@@ -102,8 +104,18 @@ export function mergeTipIntoPaymentSplits(
 ): PaymentSplit[] {
   const safeTipBs = toSafePositiveAmount(input.tipAmountBs);
 
+  const existingSplits = input.paymentSplits;
+
   if (!(safeTipBs > 0)) {
-    return input.paymentSplits ?? [];
+    return existingSplits ?? [];
+  }
+
+  // A divisa-with-change record's tendered amount is physically fixed by
+  // the bills handed over; merging a tip into any leg would either inflate
+  // that fixed amount or corrupt the change math. The tip must be captured
+  // separately in this case — bypass entirely rather than patch the merge.
+  if (existingSplits && hasChangeSplits(existingSplits)) {
+    return existingSplits;
   }
 
   const tipAmountUsd =

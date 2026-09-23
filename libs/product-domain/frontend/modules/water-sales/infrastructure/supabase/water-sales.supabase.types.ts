@@ -42,4 +42,4 @@ export const toSalePaymentSplitInsertRows = (
   saleId: string,
   splits: Readonly<NonNullable<Sale['paymentSplits']>>
 ): SalePaymentSplitInsertRow[] =>
-  toPaymentSplitInsertRows('sale_id', saleId, splits);
+  toPaymentSplitInsertRows('sale_id', saleId, splits, { emitKind: true });

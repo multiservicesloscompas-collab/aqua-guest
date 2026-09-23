@@ -1,9 +1,9 @@
-import type { PaymentSplit } from '@aqua-guest/domain';
+import type { PaymentSplit, PaymentSplitKind } from '@aqua-guest/domain';
 
 type NumericLike<T extends number | undefined> = T | string;
 
 export const PAYMENT_SPLIT_READ_SELECT =
-  'method:payment_method, amountBs:amount_bs, amountUsd:amount_usd, exchangeRateUsed:exchange_rate_used';
+  'method:payment_method, amountBs:amount_bs, amountUsd:amount_usd, exchangeRateUsed:exchange_rate_used, kind:payment_kind';
 
 export interface PaymentSplitRow
   extends Omit<PaymentSplit, 'amountBs' | 'amountUsd' | 'exchangeRateUsed'> {
@@ -18,6 +18,7 @@ export interface PaymentSplitRow
   amount_bs?: NumericLike<PaymentSplit['amountBs']>;
   amount_usd?: NumericLike<PaymentSplit['amountUsd']> | null;
   exchange_rate_used?: NumericLike<PaymentSplit['exchangeRateUsed']> | null;
+  payment_kind?: PaymentSplitKind | null;
 }
 
 export type PaymentSplitInsertRow<TParentKey extends string> = {
@@ -27,12 +28,24 @@ export type PaymentSplitInsertRow<TParentKey extends string> = {
   amount_bs: PaymentSplit['amountBs'];
   amount_usd?: PaymentSplit['amountUsd'];
   exchange_rate_used?: PaymentSplit['exchangeRateUsed'];
+  payment_kind?: PaymentSplitKind;
 };
+
+export interface ToPaymentSplitInsertRowsOptions {
+  /**
+   * Emit the `payment_kind` column. Defaults to `false` because this
+   * function is shared with the Expenses adapter, whose table has no such
+   * column — sending it there would fail the insert. Only the sales and
+   * rentals adapters pass `true`.
+   */
+  emitKind?: boolean;
+}
 
 export const toPaymentSplitInsertRows = <TParentKey extends string>(
   parentKey: TParentKey,
   parentId: string,
-  splits: readonly PaymentSplit[]
+  splits: readonly PaymentSplit[],
+  options?: ToPaymentSplitInsertRowsOptions
 ): PaymentSplitInsertRow<TParentKey>[] =>
   splits.map((split) => {
     const parent = { [parentKey]: parentId } as Record<TParentKey, string>;
@@ -43,6 +56,7 @@ export const toPaymentSplitInsertRows = <TParentKey extends string>(
       amount_bs: split.amountBs,
       amount_usd: split.amountUsd,
       exchange_rate_used: split.exchangeRateUsed,
+      ...(options?.emitKind ? { payment_kind: split.kind ?? 'payment' } : {}),
     };
   });
 
@@ -64,4 +78,5 @@ export const fromPaymentSplitRows = (
           ? undefined
           : Number(row.exchange_rate_used)
         : Number(row.exchangeRateUsed),
+    kind: row.kind ?? row.payment_kind ?? 'payment',
   }));
