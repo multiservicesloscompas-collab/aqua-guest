@@ -200,7 +200,7 @@ describe('useRentalStore offline queueing', () => {
     expect(queue.map((q) => q.type)).toEqual(['UPDATE', 'DELETE', 'INSERT']);
   });
 
-  it('queues edited rental tip upsert preserving explicit totals and mixed splits payload', async () => {
+  it('queues edited rental with tip added to total and capture split, plus the tip upsert', async () => {
     useRentalStore.setState({
       rentals: [
         {
@@ -277,8 +277,8 @@ describe('useRentalStore offline queueing', () => {
 
     expect(queue[0].payload).toMatchObject({
       id: 'rental-1',
-      total_usd: 3,
-      payment_method: 'pago_movil',
+      total_usd: 4, // principal $3 + tip 50 Bs at rate 50
+      payment_method: 'efectivo', // legacy method = largest split (efectivo 110 > pago_movil 90)
     });
     expect(
       (queue[2].payload as { splits: Array<{ amount_bs: number }> }).splits

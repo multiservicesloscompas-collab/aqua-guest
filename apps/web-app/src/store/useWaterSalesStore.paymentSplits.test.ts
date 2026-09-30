@@ -17,6 +17,7 @@ vi.mock('@/services/tips/TipDataService', () => ({
   tipsDataService: {
     upsertTipForOrigin: vi.fn(),
     deleteTipByOrigin: vi.fn(),
+    toTipPayoutReadModel: vi.fn(() => []),
   },
 }));
 
@@ -190,7 +191,7 @@ describe('useWaterSalesStore payment split persistence', () => {
     ]);
   });
 
-  it('preserves explicit total and split amounts when tipInput is provided on edit', async () => {
+  it('adds the tip to the total and to the capture-method split when tipInput is provided on edit (inputs are principal-only)', async () => {
     await useWaterSalesStore.getState().updateSale(
       'sale-1',
       {
@@ -206,8 +207,8 @@ describe('useWaterSalesStore payment split persistence', () => {
           },
           {
             method: 'efectivo',
-            amountBs: 60,
-            amountUsd: 1.2,
+            amountBs: 20,
+            amountUsd: 0.4,
             exchangeRateUsed: 50,
           },
         ],
@@ -223,7 +224,7 @@ describe('useWaterSalesStore payment split persistence', () => {
         Array<{ total_bs: number; total_usd: number }>
       >
     )[0]?.[0];
-    expect(updatePayload.total_bs).toBe(140); // Base 100 + Tip 40
+    expect(updatePayload.total_bs).toBe(140); // Principal 100 (80 + 20) + Tip 40
     expect(updatePayload.total_usd).toBe(2.8);
 
     expect(salesSplitsInsertMock).toHaveBeenCalledWith([

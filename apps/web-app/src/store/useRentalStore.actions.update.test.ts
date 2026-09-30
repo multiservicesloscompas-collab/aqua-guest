@@ -83,7 +83,7 @@ describe('updateRentalAction tip-aware recomputation guard', () => {
     });
   });
 
-  it('keeps explicit totals and explicit splits when tipInput is provided', async () => {
+  it('adds the tip to the total and to the capture-method split when tipInput is provided (inputs are principal-only)', async () => {
     let state = buildState();
     const setState = vi.fn((partial) => {
       const next = typeof partial === 'function' ? partial(state) : partial;
@@ -120,7 +120,8 @@ describe('updateRentalAction tip-aware recomputation guard', () => {
     );
 
     const updated = state.rentals[0];
-    expect(updated.totalUsd).toBe(3);
+    // Principal $3 (150 Bs) + tip 50 Bs ($1) = $4; tip lands on the efectivo split.
+    expect(updated.totalUsd).toBe(4);
     expect(updated.paymentSplits).toEqual([
       {
         method: 'pago_movil',
@@ -130,8 +131,8 @@ describe('updateRentalAction tip-aware recomputation guard', () => {
       },
       {
         method: 'efectivo',
-        amountBs: 60,
-        amountUsd: 1.2,
+        amountBs: 110,
+        amountUsd: 2.2,
         exchangeRateUsed: 50,
       },
     ]);
