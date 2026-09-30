@@ -37,6 +37,13 @@ export const BUG_KNOWLEDGE = {
     where:
       'services/payments/paymentSplitFormHydration.ts:35-70 · components/ventas/useEditSaleSheetViewModel.ts · mergeTipIntoPaymentSplits (transactionTotals.ts:101)',
   },
+  B3b: {
+    cause:
+      'Igual que B3 pero en alquileres: los pagos guardados ya incluyen la propina, el formulario de edición los hidrata sin restarla y al guardar la tienda la suma otra vez.',
+    fix: 'Aplicar la misma hidratación con propina de B3 a alquileres (resolveRentalSplitState y useEditRentalTipHydration) y rehidratar al cargar la propina. Depende de B2 para que el formulario no se reinicie.',
+    where:
+      'pages/RentalsPage/hooks/editRentalSheetViewModel.helpers.ts:49-58 · useEditRentalTipHydration.ts · store/useRentalStore.actions.update.ts:42-66',
+  },
   B4: {
     cause:
       'Los ayudantes de atribución solo confían en los pagos guardados cuando el pago es mixto (2+ métodos distintos); con un solo pago recalculan totalUsd × tasa de hoy.',
@@ -75,6 +82,48 @@ export const BUG_KNOWLEDGE = {
       'El efecto de hidratación de la edición de venta vuelve a cargar el formulario cuando llega la propina y pisa lo que el usuario ya escribió (misma clase que B2).',
     fix: 'Inicializar el formulario una vez y aplicar la propina sin reiniciar los campos que el usuario ya tocó; corregir junto con B3 porque ambos viven en la misma hidratación.',
     where: 'components/ventas/useEditSaleSheetViewModel.ts (líneas ~88-138)',
+  },
+  B11: {
+    cause:
+      'La rama sin conexión de completeSaleAction encola la venta y sus pagos (que ya incluyen la propina) y devuelve la venta, pero nunca encola la creación de la propina. La propina solo se crea en la rama con conexión.',
+    fix: 'Encolar también el INSERT de la propina en la rama offline (dependiente de la venta temporal y con su origin_id remapeado al id real al sincronizar) y agregarla a la tienda de propinas en memoria. Ver docs/agents/offline-sync.md.',
+    where:
+      'store/useWaterSalesStore.actions.ts:44-130 (rama !navigator.onLine) · offline/enqueue/salesEnqueue.ts enqueueOfflineSale',
+  },
+  B12: {
+    cause:
+      'addRentalAction, cuando el nombre de cliente no existe, inserta el cliente en Supabase antes de comprobar si hay conexión; sin conexión esa llamada falla, se lanza el error y el alquiler nunca se encola.',
+    fix: 'Crear el cliente con el mismo mecanismo offline que useCustomerStore (enqueueOfflineCustomerCreate, id temporal) y encolar el alquiler dependiendo de ese cliente; o, como mínimo, mostrar el error en vez de dejar la hoja abierta sin aviso.',
+    where:
+      'store/useRentalStore.actions.ts:36-80 (addRentalAction) · offline/enqueue/customersEnqueue.ts',
+  },
+  B13: {
+    cause:
+      'El addRental de la tienda de alquileres encola el alquiler sin conexión y luego llama directo a tipsDataService.upsertTipForOrigin (solo online); esa llamada falla y se muestra «Error al registrar el alquiler» con la hoja abierta. La propina nunca se encola (el alquiler sí queda en la cola).',
+    fix: 'Si no hay conexión, encolar la propina con enqueueOfflineRentalTipUpsert (como hace updateRental) en lugar de llamar al servidor, y cerrar la hoja con el mensaje de éxito.',
+    where:
+      'store/useRentalStore.ts:66-90 (addRental) · offline/enqueue/rentalsEnqueue.ts (enqueueOfflineRentalTipUpsert)',
+  },
+  B14: {
+    cause:
+      'El procesador legado de SyncManager (el que corre por defecto) solo implementa `sales` + INSERT (con sus pagos); cualquier otra tabla o tipo de acción (alquileres, clientes, egresos, updates, deletes) se deja en la cola sin procesar. El comentario del código dice «Otras tablas se pueden agregar aquí». La matriz de cobertura las declara como offline-mutation-enabled.',
+    fix: 'Implementar en el procesador legado el reemplazo de tempId y el envío de cada tabla/tipo declarado en coverageMatrix (o, mejor, completar y activar el orquestador global, que ya es genérico: ver C1). Requiere modo plan: toca la cola offline.',
+    where:
+      'components/layout/SyncManager.tsx:76-150 (path legado) · offline/coverageMatrix.ts · docs/agents/offline-sync.md',
+  },
+  C1: {
+    cause:
+      'Los ayudantes de encolado escriben claves de negocio (sale:temp-x) en dependsOn, pero el orquestador global solo compara contra ids de acción en completedIds; además el origin_id temporal de la propina solo se remapea para pagos (C2). Latente: la bandera está apagada por defecto y corre el procesador legado.',
+    fix: 'Que el orquestador resuelva dependsOn por clave de negocio (o que el encolado use ids de acción) y que resolveInsertPayload remapee también el origin_id de las propinas. Hacerlo antes de encender la bandera en producción.',
+    where:
+      'store/useSyncStore.ts:42 · offline/globalOrchestrator.ts:55,164 · offline/orchestratorMutations.ts:16-47',
+  },
+  C12: {
+    cause:
+      'Transacciones formatea los totales con toLocaleString sin opciones (0 a 3 decimales) y Lavadoras métricas solo fija el mínimo de 2; el resto de la app muestra siempre 2 decimales. Pendiente de confirmar el formato correcto con el usuario.',
+    fix: 'Usar el formateador de bolívares común con exactamente 2 decimales en ambas pantallas (cambia lo que ve el usuario: decidir primero).',
+    where:
+      'pages/TransactionsSummaryPage/components/TransactionsSummaryTotals.tsx:20,28 · pages/LavadorasMetricsPage/index.tsx:179',
   },
   'FIN-01': {
     cause:

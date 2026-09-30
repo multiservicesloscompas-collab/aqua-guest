@@ -17,7 +17,8 @@ export async function openRentalsModule(page: Page): Promise<void> {
 
 export async function createWasherRental(
   page: Page,
-  input: WasherRentalInput
+  input: WasherRentalInput,
+  options: { waitForClose?: boolean } = {}
 ): Promise<void> {
   await openRentalsModule(page);
 
@@ -111,9 +112,11 @@ export async function createWasherRental(
   await expect(confirmBtn).toBeEnabled();
   await confirmBtn.click();
 
-  await expect(
-    page.getByRole('heading', { name: 'Nuevo Alquiler' })
-  ).toBeHidden({ timeout: 15_000 });
+  if (options.waitForClose ?? true) {
+    await expect(
+      page.getByRole('heading', { name: 'Nuevo Alquiler' })
+    ).toBeHidden({ timeout: 15_000 });
+  }
 }
 
 export async function toggleRentalPayment(

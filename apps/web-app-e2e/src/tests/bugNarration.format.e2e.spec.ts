@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { BUG_KNOWLEDGE } from '../support/bugs/bugKnowledge';
 import {
+  assertionDetail,
   classifyBugResult,
   formatBugFicha,
   formatBugOutcome,
@@ -233,6 +234,51 @@ test.describe('bug narration', () => {
       expect(summary).toContain(
         '1 abiertos · 1 corregidos · 1 controles en verde'
       );
+    }
+  );
+
+  test(
+    'a comparison failure without expected/received shows the difference',
+    documented({
+      titulo: 'Un bug que compara listas muestra la diferencia',
+      area: AREA,
+      intent:
+        'Comprobar que, cuando Playwright no da «Expected/Received» sino una diferencia, el veredicto la muestra.',
+      steps: [
+        'Da formato al veredicto de un bug con una diferencia de listas.',
+      ],
+      expects: [
+        'El veredicto incluye las líneas de la diferencia y no el registro de llamadas.',
+      ],
+    }),
+    async () => {
+      // Arrange
+      const message = `Error: expect(received).toEqual(expected)
+
+- Expected  - 1
++ Received  + 1
+
+-   "amountBs": 4000,
++   "amountBs": 3800,
+
+Call Log:
+- Timeout 5000ms exceeded`;
+      const info = readBugInfo(annotationsOf(BUG));
+      if (!info) throw new Error('bug info missing');
+
+      // Act
+      const detail = assertionDetail(message);
+      const outcome = formatBugOutcome({
+        info,
+        verdict: 'open',
+        durationMs: 1000,
+        message,
+      });
+
+      // Assert
+      expect(detail).toContain('-   "amountBs": 4000,');
+      expect(detail.join('\n')).not.toContain('Timeout');
+      expect(outcome).toContain('+   "amountBs": 3800,');
     }
   );
 });

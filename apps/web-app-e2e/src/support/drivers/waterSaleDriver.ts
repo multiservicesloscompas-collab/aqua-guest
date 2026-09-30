@@ -53,7 +53,8 @@ export async function selectBottleProduct(
 
 export async function createWaterSale(
   page: Page,
-  input: WaterSaleInput
+  input: WaterSaleInput,
+  options: { waitForToast?: boolean } = {}
 ): Promise<void> {
   await openWaterSalesFromBottomNav(page);
   await selectBottleProduct(page, input.basePriceBs);
@@ -92,7 +93,9 @@ export async function createWaterSale(
   await page.getByTestId('cart-notes-input').fill(input.noteMarker);
   await page.getByTestId('cart-confirm-sale').click();
 
-  await expectToast(page, TOAST_SALE_REGISTERED, { timeout: 10_000 });
+  if (options.waitForToast ?? true) {
+    await expectToast(page, TOAST_SALE_REGISTERED, { timeout: 10_000 });
+  }
 }
 
 /** Deletes today's sale from the Agua list with its trash button and the confirm drawer. */

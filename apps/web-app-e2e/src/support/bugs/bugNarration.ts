@@ -110,6 +110,18 @@ export function isBusinessAssertion(message: string): boolean {
   return /^\s*(Error: )?expect(\.poll)?\(/m.test(clean);
 }
 
+/** Lines of a comparison failure (diff of arrays or objects) when it has no Expected/Received pair. */
+export function assertionDetail(message: string, maxLines = 10): string[] {
+  const lines = stripAnsi(message).split('\n').slice(1);
+  const detail: string[] = [];
+  for (const line of lines) {
+    if (/^\s*(Call log|Call Log):?/.test(line) || /^\s+at /.test(line)) break;
+    if (line.trim()) detail.push(line.trimEnd());
+    if (detail.length >= maxLines) break;
+  }
+  return detail;
+}
+
 export function classifyBugResult(input: {
   kind: 'bug' | 'control';
   status: 'passed' | 'failed' | 'timedOut' | 'skipped' | 'interrupted';
@@ -148,6 +160,13 @@ export function formatBugOutcome(input: {
         lines.push(`     Esperaba:   ${explanation.expected}`);
       if (explanation.received)
         lines.push(`     Encontró:   ${explanation.received}`);
+      if (!explanation.expected && !explanation.received) {
+        const detail = assertionDetail(message ?? '');
+        if (detail.length > 0) {
+          lines.push('     Diferencia (- esperado, + encontrado):');
+          detail.forEach((line) => lines.push(`       ${line}`));
+        }
+      }
       lines.push(`     Para cerrarlo: ${info.fix}`);
       lines.push(`     Dónde:         ${info.where}`);
     }
