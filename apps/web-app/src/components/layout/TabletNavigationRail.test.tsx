@@ -158,7 +158,7 @@ describe('TabletNavigationRail', () => {
     ).toBeInTheDocument();
   });
 
-  it('renders exactly six navigation module buttons', () => {
+  it('renders exactly seven navigation module buttons', () => {
     viewportState.viewportMode = 'tablet-landscape';
     viewportState.isMobileViewport = false;
     viewportState.isTabletViewport = true;
@@ -170,10 +170,10 @@ describe('TabletNavigationRail', () => {
       />
     );
 
-    expect(screen.getAllByRole('button')).toHaveLength(6);
+    expect(screen.getAllByRole('button')).toHaveLength(7);
   });
 
-  it('does not render a settings (Configuración) button', () => {
+  it('renders a settings (Configuración) button', () => {
     viewportState.viewportMode = 'tablet-landscape';
     viewportState.isMobileViewport = false;
     viewportState.isTabletViewport = true;
@@ -185,7 +185,9 @@ describe('TabletNavigationRail', () => {
       />
     );
 
-    expect(screen.queryByRole('button', { name: 'Configuración' })).toBeNull();
+    expect(
+      screen.getByRole('button', { name: 'Configuración' })
+    ).toBeInTheDocument();
   });
 
   it('does NOT render a "Abrir más opciones" button (no 3-dot menu)', () => {
