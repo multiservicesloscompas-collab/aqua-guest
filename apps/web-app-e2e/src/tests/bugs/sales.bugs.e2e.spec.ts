@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 import { waitForSaleByMarker } from '../../support/dbPolling';
 import { bugDoc } from '../../support/bugs/ficha';
 import { delayRoute } from '../../support/bugs/networkFaults';
-import { bug, useCleanDomain } from '../../support/bugs/setup';
+import { useCleanDomain } from '../../support/bugs/setup';
 import { createWaterSale } from '../../support/drivers/waterSaleDriver';
 import { createRunMarker } from '../../support/runMarker';
 import { bootstrapAtDashboard } from '../../support/waterSalesTipsMatrix/uiHelpers';
@@ -28,10 +28,6 @@ test.describe('Ventas (rojos)', () => {
         'el formulario vuelve a cargarse cuando llega la propina y restaura el subtotal original (en pruebas sin retraso pasa en 5 de cada 8 aperturas)',
     }),
     async ({ page }) => {
-      bug(
-        'B10',
-        'useEditSaleSheetViewModel.ts hydration effect (same class as B2)'
-      );
       // Arrange
       const marker = createRunMarker();
       await bootstrapAtDashboard(page);

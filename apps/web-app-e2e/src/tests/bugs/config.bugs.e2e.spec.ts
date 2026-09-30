@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { bugDoc } from '../../support/bugs/ficha';
-import { bug, useCleanDomain } from '../../support/bugs/setup';
+import { useCleanDomain } from '../../support/bugs/setup';
 import { getSupabaseClient } from '../../support/supabaseClient';
 import { gotoDashboard } from '../../support/uiNavigation';
 
@@ -77,7 +77,6 @@ test.describe('Configuración (rojos)', () => {
         'sin conexión el guardado solo cambia el estado local y no deja nada en la cola de sincronización',
     }),
     async ({ page, context }) => {
-      bug('B8', 'useConfigStore.ts setProductPrice returns early when offline');
       // Arrange
       const before = await (async () => {
         await openPricesPage(page);

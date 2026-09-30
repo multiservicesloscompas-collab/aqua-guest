@@ -7,7 +7,6 @@ import {
 } from '../../support/bugs/dbSeed';
 import { bugDoc } from '../../support/bugs/ficha';
 import {
-  bug,
   goToDate,
   snapshotTodayRate,
   useCleanDomain,
@@ -69,10 +68,6 @@ test.describe('Alquileres (rojos)', () => {
         'con un solo pago guardado el detalle no usa el pago y recalcula $5 × 50 = Bs 250',
     }),
     async ({ page }) => {
-      bug(
-        'B4',
-        'paymentSplitValidity.ts:13 · paymentSplitAttribution.ts:61-98'
-      );
       const restore = await snapshotTodayRate();
       try {
         // Arrange
@@ -120,10 +115,6 @@ test.describe('Alquileres (rojos)', () => {
         'la edición aplica la regla de divisa al revés y muestra $5 para efectivo',
     }),
     async ({ page }) => {
-      bug(
-        'B7',
-        'editRentalSheetViewModel.helpers.ts:112 vs utils/rentalPricing.ts:9'
-      );
       // Arrange
       const today = todayVe();
       const id = await seedPaidRentalWithSplit({
@@ -164,10 +155,6 @@ test.describe('Alquileres (rojos)', () => {
           'una excepción de las 13:00 y 14:00 fija el retiro a las 20:00 del mismo domingo, con la tienda cerrada',
       }),
       async ({ page }) => {
-        bug(
-          'B9',
-          'utils/rentalSchedule.ts calculatePickupTime (13:00/14:00 branch)'
-        );
         // Arrange
         await gotoDashboard(page);
         await openRentalsModule(page);
@@ -276,10 +263,6 @@ test.describe('Alquileres (rojos)', () => {
         'el formulario se reinicia con cada cambio de la tasa o de los alquileres y borra lo que el usuario escribió',
     }),
     async ({ page }) => {
-      bug(
-        'B2',
-        'useEditRentalFormState.ts:39-60 (useEffect on [rental, exchangeRate])'
-      );
       // Arrange
       const id = await seedPaidRentalWithSplit({
         amountBs: 240,

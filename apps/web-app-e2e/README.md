@@ -92,7 +92,9 @@ Never assert a toast with a bare `getByText`: two identical toasts overlap for a
 
 ### Known bugs (`npm run e2e:bugs`)
 
-Specs in `src/tests/bugs/*.bugs.e2e.spec.ts` (project `bugs`) assert the CORRECT behavior, so they are red until the bug is fixed; each has a `.md` with the user action, expected, actual and root cause, and a `bugDoc()` ficha (`support/bugs/ficha.ts`). Controls (`control: true`) pin nearby behavior that already works and must stay green. They are not part of `npm run e2e:web-app`. Run them from the runner with `npm run e2e:live -- --bugs` (or pick them in the menu, they are listed after the business areas). Follow the bug flow in `docs/agents/workflow.md`: red e2e, the user confirms, then fix.
+Specs in `src/tests/bugs/*.bugs.e2e.spec.ts` (project `bugs`) assert the CORRECT behavior, so they are red until the bug is fixed; each has a `.md` with the user action, expected, actual and root cause, and a `bugDoc()` ficha (`support/bugs/ficha.ts`). Controls (`control: true`) pin nearby behavior that already works and must stay green. They are not part of `npm run e2e:web-app`. Run them with the bug runner, `npm run e2e:bugs` (menu, or `-- --id B9,FIN-02 --yes`; `-- --explain [ID|all]` only prints). For each bug it shows the objective, why it fails today, the root cause, what to fix and where, runs it with the browser visible and stops on the failing screen (Playwright inspector, press Resume; `--no-pause` to skip), and ends with a table: 🔴 still open, 🟢 fixed or control green, ⚠ a control regressed or the bug failed for another reason than its assertion. `npm run e2e:bugs:ci` is the plain non-interactive run. `npm run e2e:live -- --bugs` still works too.
+
+Cause, fix and where live in `support/bugs/bugKnowledge.ts`, keyed by bug id (`fix` is a proposal, not a verified patch); `bugDoc` reads them, so a new bug needs its entry. `npm run e2e:bugs -- --check` fails if a bug lacks them. Follow the bug flow in `docs/agents/workflow.md`: red e2e, the user confirms, then fix.
 
 ### Scenarios (combined movements)
 

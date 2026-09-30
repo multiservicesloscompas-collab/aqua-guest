@@ -41,6 +41,16 @@ function parseDoc(annotations = []) {
     steps: texts('step'),
     expects: texts('expect'),
     data: texts('data').join(' · '),
+    bug: texts('bug-id')[0]
+      ? {
+          id: texts('bug-id')[0],
+          kind: texts('bug-kind')[0] ?? 'bug',
+          actual: texts('bug-actual')[0] ?? '',
+          cause: texts('bug-cause')[0] ?? '',
+          fix: texts('bug-fix')[0] ?? '',
+          where: texts('bug-where')[0] ?? '',
+        }
+      : null,
   };
 }
 

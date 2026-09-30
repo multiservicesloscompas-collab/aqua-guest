@@ -15,167 +15,27 @@
  */
 import path from 'node:path';
 import {
-  displayName,
-  estimate,
-  formatDuration,
   isBugTest,
   listTests,
   loadTimings,
-  missingParts,
   parseSelection,
   renderFicha,
   renderList,
   runCheck,
-  selectionArgs,
   testsMatching,
 } from './e2e-live/fichas.mjs';
 import { HELP, parseArgs } from './e2e-live/cli.mjs';
+import { databaseMenu, describeMode, execute } from './e2e-live/run.mjs';
 import { listAdHoc, scenarioFlow } from './e2e-live/scenario.mjs';
 import {
-  MAIN_CONFIG,
   ask,
   bold,
   createPrompter,
   describeDb,
   dim,
-  green,
-  maintenance,
-  playwright,
   readDbCounts,
   red,
-  yellow,
 } from './e2e-live/support.mjs';
-
-const FULL_FICHAS_UP_TO = 3;
-
-// ------------------------------------------------------------- running
-
-/** One Playwright run per project: the bugs project has its own config and meaning. */
-function buildRuns(selected, options) {
-  const projects = [...new Set(selected.map((test) => test.project))];
-  return projects.map((project) => {
-    const group = selected.filter((test) => test.project === project);
-    const { paths, grep } = selectionArgs(group);
-    const args = [
-      'test',
-      '-c',
-      MAIN_CONFIG,
-      `--project=${project}`,
-      '--workers=1',
-    ];
-    if (options.headed) args.push('--headed');
-    if (options.debug) args.push('--debug');
-    args.push(...paths, '-g', grep);
-    const env = { E2E_NARRATE: '1', ...options.extraEnv };
-    if (options.slowMo > 0 && (options.headed || options.debug)) {
-      env.SLOWMO = String(options.slowMo);
-    }
-    return { project, args, env };
-  });
-}
-
-function describeMode(options) {
-  if (options.debug) return 'con el inspector de Playwright (paso a paso)';
-  if (options.headed)
-    return `con el navegador visible, cámara lenta de ${options.slowMo} ms`;
-  return 'sin navegador visible (rápido)';
-}
-
-function printPlan(selected, options, timings) {
-  console.log(`\n${bold(`Vas a ejecutar ${selected.length} test(s)`)}`);
-  if (selected.length <= FULL_FICHAS_UP_TO) {
-    selected.forEach((test) => console.log(renderFicha(test, timings)));
-  } else {
-    selected.forEach((test) =>
-      console.log(`  · ${displayName(test)}\n    ${dim(test.doc.intent)}`)
-    );
-    console.log(
-      dim(
-        '\n  (Con 3 tests o menos se muestra la ficha completa; usa --explain para verlas.)'
-      )
-    );
-  }
-  const { seconds, measured } = estimate(selected, timings);
-  console.log(`\n  Cómo:      ${describeMode(options)}`);
-  console.log(
-    `  Duración:  ${measured ? '' : 'aprox. '}${formatDuration(seconds)}${
-      measured ? ' (medida en la última corrida)' : ''
-    }`
-  );
-  console.log(
-    `  ${yellow(
-      'Base local:'
-    )} antes de CADA test se borra y se siembra de nuevo (tasa 1000, 19 L = 700, Lavadora 1-5, Cliente Prueba 1-4).`
-  );
-  console.log(`  Ahora hay: ${describeDb(readDbCounts())}\n`);
-}
-
-async function afterRun(prompter, mode) {
-  console.log(
-    `\n${bold('Base local tras la ejecución:')} ${describeDb(readDbCounts())}`
-  );
-  let choice = mode;
-  if (!choice && prompter) {
-    choice = (
-      await ask(
-        prompter,
-        '¿Qué hago con la base? [r] reiniciar a la línea base · [v] vaciar por completo · [Enter] dejarla: '
-      )
-    ).toLowerCase();
-  }
-  if (choice === 'r' || choice === 'reset') await maintenance('reset');
-  if (choice === 'v' || choice === 'purge') await maintenance('purge');
-}
-
-async function execute({ selected, options, prompter, yes, printOnly, after }) {
-  const timings = loadTimings();
-  const runs = buildRuns(selected, options);
-  if (printOnly) {
-    for (const { args, env } of runs) {
-      const prefix = Object.entries(env)
-        .map(([k, v]) => `${k}=${v} `)
-        .join('');
-      console.log(
-        `${prefix}npx playwright ${args
-          .map((a) => (/\s/.test(a) ? JSON.stringify(a) : a))
-          .join(' ')}`
-      );
-    }
-    return 0;
-  }
-  printPlan(selected, options, timings);
-  if (!yes) {
-    const answer = prompter
-      ? (await ask(prompter, '¿Ejecutar? [s/N]: ')).toLowerCase()
-      : '';
-    if (answer !== 's' && answer !== 'y') {
-      console.log('Cancelado. No se tocó nada.');
-      return 0;
-    }
-  }
-  let code = 0;
-  for (const run of runs) {
-    const result = await playwright(run.args, run.env);
-    if (run.project === 'bugs') {
-      console.log(
-        yellow(
-          result === 0
-            ? '¡Todo pasó! Si había bugs en la lista, revisa si ya están corregidos.'
-            : 'Los bugs conocidos fallan a propósito y los controles deben pasar: revisa el ✔/✘ de cada test arriba.'
-        )
-      );
-    } else {
-      code ||= result;
-      console.log(
-        result === 0
-          ? green('✔ Todo en verde')
-          : red(`✘ Falló (código ${result})`)
-      );
-    }
-  }
-  await afterRun(yes && !after ? null : prompter, after);
-  return code;
-}
 
 // ---------------------------------------------------------------- menu
 
@@ -209,24 +69,6 @@ async function settings(prompter, options) {
     const value = Number(await ask(prompter, 'Milisegundos (0 = sin pausa): '));
     if (Number.isFinite(value) && value >= 0) options.slowMo = value;
   }
-}
-
-async function databaseMenu(prompter) {
-  console.log(
-    `\n${bold('Base de datos local')}: ${describeDb(readDbCounts())}`
-  );
-  console.log('  r  Reiniciar a la línea base');
-  console.log('  v  Vaciar por completo (cero absoluto)');
-  const choice = (
-    await ask(prompter, 'Elige (Enter = volver): ')
-  ).toLowerCase();
-  if (choice !== 'r' && choice !== 'v') return;
-  const what =
-    choice === 'r' ? 'reiniciar a la línea base' : 'VACIAR por completo';
-  const ok = (
-    await ask(prompter, `Esto va a ${what} la base LOCAL. ¿Seguro? [s/N]: `)
-  ).toLowerCase();
-  if (ok === 's') await maintenance(choice === 'r' ? 'reset' : 'purge');
 }
 
 async function menu(prompter, tests, options) {

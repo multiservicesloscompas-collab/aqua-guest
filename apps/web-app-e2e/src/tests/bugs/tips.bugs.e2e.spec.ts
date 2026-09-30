@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 import { bugDoc } from '../../support/bugs/ficha';
 import { seedPendingTip, seedSales } from '../../support/bugs/dbSeed';
 import { todayVe } from '../../support/bugs/dates';
-import { bug, useCleanDomain } from '../../support/bugs/setup';
+import { useCleanDomain } from '../../support/bugs/setup';
 import {
   createWasherRental,
   deleteRental,
@@ -39,10 +39,6 @@ test.describe('Propinas (rojos)', () => {
         'el formulario toma la propina (200 en pago móvil) como pago secundario y el guardado la suma otra vez, dejando efectivo 800 y pago móvil 400',
     }),
     async ({ page }) => {
-      bug(
-        'B3',
-        'paymentSplitFormHydration.ts:35-70 · useEditSaleSheetViewModel.ts'
-      );
       // Arrange
       const marker = createRunMarker();
       await bootstrapAtDashboard(page);
@@ -93,10 +89,6 @@ test.describe('Propinas (rojos)', () => {
         'la tienda de propinas mezcla lo nuevo con lo que ya tenía y nunca descarta las propinas borradas',
     }),
     async ({ page }) => {
-      bug(
-        'B1',
-        'useTipStore.ts loadTipsByDateRange (Map merge without removal)'
-      );
       // Arrange
       const [saleId] = await seedSales([
         { date: todayVe(), dailyNumber: 1, totalBs: 1000 },
@@ -139,10 +131,6 @@ test.describe('Propinas (rojos)', () => {
         'la rama sin conexión encola el borrado de la propina pero no la quita de la tienda en memoria',
     }),
     async ({ page, context }) => {
-      bug(
-        'B6',
-        'useRentalStore.actions.ts:164-187 (offline branch skips removeTipByOrigin)'
-      );
       // Arrange
       await bootstrapAtDashboard(page);
       await createWasherRental(page, {

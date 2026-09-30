@@ -14,6 +14,14 @@ import {
   formatPassed,
   formatSummary,
 } from '../support/narration';
+import {
+  classifyBugResult,
+  formatBugFicha,
+  formatBugOutcome,
+  formatBugSummary,
+  readBugInfo,
+  type BugSummaryRow,
+} from '../support/bugs/bugNarration';
 import { DOC_TYPE, readDoc } from '../support/testDoc';
 
 // Playwright empties test-results/ at the start of every run, so the timings
@@ -48,6 +56,7 @@ export default class NarratorReporter implements Reporter {
   private annotationsAtStart = new Map<string, number>();
   private counts = { passed: 0, failed: 0, skipped: 0 };
   private timings: Record<string, number> = {};
+  private bugRows: BugSummaryRow[] = [];
 
   printsToStdio(): boolean {
     return true;
@@ -63,6 +72,18 @@ export default class NarratorReporter implements Reporter {
     this.started += 1;
     this.annotationsAtStart.set(test.id, test.annotations.length);
     const doc = readDoc(test.annotations);
+    const bugInfo = readBugInfo(test.annotations);
+    if (bugInfo) {
+      process.stdout.write(
+        formatBugFicha({
+          title: doc.titulo || displayTitle(test),
+          doc,
+          info: bugInfo,
+          position: { index: this.started, total: this.total },
+        })
+      );
+      return;
+    }
     process.stdout.write(
       formatFicha({
         title: doc.titulo || displayTitle(test),
@@ -92,6 +113,12 @@ export default class NarratorReporter implements Reporter {
       return;
     }
 
+    const bugInfo = readBugInfo(test.annotations);
+    if (bugInfo) {
+      this.reportBug(test, result, bugInfo);
+      return;
+    }
+
     if (result.status === 'passed') {
       this.counts.passed += 1;
       this.timings[timingKey(test)] = result.duration;
@@ -116,7 +143,46 @@ export default class NarratorReporter implements Reporter {
     );
   }
 
+  private reportBug(
+    test: TestCase,
+    result: TestResult,
+    info: NonNullable<ReturnType<typeof readBugInfo>>
+  ): void {
+    const message = result.error?.message;
+    const verdict = classifyBugResult({
+      kind: info.kind,
+      status: result.status,
+      message,
+    });
+    if (result.status === 'passed') {
+      this.counts.passed += 1;
+      this.timings[timingKey(test)] = result.duration;
+    } else {
+      this.counts.failed += 1;
+    }
+    this.bugRows.push({
+      id: info.id,
+      title: readDoc(test.annotations).titulo || displayTitle(test),
+      verdict,
+    });
+    process.stdout.write(
+      formatBugOutcome({
+        info,
+        verdict,
+        durationMs: result.duration,
+        message,
+        evidence: result.attachments
+          .filter((attachment) => attachment.path)
+          .map((attachment) => ({
+            name: attachment.name,
+            path: relativeFile(attachment.path as string),
+          })),
+      })
+    );
+  }
+
   onEnd(_result: FullResult): void {
+    process.stdout.write(formatBugSummary(this.bugRows));
     process.stdout.write(
       formatSummary({ ...this.counts, durationMs: Date.now() - this.startedAt })
     );

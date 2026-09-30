@@ -26,8 +26,8 @@ Approval of one action never extends to the next one. Prefer leaving changes unc
 
 ## Bug Fix Flow (one bug at a time)
 
-1. **Red:** write `apps/web-app-e2e/src/tests/bugs/<id>-<slug>.bugs.e2e.spec.ts` (AAA, asserts the correct behavior, annotated with `bug(id, evidence)`) plus a `.md` next to it: user action, expected, actual, root cause. Do not touch `apps/web-app/src`. Confirm it fails on the business assertion, not on a selector or timeout.
-2. **Stop.** Give the user the run command (`npx playwright test -c apps/web-app-e2e/playwright.config.ts --project=bugs <spec> --headed`) and wait for confirmation that they saw the failure.
+1. **Red:** write `apps/web-app-e2e/src/tests/bugs/<id>-<slug>.bugs.e2e.spec.ts` (AAA, asserts the correct behavior, documented with `bugDoc({ id, ... })`) plus a `.md` next to it: user action, expected, actual, root cause. Add the id to `BUG_KNOWLEDGE` in `support/bugs/bugKnowledge.ts` (cause, fix, where): `bugDoc` will not compile without it, and `npm run e2e:bugs -- --check` fails if any is empty. Do not touch `apps/web-app/src`. Confirm it fails on the business assertion, not on a selector or timeout.
+2. **Stop.** Give the user the run command (`npm run e2e:bugs -- --id <ID>`: visible browser, stops on the failing screen, explains why it fails and what to fix) and wait for confirmation that they saw the failure.
 3. **Fix:** add a failing Vitest unit test, make the minimal source change, then the e2e must pass. Move the spec to `tests/regression/`.
 4. Run the checks below, report real numbers, and ask before committing.
 
@@ -73,5 +73,6 @@ npm run e2e:web-app      # regression e2e against the local DB
 npm run e2e:reset        # wipe the local DB and seed the e2e baseline
 npm run e2e:live         # interactive runner: per-test fichas (what it does, what it expects), watch them run
 npm run e2e:live -- --check   # fails if any e2e test lacks a complete documented() ficha
-npm run e2e:bugs         # known-bug specs (expected red until fixed)
+npm run e2e:bugs         # interactive bug runner: objective, why it fails, what to fix; browser visible
+npm run e2e:bugs:ci      # same specs, plain Playwright run (CI, agents)
 ```

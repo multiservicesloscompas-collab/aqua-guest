@@ -29,7 +29,6 @@ import {
   setExchangeRate,
 } from '../../support/bugs/dbSeed';
 import {
-  bug,
   goToDate,
   snapshotTodayRate,
   useCleanDomain,
@@ -125,10 +124,6 @@ test.describe('FIN · consistencia financiera (rojos)', () => {
         'el dashboard convierte el alquiler con la tasa de hoy y muestra Bs 250',
     }),
     async ({ page }) => {
-      bug(
-        'FIN-01',
-        'DashboardMetricsService.ts:138 · buildTransactionsSummaryItems.ts:170'
-      );
       const restore = await snapshotTodayRate();
       try {
         // Arrange: $5 rental paid at rate 36.5 (Bs 182.50), then the rate moves to 50
@@ -181,10 +176,6 @@ test.describe('FIN · consistencia financiera (rojos)', () => {
         'Transacciones suma la entrada del equilibrio como ingreso y muestra Bs 140',
     }),
     async ({ page }) => {
-      bug(
-        'FIN-02',
-        'buildTransactionsSummaryItems.ts:262 · TransactionsSummaryPage.tsx:68'
-      );
       await gotoDashboard(page);
       await createWaterSale(page, {
         basePriceBs: 100,
@@ -223,10 +214,6 @@ test.describe('FIN · consistencia financiera (rojos)', () => {
       actual: 'el resumen no se recalcula y sigue en Bs 100',
     }),
     async ({ page }) => {
-      bug(
-        'FIN-03',
-        'usePaymentBalancePageViewModel.ts:56 (useMemo sin dependencias de estado)'
-      );
       await gotoDashboard(page);
       await createWaterSale(page, {
         basePriceBs: 100,
@@ -267,10 +254,6 @@ test.describe('FIN · consistencia financiera (rojos)', () => {
       actual: 'Equilibrio usa la fecha del servicio y muestra Bs 240',
     }),
     async ({ page }) => {
-      bug(
-        'FIN-04',
-        'paymentBalanceSummary.ts:56-59 (date || datePaid) vs DashboardMetricsService.ts:113'
-      );
       await seedPaidRentalWithSplit({
         date: TODAY(),
         datePaid: addDays(TODAY(), 1),
@@ -303,10 +286,6 @@ test.describe('FIN · consistencia financiera (rojos)', () => {
       actual: 'Equilibrio ignora egresos y pagos de propina y muestra Bs 100',
     }),
     async ({ page }) => {
-      bug(
-        'FIN-05',
-        'paymentBalanceSummary.ts:17-24 ignora gastos y pagos de propina'
-      );
       await gotoDashboard(page);
       await createWaterSale(page, {
         basePriceBs: 100,
@@ -343,10 +322,6 @@ test.describe('FIN · consistencia financiera (rojos)', () => {
       actual: 'la pantalla no pide esos datos y solo aparece 1 movimiento',
     }),
     async ({ page }) => {
-      bug(
-        'FIN-06',
-        'TransactionsSummaryPage.tsx / usePaymentMethodDetailViewModel.ts no llaman a un loader'
-      );
       const day = lastDayOfPreviousMonth(TODAY());
       await seedSales([{ date: day, dailyNumber: 1, totalBs: 100 }]);
       await seedExpense({ date: day, amount: 20 });
@@ -378,10 +353,6 @@ test.describe('FIN · egresos y validaciones (rojos)', () => {
       actual: 'la pantalla suma todo lo cargado y muestra Bs 50.00',
     }),
     async ({ page }) => {
-      bug(
-        'FIN-09',
-        'EgresosMetricsPage/index.tsx:14-19 suma todo el store, sin rango de fechas'
-      );
       const past = lastDayOfPreviousMonth(TODAY());
       await seedExpense({ date: TODAY(), amount: 30 });
       await seedExpense({ date: past, amount: 20 });
@@ -413,7 +384,6 @@ test.describe('FIN · egresos y validaciones (rojos)', () => {
       actual: 'solo se valida que el campo no esté vacío y se crea 1 egreso',
     }),
     async ({ page }) => {
-      bug('FIN-10', 'ExpensesPage.tsx:118-121 solo valida !amount');
       await gotoDashboard(page);
       await page.getByLabel('Abrir más opciones').click();
       await page.getByLabel('Ir a Egresos').click();
@@ -448,10 +418,6 @@ test.describe('FIN · egresos y validaciones (rojos)', () => {
       actual: 'no se valida el saldo y la transferencia se crea',
     }),
     async ({ page }) => {
-      bug(
-        'FIN-11',
-        'paymentBalanceFormLogic.ts:55-79 no valida saldo; tasa 0 => Infinity (líneas 93,97)'
-      );
       await gotoDashboard(page);
       await openPaymentBalancePage(page);
       const before = await balanceAmount(page, 'Efectivo', 'final');
@@ -488,10 +454,6 @@ test.describe('FIN · egresos y validaciones (rojos)', () => {
         'el dashboard carga las ventas de todo el mes pero no los egresos, así que Neto Mes muestra Bs 2000 hasta que se visita ese día en Egresos',
     }),
     async ({ page }) => {
-      bug(
-        'FIN-12',
-        'useDashboardData.ts range loaders vs expenses store cache (see C4/C6)'
-      );
       // Arrange
       const today = todayVe();
       test.skip(today.endsWith('-01'), 'Yesterday falls in the previous month');
