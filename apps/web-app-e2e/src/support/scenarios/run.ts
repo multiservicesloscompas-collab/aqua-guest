@@ -8,6 +8,7 @@ import {
   createExpense,
   deleteExpense,
   editExpense,
+  openTipsModule,
   payPendingTip,
 } from '../drivers/expenseDriver';
 import {
@@ -214,20 +215,42 @@ export async function expectDashboard(
   expected: Expected,
   label: string
 ): Promise<void> {
-  const snapshot = await captureDashboardSnapshot(page);
   const at = `Después de «${label}»`;
-  expect(snapshot.mtdIncomeBs, `${at}: ingresos`).toBe(expected.incomeBs);
-  expect(snapshot.dayExpensesBs, `${at}: egresos`).toBe(expected.expenseBs);
-  expect(snapshot.dayNetBs, `${at}: neto del día`).toBe(expected.netBs);
-  expect(snapshot.transactionsCount, `${at}: transacciones`).toBe(
-    expected.transactions
-  );
-  for (const method of METHODS) {
-    expect(
-      snapshot.methodTotals[method],
-      `${at}: tarjeta de ${METHOD_LABEL[method]}`
-    ).toBe(expected.cards[method]);
-  }
+  // The store updates a moment after a save; retry the whole comparison so a
+  // stale read is not reported as a wrong figure. A real difference still fails.
+  await expect(async () => {
+    const snapshot = await captureDashboardSnapshot(page);
+    expect(snapshot.mtdIncomeBs, `${at}: ingresos`).toBe(expected.incomeBs);
+    expect(snapshot.dayExpensesBs, `${at}: egresos`).toBe(expected.expenseBs);
+    expect(snapshot.dayNetBs, `${at}: neto del día`).toBe(expected.netBs);
+    expect(snapshot.transactionsCount, `${at}: transacciones`).toBe(
+      expected.transactions
+    );
+    for (const method of METHODS) {
+      expect(
+        snapshot.methodTotals[method],
+        `${at}: tarjeta de ${METHOD_LABEL[method]}`
+      ).toBe(expected.cards[method]);
+    }
+  }).toPass({ timeout: 10_000, intervals: [500, 1_000, 2_000] });
+}
+
+/** The tips module must list as many pending and paid tips as the ledger says. */
+export async function expectTips(
+  page: Page,
+  expected: Expected,
+  label: string
+): Promise<void> {
+  await openTipsModule(page);
+  const at = `Después de «${label}»`;
+  await expect(
+    page.getByTestId('tips-summary-pending-count'),
+    `${at}: propinas pendientes`
+  ).toHaveText(String(expected.pendingTips));
+  await expect(
+    page.getByTestId('tips-summary-paid-count'),
+    `${at}: propinas pagadas`
+  ).toHaveText(String(expected.paidTips));
 }
 
 export async function runScenario(
@@ -254,10 +277,8 @@ export async function runScenario(
   for (const step of scenario.steps) {
     await runStep(state, step);
     state.ledger = applyStep(state.ledger, step);
-    await expectDashboard(
-      page,
-      computeExpected(state.ledger),
-      describeStep(step)
-    );
+    const expected = computeExpected(state.ledger);
+    await expectDashboard(page, expected, describeStep(step));
+    await expectTips(page, expected, describeStep(step));
   }
 }

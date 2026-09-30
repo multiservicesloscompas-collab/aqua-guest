@@ -128,6 +128,9 @@ export async function editWaterSale(
   await page.getByTestId(`sale-edit-trigger-${saleId}`).click();
   const sheet = page.getByRole('dialog');
   await expect(sheet.getByText(/Editar Venta/)).toBeVisible();
+  // The form re-hydrates a moment after opening and overwrites what was typed
+  // (bug B10), so let it settle before editing.
+  await page.waitForTimeout(1_500);
 
   if (changes.baseBs !== undefined) {
     await sheet
