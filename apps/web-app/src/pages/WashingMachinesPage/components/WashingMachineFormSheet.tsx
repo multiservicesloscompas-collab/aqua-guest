@@ -75,6 +75,7 @@ export function WashingMachineFormSheet({
             <Label>Nombre / Identificador</Label>
             <Input
               placeholder="Ej: Lavadora #1"
+              data-testid="machine-form-name"
               value={name}
               onChange={(event) => onChangeName(event.target.value)}
               className="h-12"
@@ -86,6 +87,7 @@ export function WashingMachineFormSheet({
             <Input
               type="number"
               placeholder="Ej: 12"
+              data-testid="machine-form-kg"
               value={kg}
               onChange={(event) => onChangeKg(event.target.value)}
               className="h-12"
@@ -96,6 +98,7 @@ export function WashingMachineFormSheet({
             <Label>Marca</Label>
             <Input
               placeholder="Ej: Samsung"
+              data-testid="machine-form-brand"
               value={brand}
               onChange={(event) => onChangeBrand(event.target.value)}
               className="h-12"
@@ -105,7 +108,7 @@ export function WashingMachineFormSheet({
           <div className="space-y-2">
             <Label>Estado</Label>
             <Select value={status} onValueChange={onChangeStatus}>
-              <SelectTrigger className="h-12">
+              <SelectTrigger className="h-12" data-testid="machine-form-status">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -121,6 +124,7 @@ export function WashingMachineFormSheet({
           <Button
             onClick={onSubmit}
             disabled={isSaving}
+            data-testid="machine-form-submit"
             className="w-full h-12 mt-4"
           >
             {isSaving ? (

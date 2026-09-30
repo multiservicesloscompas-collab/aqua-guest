@@ -46,10 +46,16 @@ export function ConfirmDeleteDialog({
           <AlertDialogDescription>{description}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+          <AlertDialogCancel
+            disabled={isDeleting}
+            data-testid="confirm-delete-cancel"
+          >
+            Cancelar
+          </AlertDialogCancel>
           <AlertDialogAction
             onClick={onConfirm}
             disabled={isDeleting}
+            data-testid="confirm-delete-confirm"
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
           >
             {showSpinner ? (

@@ -53,6 +53,7 @@ export default function CustomersPage() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
             placeholder="Buscar cliente..."
+            data-testid="customers-search-input"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-10 h-12"
@@ -68,7 +69,7 @@ export default function CustomersPage() {
         {/* Customer List */}
         <div className="space-y-3">
           {filteredCustomers.length === 0 ? (
-            <Card className="border-dashed">
+            <Card className="border-dashed" data-testid="customers-empty-state">
               <CardContent className="py-8 text-center">
                 <User className="w-12 h-12 mx-auto text-muted-foreground/50 mb-2" />
                 <p className="text-muted-foreground">
@@ -80,7 +81,11 @@ export default function CustomersPage() {
             </Card>
           ) : (
             filteredCustomers.map((customer) => (
-              <Card key={customer.id} className="overflow-hidden">
+              <Card
+                key={customer.id}
+                className="overflow-hidden"
+                data-testid={`customer-row-${customer.id}`}
+              >
                 <CardContent className="p-4">
                   <div className="flex items-start justify-between">
                     <div className="space-y-2 flex-1">
@@ -107,6 +112,7 @@ export default function CustomersPage() {
                         size="icon"
                         className="text-muted-foreground hover:text-primary hover:bg-primary/10"
                         onClick={() => handleEdit(customer.id)}
+                        data-testid={`customer-edit-${customer.id}`}
                       >
                         <Pencil className="w-4 h-4" />
                       </Button>
@@ -115,6 +121,7 @@ export default function CustomersPage() {
                         size="icon"
                         className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                         onClick={() => setDeleteId(customer.id)}
+                        data-testid={`customer-delete-${customer.id}`}
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>
@@ -131,6 +138,7 @@ export default function CustomersPage() {
       <Button
         onClick={() => setShowAddSheet(true)}
         className="fixed bottom-20 right-4 h-14 w-14 rounded-full shadow-lg z-10"
+        data-testid="customers-add-fab"
       >
         <UserPlus className="w-6 h-6" />
       </Button>

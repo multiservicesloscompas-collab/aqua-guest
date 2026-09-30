@@ -101,6 +101,7 @@ export function ExpenseSheetForm({
           type="number"
           step="0.01"
           placeholder="0.00"
+          data-testid="expense-amount-input"
           value={amount}
           onChange={(e) => onAmountChange(e.target.value)}
           className="h-12 text-lg font-semibold border-border/60"
@@ -112,6 +113,7 @@ export function ExpenseSheetForm({
         <Label className="text-sm font-semibold">Descripción</Label>
         <Input
           placeholder="Ej: Compra de insumos"
+          data-testid="expense-description-input"
           value={description}
           onChange={(e) => onDescriptionChange(e.target.value)}
           className="h-12"
@@ -205,6 +207,7 @@ export function ExpenseSheetForm({
         <Label className="text-sm font-semibold">Notas (opcional)</Label>
         <Textarea
           placeholder="Detalles adicionales..."
+          data-testid="expense-notes-input"
           value={notes}
           onChange={(e) => onNotesChange(e.target.value)}
           className="h-16 resize-none"

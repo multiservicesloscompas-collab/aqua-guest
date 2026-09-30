@@ -51,7 +51,10 @@ export function PrepaidOrderCard({
   onDelete,
 }: PrepaidOrderCardProps) {
   return (
-    <div className="bg-card rounded-xl border p-4 space-y-3">
+    <div
+      className="bg-card rounded-xl border p-4 space-y-3"
+      data-testid={`prepaid-card-${order.id}`}
+    >
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
@@ -108,6 +111,7 @@ export function PrepaidOrderCard({
                 size="sm"
                 className="flex-1"
                 disabled={isMarkingDelivered}
+                data-testid={`prepaid-deliver-${order.id}`}
               >
                 <Check className="w-4 h-4 mr-1" />
                 Marcar Entregado
@@ -128,6 +132,7 @@ export function PrepaidOrderCard({
                 <AlertDialogAction
                   onClick={() => onMarkDelivered(order.id)}
                   disabled={isMarkingDelivered}
+                  data-testid="prepaid-deliver-confirm"
                 >
                   {isMarkingDelivered ? (
                     <Loader2 className="w-4 h-4 animate-spin mr-2" />
@@ -139,13 +144,23 @@ export function PrepaidOrderCard({
           </AlertDialog>
         )}
 
-        <Button variant="outline" size="sm" onClick={() => onEdit(order.id)}>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => onEdit(order.id)}
+          data-testid={`prepaid-edit-${order.id}`}
+        >
           <Edit className="w-4 h-4" />
         </Button>
 
         <ConfirmDeleteDialog
           trigger={
-            <Button variant="outline" size="sm" disabled={isDeleting}>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={isDeleting}
+              data-testid={`prepaid-delete-${order.id}`}
+            >
               <Trash2 className="w-4 h-4 text-destructive" />
             </Button>
           }

@@ -9,7 +9,10 @@ export function WashingMachinesEmptyState({
   onAdd,
 }: WashingMachinesEmptyStateProps) {
   return (
-    <div className="flex flex-col items-center justify-center py-16 text-center">
+    <div
+      className="flex flex-col items-center justify-center py-16 text-center"
+      data-testid="machines-empty-state"
+    >
       <WashingMachineIcon className="w-16 h-16 text-muted-foreground/30 mb-4" />
       <h3 className="text-lg font-medium text-muted-foreground">
         No hay lavadoras registradas
@@ -17,7 +20,11 @@ export function WashingMachinesEmptyState({
       <p className="text-sm text-muted-foreground/70 mt-1">
         Agrega tu primera lavadora para empezar
       </p>
-      <Button onClick={onAdd} className="mt-4 gap-2">
+      <Button
+        onClick={onAdd}
+        className="mt-4 gap-2"
+        data-testid="machines-empty-add-button"
+      >
         <Plus className="w-4 h-4" />
         Agregar lavadora
       </Button>

@@ -53,6 +53,7 @@ export function RentalCardHeader({
           <DropdownMenuTrigger asChild>
             <button
               onClick={(event) => event.stopPropagation()}
+              data-testid={`rental-status-trigger-${rental.id}`}
               className={cn(
                 'flex items-center gap-1 px-3 py-1 rounded-full border text-xs font-medium transition-all hover:opacity-80',
                 statusClassName

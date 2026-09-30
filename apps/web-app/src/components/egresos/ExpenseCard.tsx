@@ -71,6 +71,7 @@ export function ExpenseCard({
                 variant="ghost"
                 size="icon"
                 onClick={() => onEdit(expense)}
+                data-testid={`expense-card-edit-${expense.id}`}
                 className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/10"
               >
                 <Pencil className="w-4 h-4" />
@@ -80,6 +81,7 @@ export function ExpenseCard({
                   <Button
                     variant="ghost"
                     size="icon"
+                    data-testid={`expense-card-delete-${expense.id}`}
                     className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                   >
                     <Trash2 className="w-4 h-4" />

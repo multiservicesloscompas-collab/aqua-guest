@@ -16,7 +16,10 @@ export function ExpensesDayTotalCard({
             Total Egresos
           </span>
         </div>
-        <span className="text-xl font-extrabold text-destructive">
+        <span
+          className="text-xl font-extrabold text-destructive"
+          data-testid="expenses-day-total"
+        >
           Bs {totalExpenses.toFixed(2)}
         </span>
       </div>

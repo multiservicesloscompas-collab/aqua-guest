@@ -106,7 +106,7 @@ export function PrepaidFormSheet({
               value={paymentMethod}
               onValueChange={(v) => onPaymentMethodChange(v as PaymentMethod)}
             >
-              <SelectTrigger>
+              <SelectTrigger data-testid="prepaid-form-method">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -134,6 +134,7 @@ export function PrepaidFormSheet({
           <Button
             onClick={onSubmit}
             disabled={!customerName.trim() || !liters || saving}
+            data-testid="prepaid-form-submit"
             className="w-full"
             size="lg"
           >

@@ -38,6 +38,7 @@ export function ExpensesMobileHeaderControls({
       <button
         onClick={onToggleViewMode}
         title={isDayView ? 'Cambiar a vista semanal' : 'Volver a vista diaria'}
+        data-testid="expenses-view-toggle"
         className={cn(
           'w-full flex items-center justify-between p-4 rounded-[20px] transition-all duration-300',
           'bg-card border border-border/40 shadow-sm hover:shadow-md hover:border-primary/20 active:scale-[0.98]'

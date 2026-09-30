@@ -94,6 +94,7 @@ export function DashboardPage({
               subtitle={kpiPrimary.subtitle}
               icon={<Droplets className="w-5 h-5 text-primary-foreground" />}
               variant="primary"
+              dataTestId="dashboard-day-income"
             />
           </div>
         </TabletSectionGrid>
