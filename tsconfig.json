@@ -7,9 +7,6 @@
       "path": "./apps/web-app"
     },
     {
-      "path": "./libs/models"
-    },
-    {
       "path": "./apps/web-app-e2e"
     }
   ]
