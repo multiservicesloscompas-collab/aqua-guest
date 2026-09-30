@@ -11,6 +11,50 @@ import {
 } from 'date-fns';
 import { es } from 'date-fns/locale';
 
+function getBusinessHoursWindow(date: Date): {
+  openTime: Date;
+  closeTime: Date;
+} {
+  const isSunday = getDay(date) === 0;
+  const closeHour = isSunday
+    ? BUSINESS_HOURS.sundayCloseHour
+    : BUSINESS_HOURS.closeHour;
+
+  return {
+    openTime: setMinutes(setHours(new Date(date), BUSINESS_HOURS.openHour), 0),
+    closeTime: setMinutes(setHours(new Date(date), closeHour), 0),
+  };
+}
+
+/**
+ * Keeps a moment inside business hours. A moment before opening moves to
+ * opening time the same day; one after closing moves to opening time on the
+ * next working day.
+ */
+export function clampToBusinessHours(dateTime: Date): Date {
+  const { openTime, closeTime } = getBusinessHoursWindow(dateTime);
+
+  const isWithinBusinessHours =
+    !isBefore(dateTime, openTime) && !isAfter(dateTime, closeTime);
+  if (isWithinBusinessHours) {
+    return dateTime;
+  }
+
+  if (
+    BUSINESS_HOURS.workDays.includes(getDay(dateTime)) &&
+    isBefore(dateTime, openTime)
+  ) {
+    return openTime;
+  }
+
+  // Mover al siguiente día laboral a la hora de apertura
+  let nextDay = addDays(new Date(dateTime), 1);
+  while (!BUSINESS_HOURS.workDays.includes(getDay(nextDay))) {
+    nextDay = addDays(nextDay, 1);
+  }
+  return setMinutes(setHours(nextDay, BUSINESS_HOURS.openHour), 0);
+}
+
 export function calculatePickupTime(
   deliveryDate: Date,
   deliveryTime: string, // HH:mm
@@ -39,47 +83,17 @@ export function calculatePickupTime(
     deliveryDateTime.getTime() + shiftConfig.hours * 60 * 60 * 1000
   );
 
-  const pickupDay = getDay(pickupDateTime);
-  const isSunday = pickupDay === 0;
-  const openHour = BUSINESS_HOURS.openHour;
-  const closeHour = isSunday
-    ? BUSINESS_HOURS.sundayCloseHour
-    : BUSINESS_HOURS.closeHour;
-  const openTime = setMinutes(setHours(new Date(pickupDateTime), openHour), 0);
-  const closeTime = setMinutes(
-    setHours(new Date(pickupDateTime), closeHour),
-    0
-  );
+  const { closeTime } = getBusinessHoursWindow(pickupDateTime);
 
   const isExceptionDelivery =
     deliveryTime === '13:00' || deliveryTime === '14:00';
   const sameDay =
     format(pickupDateTime, 'yyyy-MM-dd') === format(deliveryDate, 'yyyy-MM-dd');
 
-  const isWithinBusinessHours =
-    !isBefore(pickupDateTime, openTime) && !isAfter(pickupDateTime, closeTime);
-
-  if (!isWithinBusinessHours) {
-    if (isExceptionDelivery && sameDay && isAfter(pickupDateTime, closeTime)) {
-      pickupDateTime = setMinutes(setHours(deliveryDate, 20), 0);
-    } else {
-      if (
-        BUSINESS_HOURS.workDays.includes(pickupDay) &&
-        isBefore(pickupDateTime, openTime)
-      ) {
-        pickupDateTime = openTime;
-      } else {
-        // Mover al siguiente día laboral a la hora de apertura
-        let nextDay = addDays(new Date(pickupDateTime), 1);
-        while (!BUSINESS_HOURS.workDays.includes(getDay(nextDay))) {
-          nextDay = addDays(nextDay, 1);
-        }
-        pickupDateTime = setMinutes(
-          setHours(nextDay, BUSINESS_HOURS.openHour),
-          0
-        );
-      }
-    }
+  if (isExceptionDelivery && sameDay && isAfter(pickupDateTime, closeTime)) {
+    pickupDateTime = setMinutes(setHours(deliveryDate, 20), 0);
+  } else {
+    pickupDateTime = clampToBusinessHours(pickupDateTime);
   }
 
   return {
