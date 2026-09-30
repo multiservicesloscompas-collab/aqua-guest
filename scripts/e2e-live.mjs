@@ -18,6 +18,7 @@ import {
   displayName,
   estimate,
   formatDuration,
+  isBugTest,
   listTests,
   loadTimings,
   missingParts,
@@ -49,17 +50,28 @@ const FULL_FICHAS_UP_TO = 3;
 
 // ------------------------------------------------------------- running
 
-function buildRun(selected, options) {
-  const { paths, grep } = selectionArgs(selected);
-  const args = ['test', '-c', MAIN_CONFIG, '--project=chromium', '--workers=1'];
-  if (options.headed) args.push('--headed');
-  if (options.debug) args.push('--debug');
-  args.push(...paths, '-g', grep);
-  const env = { E2E_NARRATE: '1', ...options.extraEnv };
-  if (options.slowMo > 0 && (options.headed || options.debug)) {
-    env.SLOWMO = String(options.slowMo);
-  }
-  return { args, env };
+/** One Playwright run per project: the bugs project has its own config and meaning. */
+function buildRuns(selected, options) {
+  const projects = [...new Set(selected.map((test) => test.project))];
+  return projects.map((project) => {
+    const group = selected.filter((test) => test.project === project);
+    const { paths, grep } = selectionArgs(group);
+    const args = [
+      'test',
+      '-c',
+      MAIN_CONFIG,
+      `--project=${project}`,
+      '--workers=1',
+    ];
+    if (options.headed) args.push('--headed');
+    if (options.debug) args.push('--debug');
+    args.push(...paths, '-g', grep);
+    const env = { E2E_NARRATE: '1', ...options.extraEnv };
+    if (options.slowMo > 0 && (options.headed || options.debug)) {
+      env.SLOWMO = String(options.slowMo);
+    }
+    return { project, args, env };
+  });
 }
 
 function describeMode(options) {
@@ -117,16 +129,18 @@ async function afterRun(prompter, mode) {
 
 async function execute({ selected, options, prompter, yes, printOnly, after }) {
   const timings = loadTimings();
-  const { args, env } = buildRun(selected, options);
+  const runs = buildRuns(selected, options);
   if (printOnly) {
-    const prefix = Object.entries(env)
-      .map(([k, v]) => `${k}=${v} `)
-      .join('');
-    console.log(
-      `${prefix}npx playwright ${args
-        .map((a) => (/\s/.test(a) ? JSON.stringify(a) : a))
-        .join(' ')}`
-    );
+    for (const { args, env } of runs) {
+      const prefix = Object.entries(env)
+        .map(([k, v]) => `${k}=${v} `)
+        .join('');
+      console.log(
+        `${prefix}npx playwright ${args
+          .map((a) => (/\s/.test(a) ? JSON.stringify(a) : a))
+          .join(' ')}`
+      );
+    }
     return 0;
   }
   printPlan(selected, options, timings);
@@ -139,10 +153,26 @@ async function execute({ selected, options, prompter, yes, printOnly, after }) {
       return 0;
     }
   }
-  const code = await playwright(args, env);
-  console.log(
-    code === 0 ? green('✔ Todo en verde') : red(`✘ Falló (código ${code})`)
-  );
+  let code = 0;
+  for (const run of runs) {
+    const result = await playwright(run.args, run.env);
+    if (run.project === 'bugs') {
+      console.log(
+        yellow(
+          result === 0
+            ? '¡Todo pasó! Si había bugs en la lista, revisa si ya están corregidos.'
+            : 'Los bugs conocidos fallan a propósito y los controles deben pasar: revisa el ✔/✘ de cada test arriba.'
+        )
+      );
+    } else {
+      code ||= result;
+      console.log(
+        result === 0
+          ? green('✔ Todo en verde')
+          : red(`✘ Falló (código ${result})`)
+      );
+    }
+  }
   await afterRun(yes && !after ? null : prompter, after);
   return code;
 }
@@ -153,9 +183,10 @@ async function pickTests(prompter, tests, title) {
   console.log(`\n${bold(title)}${renderList(tests)}`);
   const text = await ask(
     prompter,
-    '\nElige: un número (3), varios (3,5), rango (3-6), a = todos, Enter = volver: '
+    '\nElige: un número (3), varios (3,5), rango (3-6), a = todos menos los bugs, Enter = volver: '
   );
   if (text === '' || text.toLowerCase() === 'q') return [];
+  if (text.toLowerCase() === 'a') return tests.filter((t) => !isBugTest(t));
   const indexes = parseSelection(text, tests.length);
   if (!indexes) {
     console.log(red('Selección no válida.'));
@@ -247,7 +278,8 @@ async function menu(prompter, tests, options) {
 // ----------------------------------------------------------------- cli
 
 function selectFromFlags(args, tests) {
-  if (args.all) return { selected: tests };
+  if (args.all) return { selected: tests.filter((t) => !isBugTest(t)) };
+  if (args.bugs) return { selected: tests.filter(isBugTest) };
   const byFile = args.specs.length > 0 ? args.specs : null;
   const unknown = (byFile ?? []).filter(
     (id) => !tests.some((t) => t.fileId === id)
@@ -321,7 +353,7 @@ async function main() {
     return;
   }
 
-  const wantsRun = args.all || args.specs.length > 0 || args.test;
+  const wantsRun = args.all || args.bugs || args.specs.length > 0 || args.test;
   if (wantsRun) {
     const { selected, error: selectError } = selectFromFlags(args, tests);
     if (selectError) {

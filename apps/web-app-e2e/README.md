@@ -90,6 +90,10 @@ test(
 
 Never assert a toast with a bare `getByText`: two identical toasts overlap for about 4 s and trigger a strict-mode violation. Use `expectToast` from `support/toasts.ts`, and prove the effect with a database check.
 
+### Known bugs (`npm run e2e:bugs`)
+
+Specs in `src/tests/bugs/*.bugs.e2e.spec.ts` (project `bugs`) assert the CORRECT behavior, so they are red until the bug is fixed; each has a `.md` with the user action, expected, actual and root cause, and a `bugDoc()` ficha (`support/bugs/ficha.ts`). Controls (`control: true`) pin nearby behavior that already works and must stay green. They are not part of `npm run e2e:web-app`. Run them from the runner with `npm run e2e:live -- --bugs` (or pick them in the menu, they are listed after the business areas). Follow the bug flow in `docs/agents/workflow.md`: red e2e, the user confirms, then fix.
+
 ### Scenarios (combined movements)
 
 `src/support/scenarios` describes what a person can do in the app as plain-data steps: `sale`, `rental`, `expense`, `transfer`, `payTip`, `markPaid`, `edit`, `delete`. Sales and rentals take a simple or mixed payment and an optional tip; editing is limited to records with a simple payment and no tip (tip edits are the known bug B3). Prepaid orders and rental extensions are deliberately not covered (features expected to go away).

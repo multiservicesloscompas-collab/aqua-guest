@@ -23,6 +23,7 @@ const TIMINGS_FILE = path.join(
 );
 const DEFAULT_SECONDS = 15;
 const INTERNAL_AREA = 'Herramientas de prueba (internas)';
+export const isBugTest = (test) => test.project === 'bugs';
 
 export const displayName = (test) => test.doc.titulo || test.fullTitle;
 
@@ -46,14 +47,7 @@ function parseDoc(annotations = []) {
 /** Every test of the chromium project with its documentation. */
 export function listTests(env = {}) {
   const result = playwright(
-    [
-      'test',
-      '-c',
-      MAIN_CONFIG,
-      '--project=chromium',
-      '--list',
-      '--reporter=json',
-    ],
+    ['test', '-c', MAIN_CONFIG, '--list', '--reporter=json'],
     env,
     { capture: true }
   );
@@ -77,6 +71,7 @@ export function listTests(env = {}) {
         line: spec.line,
         title: spec.title,
         fullTitle,
+        project: spec.tests[0]?.projectName ?? 'chromium',
         doc: parseDoc(spec.tests[0]?.annotations),
         timingKey: `${TESTS_DIR}/${spec.file}::${fullTitle}`,
       });
@@ -91,7 +86,11 @@ export function listTests(env = {}) {
     if (!areaOrder.includes(test.doc.area)) areaOrder.push(test.doc.area);
   });
   const rank = (test) =>
-    test.doc.area === INTERNAL_AREA ? 1000 : areaOrder.indexOf(test.doc.area);
+    test.doc.area === INTERNAL_AREA
+      ? 1000
+      : isBugTest(test)
+      ? 900
+      : areaOrder.indexOf(test.doc.area);
   tests.sort((a, b) => rank(a) - rank(b));
   return {
     tests,

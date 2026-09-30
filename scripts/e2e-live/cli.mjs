@@ -4,6 +4,7 @@ export function parseArgs(argv) {
   const out = {
     specs: [],
     all: false,
+    bugs: false,
     list: false,
     yes: false,
     help: false,
@@ -28,6 +29,7 @@ export function parseArgs(argv) {
       out.explain = next && !next.startsWith('--') ? argv[(i += 1)] : 'all';
     } else if (arg === '--check') out.check = true;
     else if (arg === '--all') out.all = true;
+    else if (arg === '--bugs') out.bugs = true;
     else if (arg === '--list') out.list = true;
     else if (arg === '--scenario') out.scenario = argv[(i += 1)];
     else if (arg === '--yes') out.yes = true;
@@ -51,7 +53,8 @@ Uso: npm run e2e:live [-- opciones]
   --explain [texto|all]   imprime la ficha (qué prueba y qué espera) sin ejecutar
   --check                 falla si algún test no tiene ficha completa
   --list                  lista de tests con su frase de "qué prueba" y la base local
-  --all                   toda la suite
+  --all                   toda la suite (sin los bugs conocidos)
+  --bugs                  los bugs conocidos y sus controles (los bugs fallan a propósito)
   --spec <archivo[,..]>   tests de uno o varios archivos (nombre sin .e2e.spec.ts)
   --test "<texto>"        tests cuyo título contiene el texto
   --headless              sin navegador visible (por defecto se ve)
