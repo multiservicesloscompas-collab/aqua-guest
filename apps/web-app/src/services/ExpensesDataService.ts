@@ -1,6 +1,8 @@
 import { supabase } from '@/lib/supabaseClient';
 import { Expense } from '@/types';
 import { getSafeTimestamp, normalizeTimestamp } from '@/lib/date-utils';
+import { getDatesInRange } from '@/services/DateService';
+import { DateKeyedLruCache } from '@/services/cache/DateKeyedLruCache';
 import { expensePaymentSplitAdapter } from '@/services/payments/paymentSplitSupabaseAdapters';
 import type { PaymentSplitRow } from '@/services/payments/paymentSplitSchemaContract';
 
@@ -52,45 +54,13 @@ export interface IExpensesDataService {
     endDate: string
   ): Promise<Map<string, Expense[]>>;
 }
-class ExpensesCache {
-  private cache: Map<string, Expense[]> = new Map();
-  private maxSize = 30;
-
-  set(date: string, expenses: Expense[]): void {
-    if (this.cache.size >= this.maxSize && !this.cache.has(date)) {
-      const oldestKey = this.cache.keys().next().value;
-      if (oldestKey) {
-        this.cache.delete(oldestKey);
-      }
-    }
-    this.cache.set(date, expenses);
-  }
-
-  get(date: string): Expense[] | null {
-    return this.cache.get(date) || null;
-  }
-
-  has(date: string): boolean {
-    return this.cache.has(date);
-  }
-
-  clear(): void {
-    this.cache.clear();
-  }
-
-  delete(date: string): boolean {
-    return this.cache.delete(date);
-  }
-
-  keys(): IterableIterator<string> {
-    return this.cache.keys();
-  }
-}
 
 export class ExpensesDataService implements IExpensesDataService {
-  private expensesCache: ExpensesCache;
+  private expensesCache: DateKeyedLruCache<Expense>;
 
-  constructor(expensesCache: ExpensesCache = new ExpensesCache()) {
+  constructor(
+    expensesCache: DateKeyedLruCache<Expense> = new DateKeyedLruCache<Expense>()
+  ) {
     this.expensesCache = expensesCache;
   }
 
@@ -184,18 +154,7 @@ export class ExpensesDataService implements IExpensesDataService {
     endDate: string
   ): Promise<Map<string, Expense[]>> {
     const results = new Map<string, Expense[]>();
-    const datesInRange: string[] = [];
-
-    const current = new Date(startDate + 'T12:00:00');
-    const end = new Date(endDate + 'T12:00:00');
-
-    while (current <= end) {
-      const y = current.getFullYear();
-      const m = String(current.getMonth() + 1).padStart(2, '0');
-      const d = String(current.getDate()).padStart(2, '0');
-      datesInRange.push(`${y}-${m}-${d}`);
-      current.setDate(current.getDate() + 1);
-    }
+    const datesInRange = getDatesInRange(startDate, endDate);
 
     const allCached = datesInRange.every((d) => this.expensesCache.has(d));
 

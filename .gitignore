@@ -64,3 +64,5 @@ testsprite_tests/*
 .temp
 supabase/
 .codegraph/
+# Local audit notes (kept on disk only, not versioned)
+docs/audit/

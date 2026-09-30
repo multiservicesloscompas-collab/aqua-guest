@@ -1,9 +1,3 @@
-/**
- * PrepaidOrderCard.tsx
- * Renders a single prepaid order with actions.
- */
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -15,16 +9,19 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Droplets, Edit, Trash2, Check, Loader2 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { ConfirmDeleteDialog } from '@/components/ui/ConfirmDeleteDialog';
+import { cn } from '@/lib/utils';
 import {
   PaymentMethodLabels,
-  PrepaidStatusLabels,
-  PrepaidStatusColors,
   PrepaidOrder,
+  PrepaidStatusColors,
+  PrepaidStatusLabels,
 } from '@/types';
-import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { Check, Droplets, Edit, Loader2, Trash2 } from 'lucide-react';
 
 interface PrepaidOrderCardProps {
   order: PrepaidOrder;
@@ -54,7 +51,10 @@ export function PrepaidOrderCard({
   onDelete,
 }: PrepaidOrderCardProps) {
   return (
-    <div className="bg-card rounded-xl border p-4 space-y-3">
+    <div
+      className="bg-card rounded-xl border p-4 space-y-3"
+      data-testid={`prepaid-card-${order.id}`}
+    >
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
@@ -111,6 +111,7 @@ export function PrepaidOrderCard({
                 size="sm"
                 className="flex-1"
                 disabled={isMarkingDelivered}
+                data-testid={`prepaid-deliver-${order.id}`}
               >
                 <Check className="w-4 h-4 mr-1" />
                 Marcar Entregado
@@ -131,6 +132,7 @@ export function PrepaidOrderCard({
                 <AlertDialogAction
                   onClick={() => onMarkDelivered(order.id)}
                   disabled={isMarkingDelivered}
+                  data-testid="prepaid-deliver-confirm"
                 >
                   {isMarkingDelivered ? (
                     <Loader2 className="w-4 h-4 animate-spin mr-2" />
@@ -142,41 +144,32 @@ export function PrepaidOrderCard({
           </AlertDialog>
         )}
 
-        <Button variant="outline" size="sm" onClick={() => onEdit(order.id)}>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => onEdit(order.id)}
+          data-testid={`prepaid-edit-${order.id}`}
+        >
           <Edit className="w-4 h-4" />
         </Button>
 
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <Button variant="outline" size="sm" disabled={isDeleting}>
+        <ConfirmDeleteDialog
+          trigger={
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={isDeleting}
+              data-testid={`prepaid-delete-${order.id}`}
+            >
               <Trash2 className="w-4 h-4 text-destructive" />
             </Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>¿Eliminar pedido?</AlertDialogTitle>
-              <AlertDialogDescription>
-                Esta acción no se puede deshacer.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel disabled={isDeleting}>
-                Cancelar
-              </AlertDialogCancel>
-              <AlertDialogAction
-                onClick={() => onDelete(order.id)}
-                disabled={isDeleting}
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              >
-                {isDeleting && deletingId === order.id ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  'Eliminar'
-                )}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+          }
+          title="¿Eliminar pedido?"
+          description="Esta acción no se puede deshacer."
+          onConfirm={() => onDelete(order.id)}
+          isDeleting={isDeleting}
+          showSpinner={isDeleting && deletingId === order.id}
+        />
       </div>
     </div>
   );

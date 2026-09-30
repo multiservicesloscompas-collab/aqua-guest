@@ -2,8 +2,8 @@ import { expect, type Page } from '@playwright/test';
 import type { ExpectedLedger, MatrixScenario, TipScenarioState } from './types';
 import {
   type DashboardSnapshot,
-  openTipsModule,
   openExpensesModule,
+  openTipsModule,
   openTransactionsModule,
   openWaterSalesFromBottomNav,
 } from './uiHelpers';
@@ -85,38 +85,53 @@ export async function assertTipsModule(page: Page, ledger: ExpectedLedger) {
 
 export async function assertExpensesModuleForPaidTips(input: {
   page: Page;
-  paidTipsCount: number;
+  paidTipIds: readonly string[];
 }) {
   await openExpensesModule(input.page);
 
-  const payoutRows = input.page.getByTestId(/^expense-kind-pago-de-propina-/);
-  await expect(payoutRows).toHaveCount(input.paidTipsCount);
+  for (const tipId of input.paidTipIds) {
+    await expect(
+      input.page.getByTestId(`expense-kind-pago-de-propina-tip-payout:${tipId}`)
+    ).toHaveCount(1);
+  }
+}
+
+export function expectedTransactionRowsForSale(
+  splits: ReadonlyArray<{ method: string; amountBs: number }>
+): number {
+  const allPositive = splits.every(
+    (split) => Number.isFinite(split.amountBs) && split.amountBs > 0
+  );
+  const distinctMethods = new Set(splits.map((split) => split.method)).size;
+
+  return splits.length >= 2 && allPositive && distinctMethods >= 2
+    ? splits.length
+    : 1;
 }
 
 export async function assertTransactionsRows(input: {
   page: Page;
-  saleDailyNumbers: Array<number | null>;
-  paidTipsCount: number;
+  sales: Array<{ dailyNumber: number | null; expectedRows: number }>;
+  paidTipIds: readonly string[];
 }) {
-  const { page, saleDailyNumbers, paidTipsCount } = input;
+  const { page, sales, paidTipIds } = input;
   await openTransactionsModule(page);
 
-  for (const dailyNumber of saleDailyNumbers) {
+  for (const { dailyNumber, expectedRows } of sales) {
     if (!dailyNumber) {
       continue;
     }
-
+    
     await expect(
-      page.locator('[data-testid^="transaction-row-"]', {
-        hasText: `Venta de Agua #${dailyNumber}`,
+      page.locator('[data-testid^="transaction-row-"]').filter({
+        has: page.getByText(`Venta de Agua #${dailyNumber}`, { exact: true }),
       })
-    ).toHaveCount(1);
+    ).toHaveCount(expectedRows);
   }
 
-  const tipPayoutRows = page.locator('[data-testid^="transaction-row-"]', {
-    hasText: 'Pago de Propina',
-  });
-  await expect(tipPayoutRows).toHaveCount(paidTipsCount);
+  for (const tipId of paidTipIds) {
+    await expect(page.getByTestId(`transaction-row-${tipId}`)).toHaveCount(1);
+  }
 }
 
 function tipStateForScenario(scenario: MatrixScenario): TipScenarioState {

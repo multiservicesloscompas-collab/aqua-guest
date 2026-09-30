@@ -1,14 +1,4 @@
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import { Loader2 } from 'lucide-react';
+import { ConfirmDeleteDialog } from '@/components/ui/ConfirmDeleteDialog';
 
 interface DeleteMachineDialogProps {
   open: boolean;
@@ -26,30 +16,13 @@ export function DeleteMachineDialog({
   isDeleting,
 }: DeleteMachineDialogProps) {
   return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Eliminar lavadora</AlertDialogTitle>
-          <AlertDialogDescription>
-            ¿Estás seguro de eliminar "{machineName}"? Esta acción no se puede
-            deshacer.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>Cancelar</AlertDialogCancel>
-          <AlertDialogAction
-            onClick={onConfirm}
-            disabled={isDeleting}
-            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-          >
-            {isDeleting ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              'Eliminar'
-            )}
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+    <ConfirmDeleteDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title="Eliminar lavadora"
+      description={`¿Estás seguro de eliminar "${machineName}"? Esta acción no se puede deshacer.`}
+      onConfirm={onConfirm}
+      isDeleting={isDeleting}
+    />
   );
 }

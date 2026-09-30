@@ -127,6 +127,79 @@ describe('paymentBalanceEnqueue', () => {
     expect(Number(queue[0].payload.difference_usd)).toBeCloseTo(-0.2, 10);
   });
 
+  describe('amount normalization trigger', () => {
+    const existing = {
+      id: 'payment-balance-2',
+      date: '2026-03-09',
+      operationType: 'avance' as const,
+      fromMethod: 'pago_movil' as const,
+      toMethod: 'efectivo' as const,
+      amount: 1000,
+      amountBs: 1000,
+      amountUsd: 20,
+      amountOutBs: 1000,
+      amountOutUsd: 20,
+      amountInBs: 980,
+      amountInUsd: 19.6,
+      differenceBs: -20,
+      differenceUsd: -0.4,
+      createdAt: '2026-03-09T00:00:00.000Z',
+      updatedAt: '2026-03-09T00:00:00.000Z',
+    };
+
+    it('does not add normalized amounts when no amount field changes', () => {
+      // Arrange
+      const updates = { notes: 'Solo nota', date: '2026-03-10' };
+
+      // Act
+      enqueueOfflinePaymentBalanceUpdate(
+        existing.id,
+        updates,
+        '2026-03-09T01:00:00.000Z',
+        'paymentBalance/updatePaymentBalanceTransaction',
+        existing
+      );
+
+      // Assert
+      const payload = useSyncStore.getState().queue[0].payload;
+      expect(payload).toEqual({
+        id: existing.id,
+        notes: 'Solo nota',
+        date: '2026-03-10',
+        updated_at: '2026-03-09T01:00:00.000Z',
+      });
+    });
+
+    it.each([
+      ['amount', { amount: 1100 }],
+      ['amountBs', { amountBs: 1100 }],
+      ['amountUsd', { amountUsd: 22 }],
+      ['amountOutBs', { amountOutBs: 1100 }],
+      ['amountOutUsd', { amountOutUsd: 22 }],
+      ['amountInBs', { amountInBs: 1000 }],
+      ['amountInUsd', { amountInUsd: 20 }],
+      ['differenceBs', { differenceBs: -5 }],
+      ['differenceUsd', { differenceUsd: -0.1 }],
+    ])('adds normalized amounts when %s changes', (_field, updates) => {
+      // Arrange / Act
+      enqueueOfflinePaymentBalanceUpdate(
+        existing.id,
+        updates,
+        '2026-03-09T01:00:00.000Z',
+        'paymentBalance/updatePaymentBalanceTransaction',
+        existing
+      );
+
+      // Assert
+      const payload = useSyncStore.getState().queue[0].payload;
+      expect(payload).toHaveProperty('amount');
+      expect(payload).toHaveProperty('amount_bs');
+      expect(payload).toHaveProperty('amount_out_bs');
+      expect(payload).toHaveProperty('amount_in_bs');
+      expect(payload).toHaveProperty('difference_bs');
+    });
+  });
+
   it('enqueues update/delete with temp dependency key', () => {
     const tempId = 'temp-payment-balance-1';
 

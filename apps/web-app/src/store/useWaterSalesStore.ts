@@ -1,13 +1,7 @@
-/**
- * useWaterSalesStore.ts
- * Thin Zustand store barrel — wires together types from .core and
- * action implementations from .actions. All consumers can import
- * from this file and nothing breaks.
- */
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { Sale } from '@/types';
-import { dateService } from '@/services/DateService';
+import { dateService, getDatesInRange } from '@/services/DateService';
 import {
   DateFilterStrategy,
   SalesFilterService,
@@ -225,16 +219,7 @@ export const useWaterSalesStore = create<WaterSalesState>()(
         }));
 
         try {
-          const dates: string[] = [];
-          const current = new Date(startDate + 'T12:00:00');
-          const end = new Date(endDate + 'T12:00:00');
-          while (current <= end) {
-            const y = current.getFullYear();
-            const m = String(current.getMonth() + 1).padStart(2, '0');
-            const d = String(current.getDate()).padStart(2, '0');
-            dates.push(`${y}-${m}-${d}`);
-            current.setDate(current.getDate() + 1);
-          }
+          const dates = getDatesInRange(startDate, endDate);
 
           if (dates.length === 0) return;
 

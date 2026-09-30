@@ -1,6 +1,8 @@
 import { supabase } from '@/lib/supabaseClient';
 import { CartItem, PaymentMethod, Sale } from '@/types';
 import { getSafeTimestamp, normalizeTimestamp } from '@/lib/date-utils';
+import { getDatesInRange } from '@/services/DateService';
+import { DateKeyedLruCache } from '@/services/cache/DateKeyedLruCache';
 import {
   PAYMENT_SPLIT_SCHEMA,
   type PaymentSplitRow,
@@ -72,46 +74,12 @@ export interface ISalesDataService {
   ): Promise<Map<string, Sale[]>>;
 }
 
-class SalesCache {
-  private cache: Map<string, Sale[]> = new Map();
-  private maxSize = 30; // Caché hasta 30 días
-
-  set(date: string, sales: Sale[]): void {
-    // Implementar política de tamaño máximo (LRU simple)
-    if (this.cache.size >= this.maxSize && !this.cache.has(date)) {
-      const oldestKey = this.cache.keys().next().value;
-      if (oldestKey) {
-        this.cache.delete(oldestKey);
-      }
-    }
-    this.cache.set(date, sales);
-  }
-
-  get(date: string): Sale[] | null {
-    return this.cache.get(date) || null;
-  }
-
-  has(date: string): boolean {
-    return this.cache.has(date);
-  }
-
-  clear(): void {
-    this.cache.clear();
-  }
-
-  delete(date: string): boolean {
-    return this.cache.delete(date);
-  }
-
-  keys(): IterableIterator<string> {
-    return this.cache.keys();
-  }
-}
-
 export class SalesDataService implements ISalesDataService {
-  private salesCache: SalesCache;
+  private salesCache: DateKeyedLruCache<Sale>;
 
-  constructor(salesCache: SalesCache = new SalesCache()) {
+  constructor(
+    salesCache: DateKeyedLruCache<Sale> = new DateKeyedLruCache<Sale>()
+  ) {
     this.salesCache = salesCache;
   }
 
@@ -211,18 +179,7 @@ export class SalesDataService implements ISalesDataService {
     endDate: string
   ): Promise<Map<string, Sale[]>> {
     const results = new Map<string, Sale[]>();
-    const datesInRange: string[] = [];
-
-    const current = new Date(startDate + 'T12:00:00');
-    const end = new Date(endDate + 'T12:00:00');
-
-    while (current <= end) {
-      const y = current.getFullYear();
-      const m = String(current.getMonth() + 1).padStart(2, '0');
-      const d = String(current.getDate()).padStart(2, '0');
-      datesInRange.push(`${y}-${m}-${d}`);
-      current.setDate(current.getDate() + 1);
-    }
+    const datesInRange = getDatesInRange(startDate, endDate);
 
     const allCached = datesInRange.every((d) => this.salesCache.has(d));
 

@@ -1,6 +1,7 @@
 import { BarChart3, Droplets } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useConfigStore } from '@/store/useConfigStore';
+import { CurrencyFormatter } from '@/services/CurrencyService';
 import { LiterBreakdown } from '../hooks/useWaterMetricsViewModel';
 
 interface WaterMetricsBreakdownListProps {
@@ -60,11 +61,7 @@ export function WaterMetricsBreakdownList({
                   </div>
                   <div className="text-right">
                     <p className="font-bold text-foreground">
-                      Bs{' '}
-                      {item.totalBs.toLocaleString('es-VE', {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
+                      {CurrencyFormatter.formatBsWithSymbol(item.totalBs)}
                     </p>
                     <p className="text-xs text-muted-foreground">
                       $

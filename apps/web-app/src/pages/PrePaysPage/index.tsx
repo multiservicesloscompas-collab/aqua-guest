@@ -48,6 +48,7 @@ export function PrePaysPage() {
             variant={filterStatus === 'pendiente' ? 'default' : 'outline'}
             size="sm"
             onClick={() => setFilterStatus('pendiente')}
+            data-testid="prepaid-filter-pending"
             className="flex-1"
           >
             Pendientes ({pendingCount})
@@ -56,6 +57,7 @@ export function PrePaysPage() {
             variant={filterStatus === 'entregado' ? 'default' : 'outline'}
             size="sm"
             onClick={() => setFilterStatus('entregado')}
+            data-testid="prepaid-filter-delivered"
             className="flex-1"
           >
             {PrepaidStatusLabels['entregado']}
@@ -64,6 +66,7 @@ export function PrePaysPage() {
             variant={filterStatus === 'todos' ? 'default' : 'outline'}
             size="sm"
             onClick={() => setFilterStatus('todos')}
+            data-testid="prepaid-filter-all"
             className="flex-1"
           >
             Todos
@@ -72,7 +75,10 @@ export function PrePaysPage() {
 
         {/* Orders List */}
         {filteredOrders.length === 0 ? (
-          <div className="text-center py-12 text-muted-foreground">
+          <div
+            className="text-center py-12 text-muted-foreground"
+            data-testid="prepaid-empty-state"
+          >
             <Droplets className="w-12 h-12 mx-auto mb-4 opacity-50" />
             <p>
               No hay pedidos{' '}
@@ -104,6 +110,7 @@ export function PrePaysPage() {
       {/* FAB */}
       <Button
         onClick={handleOpenSheet}
+        data-testid="prepaid-add-fab"
         className="fixed bottom-24 right-4 w-14 h-14 rounded-full shadow-lg z-40"
         size="icon"
       >

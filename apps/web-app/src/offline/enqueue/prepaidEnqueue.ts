@@ -1,5 +1,7 @@
 import type { PrepaidOrder } from '@/types';
 import { useSyncStore } from '@/store/useSyncStore';
+import { generateTempId } from './tempId';
+import { enqueueEntityDelete } from './commonEnqueue';
 
 interface EnqueueOfflinePrepaidCreateInput {
   payload: Record<string, unknown>;
@@ -14,9 +16,6 @@ interface EnqueueOfflinePrepaidUpdateInput {
   payload: Record<string, unknown>;
   actionSource?: string;
 }
-
-const generateTempId = () =>
-  `temp-${Math.random().toString(36).substring(2, 15)}`;
 
 const buildEntityBusinessKey = (id: string) => `prepaid:${id}`;
 
@@ -63,15 +62,10 @@ export const enqueueOfflinePrepaidUpdate = (
 export const enqueueOfflinePrepaidDelete = (
   id: string,
   actionSource = 'prepaid/deletePrepaidOrder'
-) => {
-  const businessKey = buildEntityBusinessKey(id);
-
-  useSyncStore.getState().addToQueue({
-    type: 'DELETE',
+) =>
+  enqueueEntityDelete({
     table: 'prepaid_orders',
-    payload: { id },
-    enqueueSource: actionSource,
-    businessKey,
-    dependencyKeys: id.startsWith('temp-') ? [businessKey] : undefined,
+    id,
+    businessKey: buildEntityBusinessKey(id),
+    actionSource,
   });
-};

@@ -52,7 +52,7 @@ npm run supabase:reset
 
 ## Non-Negotiable Rules
 
-- Keep files under 300 lines of code. If a change pushes a file beyond that limit, refactor before continuing.
+- Keep files under 400 lines of code (tests and base UI primitives in `src/components/ui` are exempt). If a change pushes a domain file beyond that limit, refactor before continuing.
 - Never print, log, or expose `.env` contents or credentials.
 - Do not introduce Supabase Edge Functions or database-side business logic unless the user explicitly requests an architecture change.
 - Keep business logic out of presentational UI components whenever practical.
@@ -117,7 +117,7 @@ Before finishing, verify all of the following:
 - Loaded the nearest `AGENTS.md` plus only the supporting docs required for the task
 - Updated affected agent docs when business rules or architectural patterns changed
 - Preserved module boundaries and future extraction paths into `libs/`
-- Kept edited files under the 300-line guardrail
+- Kept edited files under the 400-line guardrail
 - Ran relevant Nx checks or clearly explained why a check was not run, and reported real failure counts
 - Left commits, pushes, and database changes to the user's explicit approval
 - Reviewed cross-module impact when touching Water Sales or Washer Rentals

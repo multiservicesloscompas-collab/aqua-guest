@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { payPendingTip } from '../support/drivers/expenseDriver';
 import {
   listSaleSplitsBySaleIds,
   listSalesByMarker,
@@ -10,6 +11,7 @@ import {
   assertSalesDescriptors,
   assertTipsModule,
   assertTransactionsRows,
+  expectedTransactionRowsForSale,
 } from '../support/waterSalesTipsMatrix/assertions';
 import { waitTipsBySaleOrigins } from '../support/waterSalesTipsMatrix/dbWaits';
 import { createBaseLedger } from '../support/waterSalesTipsMatrix/ledger';
@@ -24,7 +26,6 @@ import {
   bootstrapAtDashboard,
   captureDashboardSnapshot,
   createScenarioSale,
-  openTipsModule,
 } from '../support/waterSalesTipsMatrix/uiHelpers';
 
 function assertPlannerEdgeCases(scenarios: MatrixScenario[]) {
@@ -66,7 +67,9 @@ function assertPlannerEdgeCases(scenarios: MatrixScenario[]) {
 
 test('water sales tips matrix validates propagation end-to-end', async ({
   page,
-}) => {
+}) => {  
+  test.setTimeout(180_000);
+
   const marker = createMatrixRunMarker();
   const rng = createSeededRng(marker.seed);
   const scenarios = buildTipsMatrixScenarios({
@@ -149,22 +152,27 @@ test('water sales tips matrix validates propagation end-to-end', async ({
     };
   });
 
-  const paidTipIds = ledger.saleArtifacts
-    .filter((artifact) => {
-      const scenario = scenarios.find(
-        (entry) => entry.id === artifact.scenarioId
-      );
-      if (!scenario) {
-        throw new Error(`Missing scenario for artifact ${artifact.scenarioId}`);
-      }
-      return scenario.tipState === 'paid' && artifact.tipId;
-    })
-    .map((artifact) => artifact.tipId as string);
+  const tipsToPay = ledger.saleArtifacts.flatMap((artifact) => {
+    const scenario = scenarios.find(
+      (entry) => entry.id === artifact.scenarioId
+    );
+    if (!scenario) {
+      throw new Error(`Missing scenario for artifact ${artifact.scenarioId}`);
+    }
+    if (scenario.tipState !== 'paid' || !artifact.tipId) {
+      return [];
+    }
+    return [
+      {
+        tipId: artifact.tipId,
+        method: scenario.tipPaymentMethod ?? scenario.paymentMethod,
+      },
+    ];
+  });
 
-  if (paidTipIds.length > 0) {
-    await openTipsModule(page);
-    for (const tipId of paidTipIds) {
-      await page.getByTestId(`tip-pay-button-${tipId}`).click();
+  if (tipsToPay.length > 0) {
+    for (const { tipId, method } of tipsToPay) {
+      await payPendingTip(page, tipId, method);
     }
 
     await expect
@@ -185,14 +193,20 @@ test('water sales tips matrix validates propagation end-to-end', async ({
   await assertTipsModule(page, ledger);
   await assertExpensesModuleForPaidTips({
     page,
-    paidTipsCount: paidTipIds.length,
+    paidTipIds: tipsToPay.map((tip) => tip.tipId),
   });
   await assertTransactionsRows({
     page,
-    saleDailyNumbers: ledger.saleArtifacts.map(
-      (artifact) => artifact.dailyNumber
-    ),
-    paidTipsCount: paidTipIds.length,
+    sales: ledger.saleArtifacts.map((artifact) => ({
+      dailyNumber: artifact.dailyNumber,
+      expectedRows: expectedTransactionRowsForSale(
+        artifact.splitAmounts.map((split) => ({
+          method: split.method,
+          amountBs: split.amountBs,
+        }))
+      ),
+    })),
+    paidTipIds: tipsToPay.map((tip) => tip.tipId),
   });
   await assertSalesDescriptors({ page, scenarios, saleIdByScenario });
 

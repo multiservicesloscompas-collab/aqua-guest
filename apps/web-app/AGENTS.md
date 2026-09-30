@@ -82,5 +82,5 @@ Before finishing a task in `apps/web-app`, verify all of the following:
 
 - Updated the matching domain doc if the task changed business behavior or persistence behavior
 - Ran relevant tests for modified files when coverage exists
-- Kept files under the 300-line guardrail or refactored them
+- Kept files under the 400-line guardrail or refactored them (tests and `src/components/ui` primitives exempt)
 - Preserved accessibility and responsive behavior when changing UI

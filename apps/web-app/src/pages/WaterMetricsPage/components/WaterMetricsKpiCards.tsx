@@ -1,5 +1,6 @@
 import { Droplets, DollarSign, TrendingUp, Package } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
+import { CurrencyFormatter } from '@/services/CurrencyService';
 import { WaterMetrics } from '../hooks/useWaterMetricsViewModel';
 
 interface WaterMetricsKpiCardsProps {
@@ -52,11 +53,7 @@ export function WaterMetricsKpiCards({ metrics }: WaterMetricsKpiCardsProps) {
             </span>
           </div>
           <p className="text-2xl font-bold text-green-600">
-            Bs{' '}
-            {metrics.totalBs.toLocaleString('es-VE', {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2,
-            })}
+            {CurrencyFormatter.formatBsWithSymbol(metrics.totalBs)}
           </p>
         </CardContent>
       </Card>

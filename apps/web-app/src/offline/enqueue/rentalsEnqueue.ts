@@ -4,6 +4,7 @@ import type { PaymentSplit } from '@/types/paymentSplits';
 import { PAYMENT_SPLIT_SCHEMA } from '@/services/payments/paymentSplitSchemaContract';
 import { rentalPaymentSplitAdapter } from '@/services/payments/paymentSplitSupabaseAdapters';
 import { useSyncStore } from '@/store/useSyncStore';
+import { generateTempId } from './tempId';
 
 interface EnqueueOfflineRentalInput {
   payload: Record<string, unknown>;
@@ -22,9 +23,6 @@ interface EnqueueOfflineRentalDeleteInput {
   id: string;
   actionSource?: string;
 }
-
-const generateTempId = () =>
-  `temp-${Math.random().toString(36).substring(2, 15)}`;
 
 const buildRentalBusinessKey = (
   rental: Omit<WasherRental, 'id' | 'createdAt' | 'updatedAt'>

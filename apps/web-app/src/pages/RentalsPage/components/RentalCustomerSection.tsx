@@ -41,6 +41,7 @@ export function RentalCustomerSection({
         <button
           type="button"
           onClick={() => setIsSheetOpen(true)}
+          data-testid="rental-customer-trigger"
           className={cn(
             'w-full flex items-center justify-between p-4 rounded-[24px] transition-all duration-300',
             'bg-card border border-border hover:border-primary/50 shadow-sm active:scale-[0.98]'

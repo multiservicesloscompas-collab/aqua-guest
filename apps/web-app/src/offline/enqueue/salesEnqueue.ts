@@ -4,6 +4,7 @@ import type { PaymentSplit } from '@/types/paymentSplits';
 import { PAYMENT_SPLIT_SCHEMA } from '@/services/payments/paymentSplitSchemaContract';
 import { salePaymentSplitAdapter } from '@/services/payments/paymentSplitSupabaseAdapters';
 import { useSyncStore } from '@/store/useSyncStore';
+import { generateTempId } from './tempId';
 
 interface EnqueueOfflineSaleInput {
   newSalePayload: Record<string, unknown>;
@@ -31,9 +32,6 @@ interface EnqueueOfflineSaleDeleteInput {
   id: string;
   actionSource?: string;
 }
-
-const generateTempId = () =>
-  `temp-${Math.random().toString(36).substring(2, 15)}`;
 
 export const enqueueOfflineSale = (input: EnqueueOfflineSaleInput): Sale => {
   const tempId = generateTempId();
