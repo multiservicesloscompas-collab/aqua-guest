@@ -12,7 +12,7 @@ export default defineConfig({
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  workers: 1,
   timeout: 60_000,
   expect: {
     timeout: 15_000,
@@ -20,6 +20,11 @@ export default defineConfig({
   reporter: process.env.CI ? 'line' : 'list',
   use: {
     baseURL,
+    timezoneId: 'America/Caracas',
+    locale: 'es-VE',
+    launchOptions: {
+      slowMo: process.env.SLOWMO ? Number(process.env.SLOWMO) : 0,
+    },
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
@@ -33,6 +38,7 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
+      testIgnore: '**/bugs/**',
       use: {
         browserName: 'chromium',
         // Keep deterministic iPhone 14 defaults for local headed/debug runs.
@@ -41,6 +47,17 @@ export default defineConfig({
       },
       expect: {
         timeout: 15_000,
+      },
+    },
+    {
+      name: 'bugs',
+      testMatch: '**/bugs/**/*.bugs.e2e.spec.ts',
+      use: {
+        browserName: 'chromium',
+        ...IPHONE_14_DEFAULTS,
+      },
+      expect: {
+        timeout: 8_000,
       },
     },
   ],

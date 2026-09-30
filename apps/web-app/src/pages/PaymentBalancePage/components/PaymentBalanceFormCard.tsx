@@ -94,7 +94,7 @@ export function PaymentBalanceFormCard({
                 }))
               }
             >
-              <SelectTrigger>
+              <SelectTrigger data-testid="balance-from-method-select">
                 <SelectValue placeholder="Seleccionar método de origen" />
               </SelectTrigger>
               <SelectContent>
@@ -121,7 +121,7 @@ export function PaymentBalanceFormCard({
                 }))
               }
             >
-              <SelectTrigger>
+              <SelectTrigger data-testid="balance-to-method-select">
                 <SelectValue placeholder="Seleccionar método de destino" />
               </SelectTrigger>
               <SelectContent>
@@ -237,7 +237,12 @@ export function PaymentBalanceFormCard({
                 </Button>
               </>
             ) : (
-              <Button onClick={onAdd} disabled={isAdding} className="w-full">
+              <Button
+                onClick={onAdd}
+                disabled={isAdding}
+                data-testid="balance-transfer-submit"
+                className="w-full"
+              >
                 {isAdding ? (
                   <Loader2 className="w-4 h-4 animate-spin mr-2" />
                 ) : (

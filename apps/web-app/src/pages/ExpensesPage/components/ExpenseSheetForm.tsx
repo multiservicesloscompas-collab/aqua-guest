@@ -215,6 +215,7 @@ export function ExpenseSheetForm({
       <Button
         onClick={onSubmit}
         disabled={!description || !amount || isSaving}
+        data-testid="expense-submit-button"
         className="w-full h-14 text-base font-bold bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-xl mt-4"
       >
         {isSaving ? (

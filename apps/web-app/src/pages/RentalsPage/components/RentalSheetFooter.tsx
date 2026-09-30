@@ -38,6 +38,7 @@ export function RentalSheetFooter({
       <Button
         onClick={onSubmit}
         disabled={isSaving}
+        data-testid="rental-confirm-button"
         className="w-full h-12 text-base font-semibold"
         style={{
           marginBottom: '4rem',

@@ -60,6 +60,9 @@ Load shared docs from the repository root only when the task needs them.
 | Frontend structure and state ownership | `docs/agents/frontend-web-app.md` | React architecture, store boundaries, React Query vs Zustand, UI layering |
 | Commercial business rules | `docs/agents/commercial-rules.md` | Any change that can affect totals, payments, tips, expenses, or dashboard calculations |
 | Supabase rules | `docs/agents/supabase.md` | Query changes, schema work, persistence, RLS, synchronization |
+| Database schema reference | `docs/agents/database.md` | Inspecting tables, columns, relationships, or constraints before changing queries or the database |
+| Offline queue and sync | `docs/agents/offline-sync.md` | Anything that enqueues mutations, changes `src/offline/*`, `SyncManager`, feature flags, or offline behavior of a store |
+| Bug, refactor, migration, release, and test-triage workflow | `docs/agents/workflow.md` | Fixing a bug, refactoring, touching migrations, preparing a release, or investigating failing tests |
 | Shared architecture | `docs/agents/architecture.md` | Refactors, module extraction, cross-cutting patterns, folder moves |
 | AGENTS and agent docs | `docs/agents/agents-guidelines.md` | Before editing `AGENTS.md` or `docs/agents/*` |
 
