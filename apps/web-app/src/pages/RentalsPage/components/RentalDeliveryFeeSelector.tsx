@@ -26,6 +26,7 @@ export function RentalDeliveryFeeSelector({
             type="button"
             variant={selectedFee === fee ? 'default' : 'outline'}
             onClick={() => onSelect(fee)}
+            data-testid={`rental-fee-${fee}`}
             className="flex-1 h-10"
           >
             ${fee}

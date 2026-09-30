@@ -81,11 +81,13 @@ export function ExchangeRateConfigPage({
                 step="0.01"
                 value={rate}
                 onChange={(e) => setRate(e.target.value)}
+                data-testid="exchange-rate-input"
                 className="h-14 text-2xl font-bold text-center flex-1"
               />
               <Button
                 onClick={handleSave}
                 disabled={isSaving}
+                data-testid="exchange-rate-save"
                 className="h-14 w-14 gradient-primary rounded-xl"
               >
                 {isSaving ? (

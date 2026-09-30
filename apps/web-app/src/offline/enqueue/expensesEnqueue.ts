@@ -3,12 +3,11 @@ import type { PaymentSplit } from '@/types/paymentSplits';
 import { PAYMENT_SPLIT_SCHEMA } from '@/services/payments/paymentSplitSchemaContract';
 import { expensePaymentSplitAdapter } from '@/services/payments/paymentSplitSupabaseAdapters';
 import { useSyncStore } from '@/store/useSyncStore';
+import { generateTempId } from './tempId';
+import { enqueueEntityDelete } from './commonEnqueue';
 
 type ExpenseCreateInput = Omit<Expense, 'id' | 'createdAt'>;
 type ExpenseUpdateInput = Partial<Omit<Expense, 'id' | 'createdAt'>>;
-
-const generateTempId = () =>
-  `temp-${Math.random().toString(36).substring(2, 15)}`;
 
 const buildEntityBusinessKey = (id: string) => `expense:${id}`;
 
@@ -93,18 +92,13 @@ export const enqueueOfflineExpenseUpdate = (
 export const enqueueOfflineExpenseDelete = (
   id: string,
   actionSource = 'expenses/deleteExpense'
-) => {
-  const businessKey = buildEntityBusinessKey(id);
-
-  useSyncStore.getState().addToQueue({
-    type: 'DELETE',
+) =>
+  enqueueEntityDelete({
     table: 'expenses',
-    payload: { id },
-    enqueueSource: actionSource,
-    businessKey,
-    dependencyKeys: id.startsWith('temp-') ? [businessKey] : undefined,
+    id,
+    businessKey: buildEntityBusinessKey(id),
+    actionSource,
   });
-};
 
 export const enqueueOfflineExpensePaymentSplitsReplace = (
   expenseId: string,

@@ -60,8 +60,8 @@ vi.mock('./components/RentalList', () => ({
 vi.mock('./components/RentalsSummaryCards', () => ({
   RentalsSummaryCards: () => <div>SummaryCards</div>,
 }));
-vi.mock('./components/RentalsLoadingState', () => ({
-  RentalsLoadingState: () => <div>Loading</div>,
+vi.mock('@/components/ui/LoadingState', () => ({
+  LoadingState: () => <div>Loading</div>,
 }));
 vi.mock('./components/RentalsFab', () => ({
   RentalsFab: () => <button>Fab</button>,

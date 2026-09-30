@@ -25,6 +25,7 @@ export function WashingMachineList({
       {items.map((machine) => (
         <WashingMachineCard
           key={machine.id}
+          machineId={machine.id}
           name={machine.name}
           statusLabel={machine.statusLabel}
           statusColor={machine.statusColor}

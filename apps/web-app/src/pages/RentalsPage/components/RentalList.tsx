@@ -175,6 +175,7 @@ function RentalListItem({
   return (
     <>
       <Card
+        data-testid={`rental-card-${rental.id}`}
         className={cn(
           'p-4 space-y-3 transition-all active:scale-[0.98] group relative',
           rental.status === 'finalizado' && 'opacity-60'
@@ -199,6 +200,7 @@ function RentalListItem({
         />
 
         <RentalCardFooter
+          rentalId={rental.id}
           isPaid={rental.isPaid}
           totalUsd={rental.totalUsd ?? 0}
           canExtend={canExtend}

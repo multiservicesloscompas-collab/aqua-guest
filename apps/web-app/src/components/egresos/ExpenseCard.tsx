@@ -1,17 +1,7 @@
 import { Button } from '@/components/ui/button';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
+import { ConfirmDeleteDialog } from '@/components/ui/ConfirmDeleteDialog';
 import { Expense, ExpenseCategoryLabels, PaymentMethodLabels } from '@/types';
-import { Trash2, Pencil, Loader2, Banknote } from 'lucide-react';
+import { Trash2, Pencil, Banknote } from 'lucide-react';
 import { isTipPayoutDerivedExpenseId } from '@/services/expenses/expensesWithTipPayouts';
 import { hasValidMixedPaymentSplits } from '@/services/payments/paymentSplitValidity';
 
@@ -81,43 +71,29 @@ export function ExpenseCard({
                 variant="ghost"
                 size="icon"
                 onClick={() => onEdit(expense)}
+                data-testid={`expense-card-edit-${expense.id}`}
                 className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/10"
               >
                 <Pencil className="w-4 h-4" />
               </Button>
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
+              <ConfirmDeleteDialog
+                trigger={
                   <Button
                     variant="ghost"
                     size="icon"
+                    data-testid={`expense-card-delete-${expense.id}`}
                     className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                   >
                     <Trash2 className="w-4 h-4" />
                   </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent className="max-w-[90vw] rounded-xl">
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>¿Eliminar egreso?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Esta acción no se puede deshacer.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={() => onDelete(expense.id)}
-                      disabled={isDeleting}
-                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                    >
-                      {isDeleting && deletingId === expense.id ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        'Eliminar'
-                      )}
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
+                }
+                title="¿Eliminar egreso?"
+                description="Esta acción no se puede deshacer."
+                onConfirm={() => onDelete(expense.id)}
+                isDeleting={isDeleting}
+                showSpinner={isDeleting && deletingId === expense.id}
+                contentClassName="max-w-[90vw] rounded-xl"
+              />
             </div>
           )}
         </div>

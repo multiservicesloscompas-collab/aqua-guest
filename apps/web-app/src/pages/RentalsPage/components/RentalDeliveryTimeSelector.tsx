@@ -28,12 +28,19 @@ export function RentalDeliveryTimeSelector({
         Hora de Entrega
       </Label>
       <Select value={deliveryTime} onValueChange={onSelectDeliveryTime}>
-        <SelectTrigger className="h-12">
+        <SelectTrigger
+          className="h-12"
+          data-testid="rental-delivery-time-select"
+        >
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
           {timeSlots.map((slot) => (
-            <SelectItem key={slot} value={slot}>
+            <SelectItem
+              key={slot}
+              value={slot}
+              data-testid={`rental-delivery-time-option-${slot}`}
+            >
               {slot}
             </SelectItem>
           ))}
@@ -44,7 +51,9 @@ export function RentalDeliveryTimeSelector({
         <Clock className="w-4 h-4 text-primary shrink-0" />
         <div className="text-sm">
           <span className="text-muted-foreground">Retiro: </span>
-          <span className="font-medium">{pickupLabel}</span>
+          <span className="font-medium" data-testid="rental-pickup-label">
+            {pickupLabel}
+          </span>
         </div>
       </div>
     </div>

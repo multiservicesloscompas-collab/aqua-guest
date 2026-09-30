@@ -1,5 +1,8 @@
 import type { PaymentBalanceTransaction } from '@/types';
 import { useSyncStore } from '@/store/useSyncStore';
+import { hasAmountUpdates } from '@/store/paymentBalanceDraft';
+import { generateTempId } from './tempId';
+import { enqueueEntityDelete } from './commonEnqueue';
 
 type PaymentBalanceCreateInput = Omit<
   PaymentBalanceTransaction,
@@ -8,9 +11,6 @@ type PaymentBalanceCreateInput = Omit<
 type PaymentBalanceUpdateInput = Partial<
   Omit<PaymentBalanceTransaction, 'id' | 'createdAt' | 'updatedAt'>
 >;
-
-const generateTempId = () =>
-  `temp-${Math.random().toString(36).substring(2, 15)}`;
 
 const buildEntityBusinessKey = (id: string) => `payment-balance:${id}`;
 
@@ -107,16 +107,7 @@ export const enqueueOfflinePaymentBalanceUpdate = (
 ) => {
   const businessKey = buildEntityBusinessKey(id);
 
-  const hasAmountMutation =
-    updates.amount !== undefined ||
-    updates.amountBs !== undefined ||
-    updates.amountUsd !== undefined ||
-    updates.amountOutBs !== undefined ||
-    updates.amountOutUsd !== undefined ||
-    updates.amountInBs !== undefined ||
-    updates.amountInUsd !== undefined ||
-    updates.differenceBs !== undefined ||
-    updates.differenceUsd !== undefined;
+  const hasAmountMutation = hasAmountUpdates(updates);
 
   const mergedTransaction = existingTransaction
     ? {
@@ -199,15 +190,10 @@ export const enqueueOfflinePaymentBalanceUpdate = (
 export const enqueueOfflinePaymentBalanceDelete = (
   id: string,
   actionSource = 'paymentBalance/deletePaymentBalanceTransaction'
-) => {
-  const businessKey = buildEntityBusinessKey(id);
-
-  useSyncStore.getState().addToQueue({
-    type: 'DELETE',
+) =>
+  enqueueEntityDelete({
     table: 'payment_balance_transactions',
-    payload: { id },
-    enqueueSource: actionSource,
-    businessKey,
-    dependencyKeys: id.startsWith('temp-') ? [businessKey] : undefined,
+    id,
+    businessKey: buildEntityBusinessKey(id),
+    actionSource,
   });
-};

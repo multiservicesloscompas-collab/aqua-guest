@@ -78,7 +78,7 @@ export class TipsDataService {
         throw error;
       }
 
-      const updatedRows = (data ?? []) as any[];
+      const updatedRows = (data ?? []) as Record<string, unknown>[];
       const totalAmount = updatedRows.reduce(
         (sum, t) => sum + Number(t[TIP_SCHEMA_CONTRACT.columns.amountBs]),
         0
@@ -144,12 +144,12 @@ export class TipsDataService {
       };
     }
 
-    const tip = data[0] as any;
+    const tip = data[0] as Record<string, unknown>;
     return {
-      date: tip[TIP_SCHEMA_CONTRACT.columns.tipDate],
+      date: tip[TIP_SCHEMA_CONTRACT.columns.tipDate] as string,
       paymentMethod: paymentMethod,
       paidCount: 1,
-      totalAmountBs: tip[TIP_SCHEMA_CONTRACT.columns.amountBs],
+      totalAmountBs: tip[TIP_SCHEMA_CONTRACT.columns.amountBs] as number,
     };
   }
 

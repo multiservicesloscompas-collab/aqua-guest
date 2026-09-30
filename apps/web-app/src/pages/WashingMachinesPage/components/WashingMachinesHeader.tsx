@@ -25,7 +25,12 @@ export function WashingMachinesHeader({
               </p>
             </div>
           </div>
-          <Button onClick={onNew} size="sm" className="gap-2">
+          <Button
+            onClick={onNew}
+            size="sm"
+            className="gap-2"
+            data-testid="machines-add-button"
+          >
             <Plus className="w-4 h-4" />
             Nueva
           </Button>

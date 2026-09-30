@@ -16,13 +16,21 @@ export function DeliveryStatsGrid({ stats }: DeliveryStatsGridProps) {
     <div className="grid grid-cols-2 gap-3">
       <Card>
         <CardContent className="p-4 text-center">
-          <p className="text-2xl font-bold text-primary">{stats.total}</p>
+          <p
+            className="text-2xl font-bold text-primary"
+            data-testid="deliveries-stat-total"
+          >
+            {stats.total}
+          </p>
           <p className="text-sm text-muted-foreground">Total entregas</p>
         </CardContent>
       </Card>
       <Card>
         <CardContent className="p-4 text-center">
-          <p className="text-2xl font-bold text-green-600">
+          <p
+            className="text-2xl font-bold text-green-600"
+            data-testid="deliveries-stat-revenue"
+          >
             ${stats.totalRevenue.toFixed(2)}
           </p>
           <p className="text-sm text-muted-foreground">Ingresos</p>
@@ -30,13 +38,21 @@ export function DeliveryStatsGrid({ stats }: DeliveryStatsGridProps) {
       </Card>
       <Card>
         <CardContent className="p-4 text-center">
-          <p className="text-2xl font-bold text-red-600">{stats.unpaid}</p>
+          <p
+            className="text-2xl font-bold text-red-600"
+            data-testid="deliveries-stat-unpaid-count"
+          >
+            {stats.unpaid}
+          </p>
           <p className="text-sm text-muted-foreground">Entregas no pagadas</p>
         </CardContent>
       </Card>
       <Card>
         <CardContent className="p-4 text-center">
-          <p className="text-2xl font-bold text-red-600">
+          <p
+            className="text-2xl font-bold text-red-600"
+            data-testid="deliveries-stat-unpaid-amount"
+          >
             ${stats.unpaidAmount.toFixed(2)}
           </p>
           <p className="text-sm text-muted-foreground">Monto no pagado</p>

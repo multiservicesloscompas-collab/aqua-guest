@@ -26,6 +26,7 @@ export function DeliveryFiltersCard({
         <div className="flex bg-muted/40 p-1.5 rounded-2xl">
           <button
             onClick={() => onTimeFilterChange('dia')}
+            data-testid="deliveries-filter-day"
             className={`flex-1 py-2.5 text-sm font-semibold rounded-xl transition-all duration-200 ${
               timeFilter === 'dia'
                 ? 'bg-background shadow-sm text-foreground'
@@ -36,6 +37,7 @@ export function DeliveryFiltersCard({
           </button>
           <button
             onClick={() => onTimeFilterChange('semana')}
+            data-testid="deliveries-filter-week"
             className={`flex-1 py-2.5 text-sm font-semibold rounded-xl transition-all duration-200 ${
               timeFilter === 'semana'
                 ? 'bg-background shadow-sm text-foreground'
@@ -46,6 +48,7 @@ export function DeliveryFiltersCard({
           </button>
           <button
             onClick={() => onTimeFilterChange('mes')}
+            data-testid="deliveries-filter-month"
             className={`flex-1 py-2.5 text-sm font-semibold rounded-xl transition-all duration-200 ${
               timeFilter === 'mes'
                 ? 'bg-background shadow-sm text-foreground'

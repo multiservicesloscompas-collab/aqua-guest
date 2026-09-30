@@ -13,6 +13,7 @@ import {
   DollarSign,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { EmptyState } from '@/components/ui/EmptyState';
 import {
   Drawer,
   DrawerContent,
@@ -91,17 +92,17 @@ export function SalesList({ sales, paymentFilter = 'todos' }: SalesListProps) {
 
   if (filteredSales.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-        <FileText className="w-12 h-12 mb-3 opacity-40" />
-        <p className="text-sm font-medium">
-          {paymentFilter === 'todos'
+      <EmptyState
+        icon={FileText}
+        title={
+          paymentFilter === 'todos'
             ? 'Sin ventas este día'
             : `Sin ventas con ${
                 PaymentMethodLabels[paymentFilter as PaymentMethod]
-              }`}
-        </p>
-        <p className="text-xs">Presiona + para agregar una venta</p>
-      </div>
+              }`
+        }
+        hint="Presiona + para agregar una venta"
+      />
     );
   }
 

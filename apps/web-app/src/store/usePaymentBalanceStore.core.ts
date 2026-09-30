@@ -52,15 +52,15 @@ export type PaymentBalanceRow = {
   operation_type?: 'equilibrio' | 'avance' | null;
   from_method: PaymentMethod;
   to_method: PaymentMethod;
-  amount: number;
-  amount_bs?: number | null;
-  amount_usd?: number | null;
-  amount_out_bs?: number | null;
-  amount_out_usd?: number | null;
-  amount_in_bs?: number | null;
-  amount_in_usd?: number | null;
-  difference_bs?: number | null;
-  difference_usd?: number | null;
+  amount: number | string;
+  amount_bs?: number | string | null;
+  amount_usd?: number | string | null;
+  amount_out_bs?: number | string | null;
+  amount_out_usd?: number | string | null;
+  amount_in_bs?: number | string | null;
+  amount_in_usd?: number | string | null;
+  difference_bs?: number | string | null;
+  difference_usd?: number | string | null;
   notes?: string | null;
   created_at?: string | null;
   updated_at?: string | null;
@@ -139,7 +139,7 @@ export function rowToTransaction(
       row.difference_usd !== null && row.difference_usd !== undefined
         ? Number(row.difference_usd)
         : undefined,
-    notes: row.notes || undefined,
+    notes: row.notes ?? undefined,
     createdAt: row.created_at || new Date().toISOString(),
     updatedAt: row.updated_at || new Date().toISOString(),
   };

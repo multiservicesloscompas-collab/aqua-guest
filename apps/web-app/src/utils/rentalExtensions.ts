@@ -1,15 +1,6 @@
 import { RentalExtension, WasherRental } from '@/types';
-import {
-  parse,
-  format,
-  getDay,
-  setHours,
-  setMinutes,
-  addDays,
-  isBefore,
-  isAfter,
-} from 'date-fns';
-import { BUSINESS_HOURS } from '@/types';
+import { parse, format } from 'date-fns';
+import { clampToBusinessHours } from './rentalSchedule';
 
 export function calculateExtensionFee(additionalHours: number): number {
   if (additionalHours <= 8) {
@@ -35,47 +26,9 @@ export function calculateExtendedPickupTime(
     new Date()
   );
 
-  let newPickupDateTime = new Date(
-    currentPickupDateTime.getTime() + additionalHours * 60 * 60 * 1000
+  const newPickupDateTime = clampToBusinessHours(
+    new Date(currentPickupDateTime.getTime() + additionalHours * 60 * 60 * 1000)
   );
-
-  const pickupDay = getDay(newPickupDateTime);
-  const isSunday = pickupDay === 0;
-  const openHour = BUSINESS_HOURS.openHour;
-  const closeHour = isSunday
-    ? BUSINESS_HOURS.sundayCloseHour
-    : BUSINESS_HOURS.closeHour;
-  const openTime = setMinutes(
-    setHours(new Date(newPickupDateTime), openHour),
-    0
-  );
-  const closeTime = setMinutes(
-    setHours(new Date(newPickupDateTime), closeHour),
-    0
-  );
-
-  const isWithinBusinessHours =
-    !isBefore(newPickupDateTime, openTime) &&
-    !isAfter(newPickupDateTime, closeTime);
-
-  if (!isWithinBusinessHours) {
-    if (
-      BUSINESS_HOURS.workDays.includes(pickupDay) &&
-      isBefore(newPickupDateTime, openTime)
-    ) {
-      newPickupDateTime = openTime;
-    } else {
-      // Mover al siguiente día laboral a la hora de apertura
-      let nextDay = addDays(new Date(newPickupDateTime), 1);
-      while (!BUSINESS_HOURS.workDays.includes(getDay(nextDay))) {
-        nextDay = addDays(nextDay, 1);
-      }
-      newPickupDateTime = setMinutes(
-        setHours(nextDay, BUSINESS_HOURS.openHour),
-        0
-      );
-    }
-  }
 
   return {
     pickupTime: format(newPickupDateTime, 'HH:mm'),

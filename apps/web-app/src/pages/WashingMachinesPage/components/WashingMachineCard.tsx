@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 
 interface WashingMachineCardProps {
+  machineId: string;
   name: string;
   statusLabel: string;
   statusColor: string;
@@ -19,6 +20,7 @@ interface WashingMachineCardProps {
 }
 
 export function WashingMachineCard({
+  machineId,
   name,
   statusLabel,
   statusColor,
@@ -28,7 +30,7 @@ export function WashingMachineCard({
   onDelete,
 }: WashingMachineCardProps) {
   return (
-    <Card className="overflow-hidden">
+    <Card className="overflow-hidden" data-testid={`machine-card-${machineId}`}>
       <CardContent className="p-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
@@ -61,6 +63,7 @@ export function WashingMachineCard({
               variant="ghost"
               size="icon"
               onClick={onEdit}
+              data-testid={`machine-edit-${machineId}`}
               className="h-9 w-9"
             >
               <Pencil className="w-4 h-4" />
@@ -69,6 +72,7 @@ export function WashingMachineCard({
               variant="ghost"
               size="icon"
               onClick={onDelete}
+              data-testid={`machine-delete-${machineId}`}
               className="h-9 w-9 text-destructive hover:text-destructive"
             >
               <Trash2 className="w-4 h-4" />

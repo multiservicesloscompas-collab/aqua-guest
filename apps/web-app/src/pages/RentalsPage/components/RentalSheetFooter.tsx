@@ -1,5 +1,5 @@
-import { DollarSign, Loader2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { DollarSign } from 'lucide-react';
+import { LoadingButton } from '@/components/ui/loading-button';
 
 interface RentalSheetFooterProps {
   subtotalUsdText: string;
@@ -35,9 +35,10 @@ export function RentalSheetFooter({
           <span className="text-2xl font-bold">{totalUsdText}</span>
         </div>
       </div>
-      <Button
+      <LoadingButton
         onClick={onSubmit}
-        disabled={isSaving}
+        loading={isSaving}
+        loadingText="Registrando..."
         data-testid="rental-confirm-button"
         className="w-full h-12 text-base font-semibold"
         style={{
@@ -45,9 +46,8 @@ export function RentalSheetFooter({
           marginTop: '2rem',
         }}
       >
-        {isSaving && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
-        {isSaving ? 'Registrando...' : 'Confirmar Alquiler'}
-      </Button>
+        Confirmar Alquiler
+      </LoadingButton>
     </div>
   );
 }

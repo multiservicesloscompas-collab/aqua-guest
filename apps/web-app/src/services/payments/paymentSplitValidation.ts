@@ -5,13 +5,7 @@ import {
   reconcileSplitAmountsUsd,
   roundToCurrency,
 } from './paymentSplitRounding';
-
-const PAYMENT_METHODS: PaymentMethod[] = [
-  'efectivo',
-  'pago_movil',
-  'punto_venta',
-  'divisa',
-];
+import { PAYMENT_METHODS } from './paymentMethods';
 
 const TOLERANCE = 0.01;
 
