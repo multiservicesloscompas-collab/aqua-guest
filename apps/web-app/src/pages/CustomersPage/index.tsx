@@ -15,18 +15,8 @@ import {
   UserPlus,
   Users,
   Pencil,
-  Loader2,
 } from 'lucide-react';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+import { ConfirmDeleteDialog } from '@/components/ui/ConfirmDeleteDialog';
 import { CustomerFormSheet } from './components/CustomerFormSheet';
 import { useCustomersPageViewModel } from './hooks/useCustomersPageViewModel';
 
@@ -161,30 +151,14 @@ export default function CustomersPage() {
       />
 
       {/* Delete Confirmation */}
-      <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>¿Eliminar cliente?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta acción no se puede deshacer.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              disabled={isDeleting}
-              className="bg-destructive text-destructive-foreground"
-            >
-              {isDeleting ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                'Eliminar'
-              )}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDeleteDialog
+        open={!!deleteId}
+        onOpenChange={() => setDeleteId(null)}
+        title="¿Eliminar cliente?"
+        description="Esta acción no se puede deshacer."
+        onConfirm={handleDelete}
+        isDeleting={isDeleting}
+      />
     </div>
   );
 }

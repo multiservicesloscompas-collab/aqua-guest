@@ -1,9 +1,3 @@
-/**
- * PrepaidOrderCard.tsx
- * Renders a single prepaid order with actions.
- */
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -15,16 +9,19 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Droplets, Edit, Trash2, Check, Loader2 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { ConfirmDeleteDialog } from '@/components/ui/ConfirmDeleteDialog';
+import { cn } from '@/lib/utils';
 import {
   PaymentMethodLabels,
-  PrepaidStatusLabels,
-  PrepaidStatusColors,
   PrepaidOrder,
+  PrepaidStatusColors,
+  PrepaidStatusLabels,
 } from '@/types';
-import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { Check, Droplets, Edit, Loader2, Trash2 } from 'lucide-react';
 
 interface PrepaidOrderCardProps {
   order: PrepaidOrder;
@@ -146,37 +143,18 @@ export function PrepaidOrderCard({
           <Edit className="w-4 h-4" />
         </Button>
 
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
+        <ConfirmDeleteDialog
+          trigger={
             <Button variant="outline" size="sm" disabled={isDeleting}>
               <Trash2 className="w-4 h-4 text-destructive" />
             </Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>¿Eliminar pedido?</AlertDialogTitle>
-              <AlertDialogDescription>
-                Esta acción no se puede deshacer.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel disabled={isDeleting}>
-                Cancelar
-              </AlertDialogCancel>
-              <AlertDialogAction
-                onClick={() => onDelete(order.id)}
-                disabled={isDeleting}
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              >
-                {isDeleting && deletingId === order.id ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  'Eliminar'
-                )}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+          }
+          title="¿Eliminar pedido?"
+          description="Esta acción no se puede deshacer."
+          onConfirm={() => onDelete(order.id)}
+          isDeleting={isDeleting}
+          showSpinner={isDeleting && deletingId === order.id}
+        />
       </div>
     </div>
   );
