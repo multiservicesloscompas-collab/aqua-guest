@@ -1,5 +1,6 @@
 import type { PaymentBalanceTransaction } from '@/types';
 import { useSyncStore } from '@/store/useSyncStore';
+import { generateTempId } from './tempId';
 
 type PaymentBalanceCreateInput = Omit<
   PaymentBalanceTransaction,
@@ -8,9 +9,6 @@ type PaymentBalanceCreateInput = Omit<
 type PaymentBalanceUpdateInput = Partial<
   Omit<PaymentBalanceTransaction, 'id' | 'createdAt' | 'updatedAt'>
 >;
-
-const generateTempId = () =>
-  `temp-${Math.random().toString(36).substring(2, 15)}`;
 
 const buildEntityBusinessKey = (id: string) => `payment-balance:${id}`;
 

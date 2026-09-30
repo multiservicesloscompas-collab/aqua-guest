@@ -1,11 +1,9 @@
 import type { WashingMachine } from '@/types';
 import { useSyncStore } from '@/store/useSyncStore';
+import { generateTempId } from './tempId';
 
 type MachineCreateInput = Omit<WashingMachine, 'id'>;
 type MachineUpdateInput = Partial<Omit<WashingMachine, 'id'>>;
-
-const generateTempId = () =>
-  `temp-${Math.random().toString(36).substring(2, 15)}`;
 
 const buildEntityBusinessKey = (id: string) => `machine:${id}`;
 

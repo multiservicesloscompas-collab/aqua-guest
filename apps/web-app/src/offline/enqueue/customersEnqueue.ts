@@ -1,11 +1,9 @@
 import type { Customer } from '@/types';
 import { useSyncStore } from '@/store/useSyncStore';
+import { generateTempId } from './tempId';
 
 type CustomerCreateInput = Omit<Customer, 'id'>;
 type CustomerUpdateInput = Partial<Omit<Customer, 'id'>>;
-
-const generateTempId = () =>
-  `temp-${Math.random().toString(36).substring(2, 15)}`;
 
 const buildEntityBusinessKey = (id: string) => `customer:${id}`;
 

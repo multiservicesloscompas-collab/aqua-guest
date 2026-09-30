@@ -1,5 +1,6 @@
 import type { PrepaidOrder } from '@/types';
 import { useSyncStore } from '@/store/useSyncStore';
+import { generateTempId } from './tempId';
 
 interface EnqueueOfflinePrepaidCreateInput {
   payload: Record<string, unknown>;
@@ -14,9 +15,6 @@ interface EnqueueOfflinePrepaidUpdateInput {
   payload: Record<string, unknown>;
   actionSource?: string;
 }
-
-const generateTempId = () =>
-  `temp-${Math.random().toString(36).substring(2, 15)}`;
 
 const buildEntityBusinessKey = (id: string) => `prepaid:${id}`;
 
