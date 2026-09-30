@@ -53,6 +53,6 @@ When a feature grows, prefer this progression:
 
 ## Guardrails
 
-- Keep files under 300 lines of code
+- Keep domain and application files under 400 lines of code (tests and base UI primitives in `src/components/ui` are exempt)
 - Do not duplicate business rules across pages and stores
 - Update the matching docs when you establish a new architectural pattern
