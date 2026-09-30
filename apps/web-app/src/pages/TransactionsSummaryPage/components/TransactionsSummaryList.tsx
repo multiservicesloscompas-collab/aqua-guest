@@ -10,6 +10,7 @@ import {
 
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
+import { CurrencyFormatter } from '@/services/CurrencyService';
 
 import {
   buildTransactionsSummaryItems,
@@ -103,11 +104,8 @@ export function TransactionsSummaryList({
                     : 'text-red-600'
                 }
               >
-                {t.isIncome ? '+' : '-'} Bs{' '}
-                {t.amountBs.toLocaleString('es-VE', {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })}
+                {t.isIncome ? '+' : '-'}{' '}
+                {CurrencyFormatter.formatBsWithSymbol(t.amountBs)}
                 {t.amountUsd && (
                   <span className="text-xs text-muted-foreground ml-1 font-normal">
                     (${t.amountUsd.toFixed(2)})
