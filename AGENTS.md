@@ -58,6 +58,21 @@ npm run supabase:reset
 - Keep business logic out of presentational UI components whenever practical.
 - Prefer module boundaries that make future extraction into `libs/` straightforward.
 
+## Working Agreement
+
+- **Consent:** never commit, push, open or merge a PR, reset or migrate a database, or run data-purging e2e without the user's explicit approval for that specific action. Approval does not carry over to the next action. Details in `docs/agents/workflow.md`.
+- **Production is `origin/main`.** A merge deploys it. Keep every change small, single-purpose, and revertable.
+- **Local data only:** development and e2e run against local Supabase (`127.0.0.1`), never a remote database.
+- **Bugs:** red e2e first, the user confirms the failure, then fix. One bug at a time.
+- **Refactors preserve behavior** and never share a PR with a behavior change. `refactor/create-domain` is reference only, never cherry-picked.
+- **Failing tests:** say whether it is a bug or a stale test. Never change an assertion to match current output without stating the business rule.
+- **Money:** never recompute historic amounts with today's exchange rate; use the values stored on the record.
+- **Ask only what is the user's to decide** (business rules, destructive or external actions, priorities). Decide the rest and say what you chose. When a real trade-off exists, give one recommendation with its reason.
+- **Use plan mode** for changes that touch money, the database, the offline queue, or more than one module.
+- **Scope:** note improvements you notice outside the task and propose them; do not implement them unasked.
+- **Report faithfully:** failing checks with their real output, skipped steps as skipped, and mistakes as mistakes.
+- **Language:** chat replies in Spanish; code, docs, and commits in English.
+
 ## Engineering Standards
 
 - Write full TypeScript and keep code type-safe. Do not use `any`.
@@ -65,7 +80,7 @@ npm run supabase:reset
 - Use dependency injection for services, use cases, and other logic that depends on external collaborators.
 - Respect SOLID principles, but keep the implementation simple and pragmatic under KISS.
 - Avoid duplication. Search the codebase first and reuse what already exists when it fits the task.
-- Default to TDD when implementing or fixing behavior.
+- Default to TDD: a unit test first for new behavior, a red e2e for bug fixes, and a characterization test for refactors.
 - Structure tests with the Arrange, Act, Assert pattern.
 - For this repository, the expected test runner is the one already used by the target workspace. In `apps/web-app`, write and run Jest-style unit tests using the existing Vitest stack instead of introducing a second test framework.
 
@@ -90,6 +105,8 @@ For this repository, the phrase `commercial modules` means the Water Sales and W
 | Frontend architecture and state patterns | `docs/agents/frontend-web-app.md` | Working on React structure, Zustand, React Query, UI composition, or frontend layering |
 | Supabase data access and persistence rules | `docs/agents/supabase.md` | Working on queries, tables, RLS, data hydration, synchronization, or persistence contracts |
 | Database schema reference | `docs/agents/database.md` | Inspecting current tables, relationships, enums, constraints, or Supabase-managed schemas before changing the database |
+| Offline queue and sync | `docs/agents/offline-sync.md` | Anything that enqueues mutations, changes `src/offline/*`, `SyncManager`, feature flags, or offline behavior of a store |
+| Bug, refactor, migration, release, and test-triage workflow | `docs/agents/workflow.md` | Fixing a bug, refactoring, touching migrations, preparing a release, or investigating failing tests |
 | Testing discipline and workflow | `docs/agents/frontend-web-app.md` | Writing or updating frontend tests, enforcing TDD, AAA, or reuse-first implementation in `apps/web-app` |
 | AGENTS maintenance | `docs/agents/agents-guidelines.md` | Before editing any `AGENTS.md` or files inside `docs/agents/` |
 
@@ -101,5 +118,6 @@ Before finishing, verify all of the following:
 - Updated affected agent docs when business rules or architectural patterns changed
 - Preserved module boundaries and future extraction paths into `libs/`
 - Kept edited files under the 300-line guardrail
-- Ran relevant Nx checks or clearly explained why a check was not run
+- Ran relevant Nx checks or clearly explained why a check was not run, and reported real failure counts
+- Left commits, pushes, and database changes to the user's explicit approval
 - Reviewed cross-module impact when touching Water Sales or Washer Rentals
