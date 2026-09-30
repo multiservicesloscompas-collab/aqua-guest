@@ -7,6 +7,10 @@ import type {
   Sale,
   Tip,
 } from '@/types';
+import {
+  rowToTransaction,
+  type PaymentBalanceRow,
+} from './usePaymentBalanceStore.core';
 
 type ProductRow = {
   id: string;
@@ -48,26 +52,6 @@ type PrepaidOrderRow = {
 type LiterPricingRow = {
   breakpoint: number | string;
   price: number | string;
-};
-
-type PaymentBalanceTransactionRow = {
-  id: string;
-  date: string;
-  operation_type?: 'equilibrio' | 'avance' | null;
-  from_method: PaymentMethod;
-  to_method: PaymentMethod;
-  amount: number | string;
-  amount_bs?: number | string | null;
-  amount_usd?: number | string | null;
-  amount_out_bs?: number | string | null;
-  amount_out_usd?: number | string | null;
-  amount_in_bs?: number | string | null;
-  amount_in_usd?: number | string | null;
-  difference_bs?: number | string | null;
-  difference_usd?: number | string | null;
-  notes?: string | null;
-  created_at?: string | null;
-  updated_at?: string | null;
 };
 
 type SalePaymentSplitRow = {
@@ -152,64 +136,8 @@ export const mapLiterPricing = (rows: LiterPricingRow[]) =>
   }));
 
 export const mapPaymentBalanceTransactions = (
-  rows: PaymentBalanceTransactionRow[]
-): PaymentBalanceTransaction[] =>
-  rows.map((transaction) => {
-    const amount = Number(transaction.amount);
-    const amountBs =
-      transaction.amount_bs !== null && transaction.amount_bs !== undefined
-        ? Number(transaction.amount_bs)
-        : amount;
-    const amountOutBs =
-      transaction.amount_out_bs !== null &&
-      transaction.amount_out_bs !== undefined
-        ? Number(transaction.amount_out_bs)
-        : amountBs;
-    const amountInBs =
-      transaction.amount_in_bs !== null &&
-      transaction.amount_in_bs !== undefined
-        ? Number(transaction.amount_in_bs)
-        : amountBs;
-
-    return {
-      id: transaction.id,
-      date: transaction.date,
-      operationType: transaction.operation_type ?? 'equilibrio',
-      fromMethod: transaction.from_method,
-      toMethod: transaction.to_method,
-      amount,
-      amountBs,
-      amountUsd:
-        transaction.amount_usd !== null && transaction.amount_usd !== undefined
-          ? Number(transaction.amount_usd)
-          : undefined,
-      amountOutBs,
-      amountOutUsd:
-        transaction.amount_out_usd !== null &&
-        transaction.amount_out_usd !== undefined
-          ? Number(transaction.amount_out_usd)
-          : undefined,
-      amountInBs,
-      amountInUsd:
-        transaction.amount_in_usd !== null &&
-        transaction.amount_in_usd !== undefined
-          ? Number(transaction.amount_in_usd)
-          : undefined,
-      differenceBs:
-        transaction.difference_bs !== null &&
-        transaction.difference_bs !== undefined
-          ? Number(transaction.difference_bs)
-          : amountInBs - amountOutBs,
-      differenceUsd:
-        transaction.difference_usd !== null &&
-        transaction.difference_usd !== undefined
-          ? Number(transaction.difference_usd)
-          : undefined,
-      notes: transaction.notes ?? undefined,
-      createdAt: transaction.created_at || new Date().toISOString(),
-      updatedAt: transaction.updated_at || new Date().toISOString(),
-    };
-  });
+  rows: PaymentBalanceRow[]
+): PaymentBalanceTransaction[] => rows.map(rowToTransaction);
 
 export const mapSales = (rows: SaleRow[]): Sale[] =>
   rows.map((sale) => ({
