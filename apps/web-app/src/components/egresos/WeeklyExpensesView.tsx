@@ -5,6 +5,7 @@ import { es } from 'date-fns/locale';
 import { useWeeklyExpenses, WeekGroup } from '@/hooks/useWeeklyExpenses';
 import { ExpenseCard } from '@/components/egresos/ExpenseCard';
 import { LoadingState } from '@/components/ui/LoadingState';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { Expense } from '@/types';
 
 interface WeeklyExpensesViewProps {
@@ -154,11 +155,11 @@ export function WeeklyExpensesView({
     return (
       <div className="space-y-3">
         <WeekHeader week={weeks[0]} />
-        <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-          <Wallet className="w-12 h-12 mb-3 opacity-40" />
-          <p className="text-sm font-medium">Sin egresos esta semana</p>
-          <p className="text-xs">Presiona + para registrar un gasto</p>
-        </div>
+        <EmptyState
+          icon={Wallet}
+          title="Sin egresos esta semana"
+          hint="Presiona + para registrar un gasto"
+        />
         <div ref={sentinelRef} />
       </div>
     );

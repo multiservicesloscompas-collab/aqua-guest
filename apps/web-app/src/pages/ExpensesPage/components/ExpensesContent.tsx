@@ -2,6 +2,7 @@ import { Wallet } from 'lucide-react';
 
 import { ExpenseCard } from '@/components/egresos/ExpenseCard';
 import { LoadingState } from '@/components/ui/LoadingState';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { WeeklyExpensesView } from '@/components/egresos/WeeklyExpensesView';
 import { Expense } from '@/types';
 
@@ -46,11 +47,11 @@ export function ExpensesContent({
 
   if (expenses.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-        <Wallet className="w-12 h-12 mb-3 opacity-40" />
-        <p className="text-sm font-medium">Sin egresos este día</p>
-        <p className="text-xs">Presiona + para registrar un gasto</p>
-      </div>
+      <EmptyState
+        icon={Wallet}
+        title="Sin egresos este día"
+        hint="Presiona + para registrar un gasto"
+      />
     );
   }
 
