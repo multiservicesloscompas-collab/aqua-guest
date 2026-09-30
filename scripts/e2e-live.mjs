@@ -1,0 +1,233 @@
+#!/usr/bin/env node
+/**
+ * Interactive runner for the e2e suite. For every test it shows what it tries
+ * to do and what result it expects (the `documented()` fichas that live inside
+ * the specs), runs it, and then lets you decide what to do with the local data.
+ *
+ *   npm run e2e:live                          menu
+ *   npm run e2e:live -- --explain [texto|all] print fichas, run nothing
+ *   npm run e2e:live -- --check               fail if a test has no complete ficha
+ *   npm run e2e:live -- --test "propinas" --headless --yes
+ *   npm run e2e:live -- --help
+ *
+ * Every e2e test wipes the LOCAL database first (see apps/web-app-e2e/README.md).
+ * The Playwright support code aborts unless VITE_SUPABASE_URL is local.
+ */
+import path from 'node:path';
+import {
+  isBugTest,
+  listTests,
+  loadTimings,
+  parseSelection,
+  renderFicha,
+  renderList,
+  runCheck,
+  testsMatching,
+} from './e2e-live/fichas.mjs';
+import { HELP, parseArgs } from './e2e-live/cli.mjs';
+import { databaseMenu, describeMode, execute } from './e2e-live/run.mjs';
+import { listAdHoc, scenarioFlow } from './e2e-live/scenario.mjs';
+import {
+  ask,
+  bold,
+  createPrompter,
+  describeDb,
+  dim,
+  readDbCounts,
+  red,
+} from './e2e-live/support.mjs';
+
+// ---------------------------------------------------------------- menu
+
+async function pickTests(prompter, tests, title) {
+  console.log(`\n${bold(title)}${renderList(tests)}`);
+  const text = await ask(
+    prompter,
+    '\nElige: un número (3), varios (3,5), rango (3-6), a = todos menos los bugs, Enter = volver: '
+  );
+  if (text === '' || text.toLowerCase() === 'q') return [];
+  if (text.toLowerCase() === 'a') return tests.filter((t) => !isBugTest(t));
+  const indexes = parseSelection(text, tests.length);
+  if (!indexes) {
+    console.log(red('Selección no válida.'));
+    return [];
+  }
+  return indexes.map((i) => tests[i]);
+}
+
+async function settings(prompter, options) {
+  console.log(
+    `\n${bold('Ajustes')}  ${dim(`(ahora: ${describeMode(options)})`)}`
+  );
+  console.log('  1  Navegador visible (sí/no)');
+  console.log('  2  Inspector de Playwright, paso a paso (sí/no)');
+  console.log('  3  Cámara lenta en milisegundos');
+  const choice = await ask(prompter, 'Elige (Enter = volver): ');
+  if (choice === '1') options.headed = !options.headed;
+  else if (choice === '2') options.debug = !options.debug;
+  else if (choice === '3') {
+    const value = Number(await ask(prompter, 'Milisegundos (0 = sin pausa): '));
+    if (Number.isFinite(value) && value >= 0) options.slowMo = value;
+  }
+}
+
+async function menu(prompter, tests, options) {
+  for (;;) {
+    console.log(
+      `\n${bold('AquaGuest · E2E en vivo')}  ${dim(
+        `${tests.length} tests · ${describeMode(options)}`
+      )}`
+    );
+    console.log('  1  Ejecutar tests');
+    console.log('  2  Ver qué prueba cada test (sin ejecutar)');
+    console.log('  3  Base de datos (reiniciar / vaciar)');
+    console.log('  4  Ajustes (navegador visible, cámara lenta, inspector)');
+    console.log(
+      '  5  Armar un escenario (por ejemplo: venta mixta + alquiler con propina)'
+    );
+    console.log('  q  Salir');
+    const choice = (await ask(prompter, '\n> ')).toLowerCase();
+    if (choice === 'q') return;
+    if (choice === '1') {
+      const selected = await pickTests(
+        prompter,
+        tests,
+        'Qué test quieres ejecutar'
+      );
+      if (selected.length > 0) await execute({ selected, options, prompter });
+    } else if (choice === '2') {
+      const selected = await pickTests(
+        prompter,
+        tests,
+        'De qué test quieres ver la ficha'
+      );
+      const timings = loadTimings();
+      selected.forEach((test) => console.log(renderFicha(test, timings)));
+    } else if (choice === '3') await databaseMenu(prompter);
+    else if (choice === '4') await settings(prompter, options);
+    else if (choice === '5') {
+      await scenarioFlow(prompter, async (test, file) =>
+        execute({
+          selected: [test],
+          options: { ...options, extraEnv: { E2E_SCENARIO: file } },
+          prompter,
+        })
+      );
+    } else if (choice !== '') console.log(red('Opción no válida.'));
+  }
+}
+
+// ----------------------------------------------------------------- cli
+
+function selectFromFlags(args, tests) {
+  if (args.all) return { selected: tests.filter((t) => !isBugTest(t)) };
+  if (args.bugs) return { selected: tests.filter(isBugTest) };
+  const byFile = args.specs.length > 0 ? args.specs : null;
+  const unknown = (byFile ?? []).filter(
+    (id) => !tests.some((t) => t.fileId === id)
+  );
+  if (unknown.length > 0)
+    return { error: `Archivo desconocido: ${unknown.join(', ')}. Usa --list.` };
+  let selected = byFile
+    ? tests.filter((t) => byFile.includes(t.fileId))
+    : tests;
+  if (args.test) selected = testsMatching(selected, args.test);
+  if (selected.length === 0)
+    return { error: 'Ningún test coincide. Usa --list.' };
+  return { selected };
+}
+
+async function main() {
+  const args = parseArgs(process.argv.slice(2));
+  if (args.help) return void console.log(HELP);
+
+  const { tests, error } = listTests();
+  if (tests.length === 0) {
+    console.error(red(`No se pudieron listar los tests. ${error}`));
+    process.exitCode = 1;
+    return;
+  }
+  const options = {
+    headed: args.headed,
+    debug: args.debug,
+    slowMo: args.slowMo,
+  };
+
+  if (args.check) {
+    process.exitCode = runCheck(tests);
+    return;
+  }
+  if (args.explain !== undefined) {
+    const shown =
+      args.explain === 'all' ? tests : testsMatching(tests, args.explain);
+    if (shown.length === 0)
+      console.error(red(`Ningún test coincide con «${args.explain}».`));
+    const timings = loadTimings();
+    shown.forEach((test) => console.log(renderFicha(test, timings)));
+    return;
+  }
+  if (args.list) {
+    console.log(renderList(tests));
+    console.log(`\nBase local: ${describeDb(readDbCounts())}`);
+    return;
+  }
+
+  if (args.scenario) {
+    const file = path.resolve(args.scenario);
+    const { test, error: scenarioError } = listAdHoc(file);
+    if (!test) {
+      console.error(
+        red(`No se pudo leer el escenario ${file}. ${scenarioError}`)
+      );
+      process.exitCode = 1;
+      return;
+    }
+    const prompter = process.stdin.isTTY ? createPrompter() : null;
+    process.exitCode = await execute({
+      selected: [test],
+      options: { ...options, extraEnv: { E2E_SCENARIO: file } },
+      prompter,
+      yes: args.yes,
+      printOnly: args.print,
+      after: args.after === 'none' ? undefined : args.after,
+    });
+    prompter?.close();
+    return;
+  }
+
+  const wantsRun = args.all || args.bugs || args.specs.length > 0 || args.test;
+  if (wantsRun) {
+    const { selected, error: selectError } = selectFromFlags(args, tests);
+    if (selectError) {
+      console.error(red(selectError));
+      process.exitCode = 1;
+      return;
+    }
+    if (!args.yes && !args.print && !process.stdin.isTTY) {
+      console.error(
+        red(
+          'Sin terminal interactiva hay que pasar --yes (los tests borran la base LOCAL).'
+        )
+      );
+      process.exitCode = 1;
+      return;
+    }
+    const prompter = process.stdin.isTTY ? createPrompter() : null;
+    process.exitCode = await execute({
+      selected,
+      options,
+      prompter,
+      yes: args.yes,
+      printOnly: args.print,
+      after: args.after === 'none' ? undefined : args.after,
+    });
+    prompter?.close();
+    return;
+  }
+
+  const prompter = createPrompter();
+  await menu(prompter, tests, options);
+  prompter.close();
+}
+
+main();

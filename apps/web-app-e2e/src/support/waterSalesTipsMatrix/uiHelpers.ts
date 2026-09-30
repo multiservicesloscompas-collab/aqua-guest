@@ -1,4 +1,5 @@
 import { expect, type Page } from '@playwright/test';
+import { TOAST_SALE_REGISTERED, expectToast } from '../toasts';
 import {
   gotoDashboard,
   openDashboardFromBottomNav,
@@ -88,9 +89,7 @@ export async function createScenarioSale(page: Page, scenario: MatrixScenario) {
 
   await page.getByTestId('cart-notes-input').fill(scenario.noteMarker);
   await page.getByTestId('cart-confirm-sale').click();
-  await expect(
-    page.getByText('¡Venta registrada correctamente!')
-  ).toBeVisible();
+  await expectToast(page, TOAST_SALE_REGISTERED);
 }
 
 function parseIntegerText(text: string): number {

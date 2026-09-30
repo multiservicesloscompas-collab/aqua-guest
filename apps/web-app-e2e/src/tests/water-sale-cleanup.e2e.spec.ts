@@ -1,4 +1,7 @@
-import { test, expect, type Page } from '@playwright/test';
+import { type Page } from '@playwright/test';
+import { addDays, todayVe } from '../support/bugs/dates';
+import { seedSales } from '../support/bugs/dbSeed';
+import { documented, expect, test } from '../support/fixtures';
 import {
   countDiscoverableSales,
   listDiscoverableSales,
@@ -87,61 +90,94 @@ async function deleteSaleById(page: Page, saleId: string): Promise<boolean> {
   return true;
 }
 
-test('purges all existing discoverable water sales and validates zero in transactions', async ({
-  page,
-}) => {
-  test.setTimeout(5 * 60_000);
+test(
+  'purges all existing discoverable water sales and validates zero in transactions',
+  documented({
+    titulo: 'Borrar ventas desde la pantalla no deja rastro',
+    area: 'Ventas de agua',
+    intent:
+      'Comprobar que las ventas se pueden borrar desde la interfaz y que no dejan rastro.',
+    steps: [
+      'Siembra 3 ventas directo en la base: 2 de hoy (Bs 700 y Bs 1400) y 1 de ayer (Bs 700).',
+      'Abre Agua y va a la fecha de cada venta.',
+      'Borra cada venta con su botón de eliminar y «Eliminar Permanentemente» del drawer.',
+      'Abre Transacciones.',
+    ],
+    expects: [
+      'Al empezar la base tiene exactamente 3 ventas.',
+      'Al final la base tiene 0 ventas.',
+      'Transacciones no muestra ninguna «Venta de Agua».',
+    ],
+    data: 'Ventas sembradas: Bs 700, Bs 1400 y Bs 700, con tasa 1000.',
+  }),
+  async ({ page }) => {
+    test.setTimeout(5 * 60_000);
 
-  const initialDiscoverableCount = await countDiscoverableSales();
-  let remainingSales = await listDiscoverableSales();
+    // Every test starts from an empty database, so seed the sales this test deletes.
+    const today = todayVe();
+    await seedSales([
+      { date: today, dailyNumber: 1, totalBs: 700, exchangeRate: 1000 },
+      { date: today, dailyNumber: 2, totalBs: 1400, exchangeRate: 1000 },
+      {
+        date: addDays(today, -1),
+        dailyNumber: 1,
+        totalBs: 700,
+        exchangeRate: 1000,
+      },
+    ]);
 
-  await gotoDashboard(page);
-  await openWaterSalesFromBottomNav(page);
+    const initialDiscoverableCount = await countDiscoverableSales();
+    expect(initialDiscoverableCount).toBe(3);
+    let remainingSales = await listDiscoverableSales();
 
-  let deletedCount = 0;
-  const safetyCycles = 50;
+    await gotoDashboard(page);
+    await openWaterSalesFromBottomNav(page);
 
-  for (let cycle = 0; cycle < safetyCycles; cycle += 1) {
-    if (remainingSales.length === 0) {
-      break;
-    }
+    let deletedCount = 0;
+    const safetyCycles = 50;
 
-    const uniqueDates = [
-      ...new Set(remainingSales.map((sale) => sale.date)),
-    ].sort();
+    for (let cycle = 0; cycle < safetyCycles; cycle += 1) {
+      if (remainingSales.length === 0) {
+        break;
+      }
 
-    for (const date of uniqueDates) {
-      await navigateToDate(page, date);
+      const uniqueDates = [
+        ...new Set(remainingSales.map((sale) => sale.date)),
+      ].sort();
 
-      const idsForDate = remainingSales
-        .filter((sale) => sale.date === date)
-        .map((sale) => sale.id);
+      for (const date of uniqueDates) {
+        await navigateToDate(page, date);
 
-      for (const saleId of idsForDate) {
-        const deleted = await deleteSaleById(page, saleId);
-        if (deleted) {
-          deletedCount += 1;
+        const idsForDate = remainingSales
+          .filter((sale) => sale.date === date)
+          .map((sale) => sale.id);
+
+        for (const saleId of idsForDate) {
+          const deleted = await deleteSaleById(page, saleId);
+          if (deleted) {
+            deletedCount += 1;
+          }
         }
       }
+
+      remainingSales = await listDiscoverableSales();
     }
 
-    remainingSales = await listDiscoverableSales();
+    await expect
+      .poll(async () => {
+        return countDiscoverableSales();
+      })
+      .toBe(0);
+
+    const finalDiscoverableCount = await countDiscoverableSales();
+    expect(finalDiscoverableCount).toBe(0);
+
+    await openTransactionsFromMenu(page);
+    await expect(page.getByText('Venta de Agua')).toHaveCount(0);
+
+    test.info().annotations.push({
+      type: 'evidence',
+      description: `Deleted ${deletedCount} discoverable sales (initial count ${initialDiscoverableCount}) and DB count reached ${finalDiscoverableCount}`,
+    });
   }
-
-  await expect
-    .poll(async () => {
-      return countDiscoverableSales();
-    })
-    .toBe(0);
-
-  const finalDiscoverableCount = await countDiscoverableSales();
-  expect(finalDiscoverableCount).toBe(0);
-
-  await openTransactionsFromMenu(page);
-  await expect(page.getByText('Venta de Agua')).toHaveCount(0);
-
-  test.info().annotations.push({
-    type: 'evidence',
-    description: `Deleted ${deletedCount} discoverable sales (initial count ${initialDiscoverableCount}) and DB count reached ${finalDiscoverableCount}`,
-  });
-});
+);

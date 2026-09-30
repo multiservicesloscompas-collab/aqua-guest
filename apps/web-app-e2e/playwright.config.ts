@@ -17,7 +17,14 @@ export default defineConfig({
   expect: {
     timeout: 15_000,
   },
-  reporter: process.env.CI ? 'line' : 'list',
+  // E2E_NARRATE=1 (set by `npm run e2e:live`) explains each test before and
+  // after it runs; see src/reporters/narrator.ts.
+  reporter:
+    process.env.E2E_NARRATE === '1'
+      ? [['./src/reporters/narrator.ts']]
+      : process.env.CI
+      ? 'line'
+      : 'list',
   use: {
     baseURL,
     timezoneId: 'America/Caracas',
