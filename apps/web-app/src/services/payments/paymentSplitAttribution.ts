@@ -1,6 +1,9 @@
 import type { PaymentMethod, Sale, WasherRental, Expense } from '@/types';
 import type { PaymentSplit } from '@/types/paymentSplits';
-import { hasValidMixedPaymentSplits } from '@/services/payments/paymentSplitValidity';
+import {
+  hasPersistedPaymentSplits,
+  hasValidMixedPaymentSplits,
+} from '@/services/payments/paymentSplitValidity';
 
 interface SplitAwareSale extends Sale {
   paymentSplits?: PaymentSplit[];
@@ -12,6 +15,16 @@ interface SplitAwareRental extends WasherRental {
 
 interface SplitAwareExpense extends Expense {
   paymentSplits?: PaymentSplit[];
+}
+
+function sumSplitsByMethod(
+  splits: readonly PaymentSplit[],
+  method: PaymentMethod,
+  field: 'amountBs' | 'amountUsd'
+): number {
+  return splits
+    .filter((split) => split.method === method)
+    .reduce((sum, split) => sum + Number(split[field] || 0), 0);
 }
 
 function findSplitByMethod(
@@ -62,7 +75,7 @@ export function includesMethodInRental(
   rental: SplitAwareRental,
   method: PaymentMethod
 ): boolean {
-  if (hasValidMixedPaymentSplits(rental.paymentSplits)) {
+  if (hasPersistedPaymentSplits(rental.paymentSplits)) {
     return Boolean(findSplitByMethod(rental.paymentSplits, method));
   }
   return rental.paymentMethod === method;
@@ -73,9 +86,8 @@ export function getRentalAmountForMethodBs(
   method: PaymentMethod,
   exchangeRate: number
 ): number {
-  if (hasValidMixedPaymentSplits(rental.paymentSplits)) {
-    const split = findSplitByMethod(rental.paymentSplits, method);
-    if (split) return Number(split.amountBs || 0);
+  if (hasPersistedPaymentSplits(rental.paymentSplits)) {
+    return sumSplitsByMethod(rental.paymentSplits, method, 'amountBs');
   }
   return rental.paymentMethod === method
     ? Number(rental.totalUsd || 0) * exchangeRate
@@ -87,11 +99,11 @@ export function getRentalAmountForMethodUsd(
   method: PaymentMethod,
   exchangeRate: number
 ): number {
-  if (hasValidMixedPaymentSplits(rental.paymentSplits)) {
-    const split = findSplitByMethod(rental.paymentSplits, method);
-    if (split?.amountUsd !== undefined) {
-      return Number(split.amountUsd || 0);
-    }
+  if (
+    hasPersistedPaymentSplits(rental.paymentSplits) &&
+    rental.paymentSplits.every((split) => split.amountUsd !== undefined)
+  ) {
+    return sumSplitsByMethod(rental.paymentSplits, method, 'amountUsd');
   }
 
   const amountBs = getRentalAmountForMethodBs(rental, method, exchangeRate);
