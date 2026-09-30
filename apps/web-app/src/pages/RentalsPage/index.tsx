@@ -14,7 +14,7 @@ import { RentalSheet } from './components/RentalSheet';
 import { RentalsFab } from './components/RentalsFab';
 import { RentalList } from './components/RentalList';
 import { RentalsSummaryCards } from './components/RentalsSummaryCards';
-import { RentalsLoadingState } from './components/RentalsLoadingState';
+import { LoadingState } from '@/components/ui/LoadingState';
 
 import { useRentalsPageViewModel } from './hooks/useRentalsPageViewModel';
 import { useRentalListViewModel } from './hooks/useRentalListViewModel';
@@ -84,7 +84,7 @@ export function RentalsPage({ autoOpenAdd }: RentalsPageProps = {}) {
                 </div>
 
                 {loadingRentals && rentals.length === 0 ? (
-                  <RentalsLoadingState />
+                  <LoadingState message="Cargando alquileres..." />
                 ) : (
                   <RentalList
                     rentals={sortedRentals}
@@ -129,7 +129,7 @@ export function RentalsPage({ autoOpenAdd }: RentalsPageProps = {}) {
             ) : null}
 
             {loadingRentals && rentals.length === 0 ? (
-              <RentalsLoadingState />
+              <LoadingState message="Cargando alquileres..." />
             ) : (
               <RentalList
                 rentals={sortedRentals}

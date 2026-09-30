@@ -10,7 +10,8 @@ import { useViewportMode } from '@/hooks/responsive/useViewportMode';
 import { useAppStore } from '@/store/useAppStore';
 import { useWaterSalesStore } from '@/store/useWaterSalesStore';
 import { Button } from '@/components/ui/button';
-import { Plus, ShoppingCart, Loader2 } from 'lucide-react';
+import { LoadingState } from '@/components/ui/LoadingState';
+import { Plus, ShoppingCart } from 'lucide-react';
 import { TABLET_PRIMARY_COLUMN_CLASS } from '@/lib/responsive/tabletLayoutPatterns';
 import { cn } from '@/lib/utils';
 import { PaymentMethod } from '@/types';
@@ -158,10 +159,7 @@ export function WaterSalesPage({ autoOpenAdd }: WaterSalesPageProps = {}) {
               aria-label="Registros de ventas"
             >
               {loadingSales && sales.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-                  <Loader2 className="w-8 h-8 mb-3 animate-spin" />
-                  <p className="text-sm font-medium">Cargando ventas...</p>
-                </div>
+                <LoadingState message="Cargando ventas..." />
               ) : (
                 <SalesList sales={sales} paymentFilter={paymentFilter} />
               )}
@@ -198,10 +196,7 @@ export function WaterSalesPage({ autoOpenAdd }: WaterSalesPageProps = {}) {
             />
 
             {loadingSales && sales.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-                <Loader2 className="w-8 h-8 mb-3 animate-spin" />
-                <p className="text-sm font-medium">Cargando ventas...</p>
-              </div>
+              <LoadingState message="Cargando ventas..." />
             ) : (
               <SalesList sales={sales} paymentFilter={paymentFilter} />
             )}

@@ -1,6 +1,7 @@
-import { Loader2, Wallet } from 'lucide-react';
+import { Wallet } from 'lucide-react';
 
 import { ExpenseCard } from '@/components/egresos/ExpenseCard';
+import { LoadingState } from '@/components/ui/LoadingState';
 import { WeeklyExpensesView } from '@/components/egresos/WeeklyExpensesView';
 import { Expense } from '@/types';
 
@@ -40,12 +41,7 @@ export function ExpensesContent({
   }
 
   if (loadingExpenses && expenses.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-        <Loader2 className="w-8 h-8 mb-3 animate-spin" />
-        <p className="text-sm font-medium">Cargando egresos...</p>
-      </div>
-    );
+    return <LoadingState message="Cargando egresos..." />;
   }
 
   if (expenses.length === 0) {
