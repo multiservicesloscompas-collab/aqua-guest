@@ -160,7 +160,10 @@ export function EditRentalStatusPaymentCard({
             Estatus de Pago
           </Label>
           <Select value={paymentStatus} onValueChange={onChangePaymentStatus}>
-            <SelectTrigger className="h-14 rounded-2xl border-transparent bg-accent/30 shadow-none transition-colors hover:border-border/50 hover:bg-accent focus:ring-primary/20 [&>span]:flex [&>span]:w-full [&>span]:items-center">
+            <SelectTrigger
+              data-testid="rental-payment-status-select"
+              className="h-14 rounded-2xl border-transparent bg-accent/30 shadow-none transition-colors hover:border-border/50 hover:bg-accent focus:ring-primary/20 [&>span]:flex [&>span]:w-full [&>span]:items-center"
+            >
               <SelectValue placeholder="Seleccionar" />
             </SelectTrigger>
             <SelectContent className="rounded-2xl">

@@ -41,7 +41,7 @@ AquaGuest talks to Supabase directly from repository code.
   - `npm run supabase:start`: Starts local Supabase stack in background.
   - `npm run supabase:stop`: Stops local Supabase containers.
   - `npm run supabase:status`: Prints local endpoints and keys.
-  - `npm run supabase:reset`: Resets database and applies migrations and seeds.
+  - `npm run supabase:reset`: Resets the local database and re-applies whatever is in the local `supabase/migrations` and `supabase/seed.sql`. `supabase/` is gitignored, so a fresh clone has no migrations or seed: the local schema must be recreated by hand (see `docs/agents/workflow.md`, Environments).
 
 ## Documentation Sync
 

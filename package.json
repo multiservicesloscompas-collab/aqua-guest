@@ -11,7 +11,8 @@
     "supabase:reset": "supabase db reset",
     "playwright:install": "playwright install chromium",
     "e2e:web-app": "npx nx run web-app-e2e:e2e",
-    "e2e:web-app:ci": "npx nx run web-app-e2e:e2e-ci"
+    "e2e:web-app:ci": "npx nx run web-app-e2e:e2e-ci",
+    "e2e:bugs": "npx nx run web-app-e2e:e2e-bugs"
   },
   "private": true,
   "devDependencies": {

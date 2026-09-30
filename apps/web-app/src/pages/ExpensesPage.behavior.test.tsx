@@ -64,7 +64,7 @@ vi.mock('@/store/useConfigStore', () => ({
 vi.mock('@/store/useTipStore', () => ({
   useTipStore: () => ({
     tipPayouts: [],
-    loadTipsByDateRange: mocks.loadTipsByDateRange,
+    loadPaidTipsByDateRange: mocks.loadTipsByDateRange,
   }),
 }));
 

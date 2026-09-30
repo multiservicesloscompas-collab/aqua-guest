@@ -92,22 +92,15 @@ describe('TipsDataService', () => {
   });
 
   it('deduplicates concurrent daily payout requests by idempotency key', async () => {
+    // Arrange
     const service = new TipsDataService();
-
-    rpcMock.mockImplementation(
-      async (_fn: string, payload: Record<string, string>) => {
-        await Promise.resolve();
-        return {
-          data: {
-            paid_count: 2,
-            total_amount_bs: 80,
-            tip_date: payload.p_tip_date,
-            payment_method: payload.p_payment_method,
-          },
-          error: null,
-        };
-      }
-    );
+    const selectPaidRowsMock = vi.fn(async () => {
+      await Promise.resolve();
+      return { data: [{ amount_bs: 40 }, { amount_bs: 40 }], error: null };
+    });
+    const eqStatusMock = vi.fn(() => ({ select: selectPaidRowsMock }));
+    const eqTipDateMock = vi.fn(() => ({ eq: eqStatusMock }));
+    tipsUpdateMock.mockImplementation(() => ({ eq: eqTipDateMock }));
 
     const request = {
       tipDate: '2026-03-13',
@@ -115,12 +108,14 @@ describe('TipsDataService', () => {
       idempotencyKey: 'tips:2026-03-13:efectivo',
     };
 
+    // Act
     const [resultA, resultB] = await Promise.all([
       service.payTipsForDay(request),
       service.payTipsForDay(request),
     ]);
 
-    expect(rpcMock).toHaveBeenCalledTimes(1);
+    // Assert
+    expect(tipsUpdateMock).toHaveBeenCalledTimes(1);
     expect(resultA).toEqual(resultB);
     expect(resultA.paidCount).toBe(2);
     expect(resultA.totalAmountBs).toBe(80);

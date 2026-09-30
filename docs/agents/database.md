@@ -117,8 +117,11 @@ Exchange-rate history.
 Payment-balance transfers and adjustments across payment methods.
 
 - PK: `id uuid`
-- Core fields: `date`, `from_method`, `to_method`, `amount`, `amount_bs`, `amount_usd`, `amount_in_bs`, `amount_out_bs`, `difference_bs`, `notes`, `operation_type`
+- Core fields: `date`, `from_method`, `to_method`, `amount`, `amount_bs`, `amount_usd`, `amount_in_bs`, `amount_out_bs`, `difference_bs`, `amount_in_usd`, `amount_out_usd`, `difference_usd`, `notes`, `operation_type`
 - Lifecycle fields: `created_at`, `updated_at`, `deleted_at`
+
+> [!NOTE]
+> The `*_usd` balance columns are written by `src/offline/enqueue/paymentBalanceEnqueue.ts` and are not part of the original schema dump; they were added by a manual migration. Verify they exist in production before relying on them.
 
 ### `sale_payment_splits`
 Mixed-payment detail rows for water sales.
@@ -271,6 +274,11 @@ What it is: migration bookkeeping schema.
 
 - Contains `schema_migrations`
 - Use case: Supabase migration history tracking
+
+### Unverified tables referenced by code
+
+> [!WARNING]
+> `companies` and `user_profiles` are queried by `src/components/layout/SyncManager.tsx` and listed as `read-sync-only` in `src/offline/coverageMatrix.ts`, but they are not documented here and are absent from the local schema baseline. Confirm in the production database whether they exist (and their columns) before depending on them or documenting them.
 
 ## Practical Guidance
 
