@@ -1,13 +1,16 @@
 import { expect, type Page } from '@playwright/test';
 import { TOAST_SALE_REGISTERED, expectToast } from '../toasts';
 import { openWaterSalesFromBottomNav } from '../uiNavigation';
-import type { WaterSaleInput } from '../masterLedger/ledgerTypes';
+import type {
+  SupportedPaymentMethod,
+  WaterSaleInput,
+} from '../masterLedger/ledgerTypes';
 
 const METHOD_LABELS = {
   efectivo: 'Efectivo',
   pago_movil: 'Pago Móvil',
   punto_venta: 'Punto de Venta',
-  divisa: 'Divisas',
+  divisa: 'Divisa',
 } as const;
 
 export async function selectBottleProduct(
@@ -90,4 +93,54 @@ export async function createWaterSale(
   await page.getByTestId('cart-confirm-sale').click();
 
   await expectToast(page, TOAST_SALE_REGISTERED, { timeout: 10_000 });
+}
+
+/** Deletes today's sale from the Agua list with its trash button and the confirm drawer. */
+export async function deleteWaterSale(
+  page: Page,
+  saleId: string
+): Promise<void> {
+  await openWaterSalesFromBottomNav(page);
+  const row = page.getByTestId(`sale-row-${saleId}`);
+  await expect(row).toBeVisible({ timeout: 10_000 });
+
+  await page.getByTestId(`sale-delete-trigger-${saleId}`).click();
+  const confirm = page.getByTestId('sale-delete-confirm');
+  await expect(confirm).toBeEnabled();
+  await confirm.click();
+  await expect(row).toHaveCount(0);
+}
+
+const EDIT_METHOD_LABEL: Record<SupportedPaymentMethod, string> = {
+  efectivo: 'Efectivo',
+  pago_movil: 'Pago Móvil',
+  punto_venta: 'Punto de Venta',
+  divisa: 'Divisa',
+};
+
+/** Edits today's sale from the Agua list: new subtotal and/or new payment method. */
+export async function editWaterSale(
+  page: Page,
+  saleId: string,
+  changes: { baseBs?: number; primary?: SupportedPaymentMethod }
+): Promise<void> {
+  await openWaterSalesFromBottomNav(page);
+  await page.getByTestId(`sale-edit-trigger-${saleId}`).click();
+  const sheet = page.getByRole('dialog');
+  await expect(sheet.getByText(/Editar Venta/)).toBeVisible();
+
+  if (changes.baseBs !== undefined) {
+    await sheet
+      .locator('input[type="number"]')
+      .first()
+      .fill(String(changes.baseBs));
+  }
+  if (changes.primary) {
+    await sheet.getByRole('combobox').first().click();
+    await page
+      .getByRole('option', { name: EDIT_METHOD_LABEL[changes.primary] })
+      .click();
+  }
+  await sheet.getByRole('button', { name: 'Guardar Cambios' }).click();
+  await expect(sheet).toBeHidden({ timeout: 15_000 });
 }

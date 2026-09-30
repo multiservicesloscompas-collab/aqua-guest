@@ -5,7 +5,7 @@ const METHOD_LABELS = {
   efectivo: 'Efectivo',
   pago_movil: 'Pago Móvil',
   punto_venta: 'Punto de Venta',
-  divisa: 'Divisas',
+  divisa: 'Divisa',
 } as const;
 
 export async function openRentalsModule(page: Page): Promise<void> {
@@ -53,13 +53,7 @@ export async function createWasherRental(
 
   // 3. Delivery fee if specified
   if (input.deliveryFeeUsd !== undefined && input.deliveryFeeUsd > 0) {
-    const feeButton = page.getByRole('button', {
-      name: `$${input.deliveryFeeUsd}`,
-      exact: true,
-    });
-    if (await feeButton.isVisible()) {
-      await feeButton.click();
-    }
+    await page.getByTestId(`rental-fee-${input.deliveryFeeUsd}`).click();
   }
 
   // 4. Payment method and splits
@@ -80,6 +74,17 @@ export async function createWasherRental(
     await page.getByLabel(`Método secundario ${secondaryLabel}`).click();
   }
 
+  // 4b. Tip (the same capture card the cart uses)
+  if (input.tip && input.tip.amountBs > 0) {
+    await page.getByTestId('cart-tip-toggle').click();
+    await page
+      .getByTestId('cart-tip-amount-input')
+      .fill(input.tip.amountBs.toString());
+    await page
+      .getByTestId(`cart-tip-payment-method-${input.tip.method}`)
+      .click();
+  }
+
   // 5. Payment status (paid vs pending)
   if (input.isPaid) {
     const statusSelect = page.getByTestId('rental-payment-status-select');
@@ -93,12 +98,8 @@ export async function createWasherRental(
     page.getByRole('heading', { name: 'Seleccionar Cliente' })
   ).toBeVisible();
 
-  await page
-    .getByPlaceholder('Nombre del cliente')
-    .fill(input.customerName);
-  await page
-    .getByPlaceholder('Dirección de entrega')
-    .fill('Calle Prueba #100');
+  await page.getByPlaceholder('Nombre del cliente').fill(input.customerName);
+  await page.getByPlaceholder('Dirección de entrega').fill('Calle Prueba #100');
 
   await page.getByRole('button', { name: 'Aplicar y Continuar' }).click();
   await expect(
@@ -145,4 +146,38 @@ export async function toggleRentalPayment(
   }
 
   await expect(page.getByRole('dialog')).toBeHidden({ timeout: 10_000 });
+}
+
+export async function deleteRental(
+  page: Page,
+  rentalId: string
+): Promise<void> {
+  await openRentalsModule(page);
+  await page.getByTestId(`rental-delete-${rentalId}`).click();
+  // The rental uses its own drawer, without a test id on the confirm button.
+  await page.getByRole('button', { name: 'Eliminar Permanentemente' }).click();
+  await expect(page.getByTestId(`rental-card-${rentalId}`)).toHaveCount(0, {
+    timeout: 10_000,
+  });
+}
+
+/** Edits a rental: new shift and/or new payment method. */
+export async function editRental(
+  page: Page,
+  rentalId: string,
+  changes: { shift?: 'medio' | 'completo' | 'doble'; primary?: string }
+): Promise<void> {
+  await openRentalsModule(page);
+  await page.getByTestId(`rental-edit-${rentalId}`).click();
+  const confirm = page.getByTestId('rental-confirm-button');
+  await expect(confirm).toBeVisible();
+
+  if (changes.shift) {
+    await page.getByTestId(`rental-shift-option-${changes.shift}`).click();
+  }
+  if (changes.primary) {
+    await page.getByTestId(`rental-payment-method-${changes.primary}`).click();
+  }
+  await confirm.click();
+  await expect(confirm).toBeHidden({ timeout: 15_000 });
 }

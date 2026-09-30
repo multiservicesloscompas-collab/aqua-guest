@@ -9,7 +9,7 @@ const METHOD_LABELS: Record<SupportedPaymentMethod, string> = {
   efectivo: 'Efectivo',
   pago_movil: 'Pago Móvil',
   punto_venta: 'Punto de Venta',
-  divisa: 'Divisas',
+  divisa: 'Divisa',
 };
 
 export async function openExpensesModule(page: Page): Promise<void> {
@@ -94,4 +94,44 @@ export async function payPendingTip(
   await page.getByRole('button', { name: 'Confirmar Pago' }).click();
 
   await expect(page.getByRole('dialog')).toBeHidden({ timeout: 10_000 });
+}
+
+export async function deleteExpense(
+  page: Page,
+  expenseId: string
+): Promise<void> {
+  await openExpensesModule(page);
+  await page.getByTestId(`expense-card-delete-${expenseId}`).click();
+  await page.getByTestId('confirm-delete-confirm').click();
+  await expect(
+    page.getByTestId(`expense-card-delete-${expenseId}`)
+  ).toHaveCount(0, { timeout: 10_000 });
+}
+
+/** Edits an expense: new amount and/or new payment method. */
+export async function editExpense(
+  page: Page,
+  expenseId: string,
+  changes: { amountBs?: number; primary?: SupportedPaymentMethod }
+): Promise<void> {
+  await openExpensesModule(page);
+  await page.getByTestId(`expense-card-edit-${expenseId}`).click();
+  await expect(page.getByTestId('expense-amount-input')).toBeVisible();
+
+  if (changes.amountBs !== undefined) {
+    await page
+      .getByTestId('expense-amount-input')
+      .fill(String(changes.amountBs));
+  }
+  if (changes.primary) {
+    await page
+      .getByRole('button', {
+        name: `Método de pago ${METHOD_LABELS[changes.primary]}`,
+      })
+      .click();
+  }
+  await page.getByTestId('expense-submit-button').click();
+  await expect(page.getByTestId('expense-amount-input')).toBeHidden({
+    timeout: 15_000,
+  });
 }

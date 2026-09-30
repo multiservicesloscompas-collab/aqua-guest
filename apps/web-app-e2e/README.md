@@ -73,6 +73,8 @@ Every test is written with `documented()` from `support/fixtures`, and the ficha
 test(
   'title',
   documented({
+    titulo: 'Nombre corto en español.',
+    area: 'Ventas de agua',
     intent: 'Qué comprueba, en una frase.',
     steps: ['Qué hace, paso a paso.'],
     expects: ['Qué resultado espera, con cifras exactas.'],
@@ -84,9 +86,18 @@ test(
 );
 ```
 
-The ficha lives in Playwright annotations, so the runner, the narrator and the HTML report read the same source. `npm run e2e:live -- --check` fails when a test has no intent, no step or no expectation.
+`titulo` and `area` drive the runner menu (grouped by area; the `Herramientas de prueba (internas)` area is listed last). The ficha lives in Playwright annotations, so the runner, the narrator and the HTML report read the same source. `npm run e2e:live -- --check` fails when a test has no intent, no step or no expectation.
 
 Never assert a toast with a bare `getByText`: two identical toasts overlap for about 4 s and trigger a strict-mode violation. Use `expectToast` from `support/toasts.ts`, and prove the effect with a database check.
+
+### Scenarios (combined movements)
+
+`src/support/scenarios` describes what a person can do in the app as plain-data steps: `sale`, `rental`, `expense`, `transfer`, `payTip`, `markPaid`, `edit`, `delete`. Sales and rentals take a simple or mixed payment and an optional tip; editing is limited to records with a simple payment and no tip (tip edits are the known bug B3). Prepaid orders and rental extensions are deliberately not covered (features expected to go away).
+
+- `support/ledger/ledger.ts` computes the figures the dashboard must show (income, expenses, net, transactions, the four method cards) from the business rules, never from the app's formulas. Check it with `ledger.calc.e2e.spec.ts`.
+- `support/scenarios/run.ts` runs each step through the UI and compares the dashboard with the ledger after every step, naming the step in the failure message.
+- The ficha of a scenario is generated from its steps. Add a scenario to `support/scenarios/library.ts`, or build one from the runner (menu option 5) and save it: it is written to `src/scenarios/*.json` and runs like any other test. `pairwise.ts` generates a small set of scenarios that cover every pair of options (module × payment × tip × later action).
+- A new kind of movement needs: a step type, `applyStep`/`describeStep` in `apply.ts`, a driver in `support/drivers`, and a case in `run.ts`.
 
 ### Direct Playwright CLI from repo root
 

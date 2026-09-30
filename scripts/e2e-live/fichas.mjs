@@ -22,6 +22,9 @@ const TIMINGS_FILE = path.join(
   'node_modules/.cache/aquaguest-e2e/timings.json'
 );
 const DEFAULT_SECONDS = 15;
+const INTERNAL_AREA = 'Herramientas de prueba (internas)';
+
+export const displayName = (test) => test.doc.titulo || test.fullTitle;
 
 function parseDoc(annotations = []) {
   const texts = (type) =>
@@ -31,6 +34,8 @@ function parseDoc(annotations = []) {
       )
       .map((annotation) => annotation.description);
   return {
+    titulo: texts('titulo')[0] ?? '',
+    area: texts('area')[0] ?? '',
     intent: texts('intent')[0] ?? '',
     steps: texts('step'),
     expects: texts('expect'),
@@ -39,7 +44,7 @@ function parseDoc(annotations = []) {
 }
 
 /** Every test of the chromium project with its documentation. */
-export function listTests() {
+export function listTests(env = {}) {
   const result = playwright(
     [
       'test',
@@ -49,7 +54,7 @@ export function listTests() {
       '--list',
       '--reporter=json',
     ],
-    {},
+    env,
     { capture: true }
   );
   let data;
@@ -80,6 +85,14 @@ export function listTests() {
       walk(child, [...describes, child.title]);
   };
   data.suites.forEach((fileSuite) => walk(fileSuite, []));
+  // Business areas first (in order of appearance), internal tooling checks last.
+  const areaOrder = [];
+  tests.forEach((test) => {
+    if (!areaOrder.includes(test.doc.area)) areaOrder.push(test.doc.area);
+  });
+  const rank = (test) =>
+    test.doc.area === INTERNAL_AREA ? 1000 : areaOrder.indexOf(test.doc.area);
+  tests.sort((a, b) => rank(a) - rank(b));
   return {
     tests,
     error: data.errors?.length ? 'Hay errores al listar los tests.' : '',
@@ -116,6 +129,8 @@ export function formatDuration(seconds) {
 
 export function missingParts(doc) {
   const missing = [];
+  if (!doc.titulo) missing.push('titulo');
+  if (!doc.area) missing.push('area');
   if (!doc.intent) missing.push('intent');
   if (doc.steps.length === 0) missing.push('steps');
   if (doc.expects.length === 0) missing.push('expects');
@@ -124,8 +139,12 @@ export function missingParts(doc) {
 
 export function renderFicha(test, timings) {
   const lines = [
-    `\n${bold(test.fullTitle)}`,
-    dim(`  ${TESTS_DIR}/${test.file}:${test.line}`),
+    `\n${bold(displayName(test))}`,
+    dim(
+      `  ${test.doc.area ? `${test.doc.area} · ` : ''}${TESTS_DIR}/${
+        test.file
+      }:${test.line}`
+    ),
   ];
   const missing = missingParts(test.doc);
   if (missing.length > 0) {
@@ -164,22 +183,27 @@ export function renderFicha(test, timings) {
   return lines.join('\n');
 }
 
-/** Flat numbered list grouped by file, each test with its one-line intent. */
+/** Flat numbered list grouped by area, each test with what it expects. */
 export function renderList(tests) {
   const lines = [];
-  let currentFile = '';
+  let currentArea = null;
   tests.forEach((test, i) => {
-    if (test.file !== currentFile) {
-      currentFile = test.file;
-      const count = tests.filter((other) => other.file === currentFile).length;
+    if (test.doc.area !== currentArea) {
+      currentArea = test.doc.area;
+      const count = tests.filter(
+        (other) => other.doc.area === currentArea
+      ).length;
       lines.push(
-        `\n  ${bold(currentFile)} ${dim(
+        `\n  ${bold(currentArea || 'Sin área')} ${dim(
           `(${count} ${count === 1 ? 'test' : 'tests'})`
         )}`
       );
     }
-    lines.push(`  ${String(i + 1).padStart(3)}  ${test.fullTitle}`);
-    lines.push(`       ${dim(test.doc.intent || '⚠ sin ficha')}`);
+    lines.push(`  ${String(i + 1).padStart(3)}  ${displayName(test)}`);
+    const expected = test.doc.expects[0] ?? test.doc.intent;
+    lines.push(
+      `       ${dim(expected ? `Espera: ${expected}` : '⚠ sin ficha')}`
+    );
   });
   return lines.join('\n');
 }
@@ -214,6 +238,8 @@ export function testsMatching(tests, text) {
   return tests.filter(
     (test) =>
       test.fullTitle.toLowerCase().includes(needle) ||
+      displayName(test).toLowerCase().includes(needle) ||
+      test.doc.area.toLowerCase().includes(needle) ||
       test.fileId.toLowerCase() === needle
   );
 }

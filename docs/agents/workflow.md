@@ -19,6 +19,7 @@ Approval of one action never extends to the next one. Prefer leaving changes unc
 
 - Development and e2e use only the local Supabase stack (`127.0.0.1`, `npm run supabase:start`). The e2e support code aborts if the URL is not local. Never bypass that guard.
 - Every e2e test starts from an empty database plus a fixed baseline (`apps/web-app-e2e/src/support/reset`). `npm run e2e:reset`, `npm run e2e:purge` and `npm run e2e:reset:dry` do the same from the command line.
+- Cross-module e2e scenarios are data (`apps/web-app-e2e/src/support/scenarios`); their expected dashboard figures come from `support/ledger`, which must never copy the app's formulas. Prepaid orders and rental extensions are intentionally out of scope.
 - Every e2e test is written with `documented({intent, steps, expects})` (Spanish text, exact figures) and asserts toasts through `expectToast`, never a bare `getByText`. `npm run e2e:live -- --check` enforces the ficha.
 - `supabase/` is gitignored. Local migrations mirror the production baseline (`initial_schema` + USD balance columns) and are not proof of the real production schema.
 - Production migrations are applied by hand by the user. Never assume they were applied.

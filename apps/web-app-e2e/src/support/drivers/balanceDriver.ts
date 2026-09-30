@@ -1,12 +1,15 @@
 import { expect, type Page } from '@playwright/test';
 import { openDashboardFromBottomNav } from '../uiNavigation';
-import type { BalanceTransferInput, SupportedPaymentMethod } from '../masterLedger/ledgerTypes';
+import type {
+  BalanceTransferInput,
+  SupportedPaymentMethod,
+} from '../masterLedger/ledgerTypes';
 
 const METHOD_LABELS: Record<SupportedPaymentMethod, string> = {
   efectivo: 'Efectivo',
   pago_movil: 'Pago Móvil',
   punto_venta: 'Punto de Venta',
-  divisa: 'Divisas',
+  divisa: 'Divisa',
 };
 
 export async function openPaymentBalancePage(page: Page): Promise<void> {
@@ -42,12 +45,16 @@ export async function createBalanceTransfer(
   // 2. From Method
   const fromTrigger = page.getByTestId('balance-from-method-select');
   await fromTrigger.click();
-  await page.getByRole('option', { name: METHOD_LABELS[input.fromMethod] }).click();
+  await page
+    .getByRole('option', { name: METHOD_LABELS[input.fromMethod] })
+    .click();
 
   // 3. To Method
   const toTrigger = page.getByTestId('balance-to-method-select');
   await toTrigger.click();
-  await page.getByRole('option', { name: METHOD_LABELS[input.toMethod] }).click();
+  await page
+    .getByRole('option', { name: METHOD_LABELS[input.toMethod] })
+    .click();
 
   // 4. Amount Out
   const amountOutInput = page.locator('#amountOut');
