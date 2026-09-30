@@ -1,6 +1,7 @@
 import type { WashingMachine } from '@/types';
 import { useSyncStore } from '@/store/useSyncStore';
 import { generateTempId } from './tempId';
+import { enqueueEntityDelete } from './commonEnqueue';
 
 type MachineCreateInput = Omit<WashingMachine, 'id'>;
 type MachineUpdateInput = Partial<Omit<WashingMachine, 'id'>>;
@@ -64,15 +65,10 @@ export const enqueueOfflineWashingMachineUpdate = (
 export const enqueueOfflineWashingMachineDelete = (
   id: string,
   actionSource = 'machines/deleteWashingMachine'
-) => {
-  const businessKey = buildEntityBusinessKey(id);
-
-  useSyncStore.getState().addToQueue({
-    type: 'DELETE',
+) =>
+  enqueueEntityDelete({
     table: 'washing_machines',
-    payload: { id },
-    enqueueSource: actionSource,
-    businessKey,
-    dependencyKeys: id.startsWith('temp-') ? [businessKey] : undefined,
+    id,
+    businessKey: buildEntityBusinessKey(id),
+    actionSource,
   });
-};

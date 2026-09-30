@@ -1,6 +1,7 @@
 import type { Customer } from '@/types';
 import { useSyncStore } from '@/store/useSyncStore';
 import { generateTempId } from './tempId';
+import { enqueueEntityDelete } from './commonEnqueue';
 
 type CustomerCreateInput = Omit<Customer, 'id'>;
 type CustomerUpdateInput = Partial<Omit<Customer, 'id'>>;
@@ -58,15 +59,10 @@ export const enqueueOfflineCustomerUpdate = (
 export const enqueueOfflineCustomerDelete = (
   id: string,
   actionSource = 'customers/deleteCustomer'
-) => {
-  const businessKey = buildEntityBusinessKey(id);
-
-  useSyncStore.getState().addToQueue({
-    type: 'DELETE',
+) =>
+  enqueueEntityDelete({
     table: 'customers',
-    payload: { id },
-    enqueueSource: actionSource,
-    businessKey,
-    dependencyKeys: id.startsWith('temp-') ? [businessKey] : undefined,
+    id,
+    businessKey: buildEntityBusinessKey(id),
+    actionSource,
   });
-};
