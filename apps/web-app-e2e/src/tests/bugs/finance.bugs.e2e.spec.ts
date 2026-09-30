@@ -149,7 +149,8 @@ test.describe('FIN · consistencia financiera (rojos)', () => {
 
         // Assert: every view reports the historical Bs 182.50
         expect(cardsTotal).toBeCloseTo(182.5, 1);
-        expect(snapshot.mtdIncomeBs).toBeCloseTo(182.5, 0);
+        // The KPI card shows whole bolívares, so the historical 182.50 reads 183
+        expect(snapshot.mtdIncomeBs).toBe(Math.round(182.5));
         expect(txIncome).toBeCloseTo(182.5, 1);
       } finally {
         await restore();

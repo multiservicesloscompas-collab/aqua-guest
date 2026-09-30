@@ -31,3 +31,21 @@ export function hasValidMixedPaymentSplits(
 
   return uniqueMethods.size >= 2;
 }
+
+/**
+ * True when the record carries stored payments we can trust as historical
+ * amounts (one or more valid splits), unlike `hasValidMixedPaymentSplits`,
+ * which only accepts 2+ distinct methods.
+ */
+export function hasPersistedPaymentSplits(
+  splits: readonly PaymentSplit[] | undefined
+): splits is PaymentSplit[] {
+  if (!splits || splits.length === 0) {
+    return false;
+  }
+
+  return splits.every(
+    (split) =>
+      isValidSplitMethod(split.method) && isFinitePositiveNumber(split.amountBs)
+  );
+}

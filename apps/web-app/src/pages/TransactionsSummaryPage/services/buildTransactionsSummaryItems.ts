@@ -9,7 +9,10 @@ import type {
   WasherRental,
 } from '@/types';
 import type { PaymentSplit } from '@/types/paymentSplits';
-import { hasValidMixedPaymentSplits } from '@/services/payments/paymentSplitValidity';
+import {
+  hasPersistedPaymentSplits,
+  hasValidMixedPaymentSplits,
+} from '@/services/payments/paymentSplitValidity';
 import { normalizeToVenezuelaDate } from '@/services/DateService';
 import { resolvePaymentBalanceTransferLegs } from '@/services/payments/paymentBalanceTransferSemantics';
 
@@ -146,7 +149,7 @@ export function buildTransactionsSummaryItems(
         rental.isPaid && (rental.datePaid || rental.date) === selectedDate
     )
     .forEach((rental) => {
-      if (hasPaymentSplits(rental.paymentSplits)) {
+      if (hasPersistedPaymentSplits(rental.paymentSplits)) {
         items.push(
           ...toSplitItems({
             baseId: rental.id,
