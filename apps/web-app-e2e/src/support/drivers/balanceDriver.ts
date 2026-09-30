@@ -80,3 +80,15 @@ export async function createBalanceTransfer(
     page.getByText(/transferencia registrada|operación agregada|éxito/i)
   ).toBeVisible({ timeout: 10_000 });
 }
+
+/** Deletes the only transfer of the day from the Equilibrio screen (browser confirm dialog). */
+export async function deleteBalanceTransfer(page: Page): Promise<void> {
+  await openPaymentBalancePage(page);
+  const trash = page.locator('button:has(svg.lucide-trash-2)');
+  await expect(trash).toHaveCount(1);
+
+  page.once('dialog', (dialog) => dialog.accept());
+  await trash.first().click();
+
+  await expect(trash).toHaveCount(0, { timeout: 10_000 });
+}

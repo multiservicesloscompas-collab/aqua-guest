@@ -296,4 +296,28 @@ export const SCENARIOS: Scenario[] = [
       },
     ],
   },
+  {
+    id: 'borrar-equilibrio',
+    titulo: 'Borrar un equilibrio devuelve el dinero a su método',
+    area: 'Transferencias',
+    intent:
+      'Comprobar que al eliminar una transferencia entre métodos las tarjetas y las transacciones vuelven a su estado anterior.',
+    steps: [
+      {
+        type: 'sale',
+        id: 'venta',
+        baseBs: 1000,
+        payment: { primary: 'efectivo' },
+      },
+      {
+        type: 'transfer',
+        id: 'equilibrio',
+        from: 'efectivo',
+        to: 'pago_movil',
+        outBs: 400,
+        inBs: 400,
+      },
+      { type: 'delete', targetId: 'equilibrio' },
+    ],
+  },
 ];

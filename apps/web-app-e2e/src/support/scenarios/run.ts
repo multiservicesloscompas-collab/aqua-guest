@@ -1,6 +1,9 @@
 import { expect, type Page } from '@playwright/test';
 import { captureDashboardSnapshot } from '../drivers/dashboardDriver';
-import { createBalanceTransfer } from '../drivers/balanceDriver';
+import {
+  createBalanceTransfer,
+  deleteBalanceTransfer,
+} from '../drivers/balanceDriver';
 import {
   createExpense,
   deleteExpense,
@@ -139,8 +142,20 @@ async function runStep(state: RunState, step: Step): Promise<void> {
       break;
     }
     case 'delete': {
-      const dbId = state.dbIdByStep.get(step.targetId);
       const target = state.ledger.records.find((r) => r.id === step.targetId);
+      if (target?.kind === 'transfer') {
+        const transfers = state.ledger.records.filter(
+          (r) => r.kind === 'transfer'
+        );
+        if (transfers.length > 1) {
+          throw new Error(
+            'Only a scenario with a single transfer can delete it'
+          );
+        }
+        await deleteBalanceTransfer(page);
+        break;
+      }
+      const dbId = state.dbIdByStep.get(step.targetId);
       if (!dbId || !target)
         throw new Error(`Nothing to delete for «${step.targetId}»`);
       if (target.kind === 'sale') await deleteWaterSale(page, dbId);

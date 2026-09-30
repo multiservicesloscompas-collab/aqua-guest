@@ -181,3 +181,18 @@ export async function editRental(
   await confirm.click();
   await expect(confirm).toBeHidden({ timeout: 15_000 });
 }
+
+/**
+ * Picks a delivery time in the rental sheet. The list opens scrolled to the
+ * current default, so early slots sit outside the viewport: focus + Enter
+ * selects them without depending on scrolling.
+ */
+export async function pickDeliveryTime(
+  page: Page,
+  time: string
+): Promise<void> {
+  await page.getByTestId('rental-delivery-time-select').click();
+  const option = page.getByTestId(`rental-delivery-time-option-${time}`);
+  await option.focus();
+  await page.keyboard.press('Enter');
+}
