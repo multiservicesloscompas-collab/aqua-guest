@@ -1,13 +1,13 @@
-import { RentalShiftConfig, RentalShift, BUSINESS_HOURS } from '@/types';
+import { BUSINESS_HOURS, RentalShift, RentalShiftConfig } from '@/types';
 import {
-  format,
   addDays,
-  setHours,
-  setMinutes,
-  parse,
+  format,
+  getDay,
   isAfter,
   isBefore,
-  getDay,
+  parse,
+  setHours,
+  setMinutes,
 } from 'date-fns';
 import { es } from 'date-fns/locale';
 
@@ -26,11 +26,7 @@ function getBusinessHoursWindow(date: Date): {
   };
 }
 
-/**
- * Keeps a moment inside business hours. A moment before opening moves to
- * opening time the same day; one after closing moves to opening time on the
- * next working day.
- */
+
 export function clampToBusinessHours(dateTime: Date): Date {
   const { openTime, closeTime } = getBusinessHoursWindow(dateTime);
 
@@ -47,7 +43,7 @@ export function clampToBusinessHours(dateTime: Date): Date {
     return openTime;
   }
 
-  // Mover al siguiente día laboral a la hora de apertura
+
   let nextDay = addDays(new Date(dateTime), 1);
   while (!BUSINESS_HOURS.workDays.includes(getDay(nextDay))) {
     nextDay = addDays(nextDay, 1);
