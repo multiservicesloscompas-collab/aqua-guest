@@ -10,7 +10,7 @@ Load this doc for bug fixes, refactors, migrations, releases, or when triaging f
 Ask the user, every time and for that specific action, before you:
 
 - run `git commit`, `git push`, open or merge a PR
-- reset, seed, or migrate a database, or run any e2e spec that purges data
+- reset, seed, or migrate a database, or run any e2e spec or command: the suite wipes and reseeds the local database before every test
 - delete files the task did not create, or touch anything outside the repository
 
 Approval of one action never extends to the next one. Prefer leaving changes uncommitted and summarizing the diff.
@@ -18,13 +18,16 @@ Approval of one action never extends to the next one. Prefer leaving changes unc
 ## Environments
 
 - Development and e2e use only the local Supabase stack (`127.0.0.1`, `npm run supabase:start`). The e2e support code aborts if the URL is not local. Never bypass that guard.
+- Every e2e test starts from an empty database plus a fixed baseline (`apps/web-app-e2e/src/support/reset`). `npm run e2e:reset`, `npm run e2e:purge` and `npm run e2e:reset:dry` do the same from the command line.
+- Cross-module e2e scenarios are data (`apps/web-app-e2e/src/support/scenarios`); their expected dashboard figures come from `support/ledger`, which must never copy the app's formulas. Prepaid orders and rental extensions are intentionally out of scope.
+- Every e2e test is written with `documented({intent, steps, expects})` (Spanish text, exact figures) and asserts toasts through `expectToast`, never a bare `getByText`. `npm run e2e:live -- --check` enforces the ficha.
 - `supabase/` is gitignored. Local migrations mirror the production baseline (`initial_schema` + USD balance columns) and are not proof of the real production schema.
 - Production migrations are applied by hand by the user. Never assume they were applied.
 
 ## Bug Fix Flow (one bug at a time)
 
-1. **Red:** write `apps/web-app-e2e/src/tests/bugs/<id>-<slug>.bugs.e2e.spec.ts` (AAA, asserts the correct behavior, annotated with `bug(id, evidence)`) plus a `.md` next to it: user action, expected, actual, root cause. Do not touch `apps/web-app/src`. Confirm it fails on the business assertion, not on a selector or timeout.
-2. **Stop.** Give the user the run command (`npx playwright test -c apps/web-app-e2e/playwright.config.ts --project=bugs <spec> --headed`) and wait for confirmation that they saw the failure.
+1. **Red:** write `apps/web-app-e2e/src/tests/bugs/<id>-<slug>.bugs.e2e.spec.ts` (AAA, asserts the correct behavior, documented with `bugDoc({ id, ... })`) plus a `.md` next to it: user action, expected, actual, root cause. Add the id to `BUG_KNOWLEDGE` in `support/bugs/bugKnowledge.ts` (cause, fix, where): `bugDoc` will not compile without it, and `npm run e2e:bugs -- --check` fails if any is empty. Do not touch `apps/web-app/src`. Confirm it fails on the business assertion, not on a selector or timeout.
+2. **Stop.** Give the user the run command (`npm run e2e:bugs -- --id <ID>`: visible browser, stops on the failing screen, explains why it fails and what to fix) and wait for confirmation that they saw the failure.
 3. **Fix:** add a failing Vitest unit test, make the minimal source change, then the e2e must pass. Move the spec to `tests/regression/`.
 4. Run the checks below, report real numbers, and ask before committing.
 
@@ -67,5 +70,9 @@ npx nx typecheck web-app
 npx nx lint web-app
 npx nx build web-app
 npm run e2e:web-app      # regression e2e against the local DB
-npm run e2e:bugs         # known-bug specs (expected red until fixed)
+npm run e2e:reset        # wipe the local DB and seed the e2e baseline
+npm run e2e:live         # interactive runner: per-test fichas (what it does, what it expects), watch them run
+npm run e2e:live -- --check   # fails if any e2e test lacks a complete documented() ficha
+npm run e2e:bugs         # interactive bug runner: objective, why it fails, what to fix; browser visible
+npm run e2e:bugs:ci      # same specs, plain Playwright run (CI, agents)
 ```
