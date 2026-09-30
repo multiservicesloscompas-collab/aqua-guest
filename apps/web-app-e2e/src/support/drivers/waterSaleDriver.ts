@@ -1,4 +1,5 @@
 import { expect, type Page } from '@playwright/test';
+import { TOAST_SALE_REGISTERED, expectToast } from '../toasts';
 import { openWaterSalesFromBottomNav } from '../uiNavigation';
 import type { WaterSaleInput } from '../masterLedger/ledgerTypes';
 
@@ -57,9 +58,7 @@ export async function createWaterSale(
   await page.getByTestId('water-sales-open-cart-mobile').click();
 
   const primarySplit = input.splits[0];
-  await page
-    .getByTestId(`cart-payment-method-${primarySplit.method}`)
-    .click();
+  await page.getByTestId(`cart-payment-method-${primarySplit.method}`).click();
 
   if (input.splits.length > 1) {
     const secondarySplit = input.splits[1];
@@ -90,7 +89,5 @@ export async function createWaterSale(
   await page.getByTestId('cart-notes-input').fill(input.noteMarker);
   await page.getByTestId('cart-confirm-sale').click();
 
-  await expect(
-    page.getByText('¡Venta registrada correctamente!')
-  ).toBeVisible({ timeout: 10_000 });
+  await expectToast(page, TOAST_SALE_REGISTERED, { timeout: 10_000 });
 }

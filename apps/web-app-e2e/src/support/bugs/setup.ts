@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { purgeAllDomainData } from '../dbPurgeHelpers';
+import { resetDomain } from '../reset/resetDomain';
 import { getSupabaseClient } from '../supabaseClient';
 import { cleanupBugData } from './dbSeed';
 import { todayVe } from './dates';
@@ -7,7 +7,7 @@ import { todayVe } from './dates';
 /** Clean DB state before each bug spec and restore shared fixtures afterwards. */
 export function useCleanDomain(): void {
   test.beforeEach(async () => {
-    await purgeAllDomainData();
+    await resetDomain({ seed: true });
     await cleanupBugData();
   });
 
@@ -18,7 +18,9 @@ export function useCleanDomain(): void {
 
 /** Records a bug id + code evidence on the test report. */
 export function bug(id: string, evidence: string): void {
-  test.info().annotations.push({ type: 'bug', description: `${id} · ${evidence}` });
+  test
+    .info()
+    .annotations.push({ type: 'bug', description: `${id} · ${evidence}` });
 }
 
 /** Saves today's exchange rate row and returns a function that restores it. */
@@ -35,7 +37,9 @@ export async function snapshotTodayRate(): Promise<() => Promise<void>> {
     if (previous === undefined) {
       await supabase.from('exchange_rates').delete().eq('date', today);
     } else {
-      await supabase.from('exchange_rates').upsert({ date: today, rate: previous }, { onConflict: 'date' });
+      await supabase
+        .from('exchange_rates')
+        .upsert({ date: today, rate: previous }, { onConflict: 'date' });
     }
   };
 }
@@ -58,7 +62,8 @@ export async function goToDate(page: Page, date: string): Promise<void> {
   for (let i = 0; i < 70; i += 1) {
     const shown = (await current.getAttribute('data-date')) ?? '';
     if (shown === date) return;
-    const testId = shown > date ? 'water-sales-date-prev' : 'water-sales-date-next';
+    const testId =
+      shown > date ? 'water-sales-date-prev' : 'water-sales-date-next';
     await page.getByTestId(testId).first().click();
   }
   throw new Error(`Could not navigate DateSelector to ${date}`);

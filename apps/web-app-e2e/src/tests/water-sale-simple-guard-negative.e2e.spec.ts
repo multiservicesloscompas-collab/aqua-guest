@@ -1,4 +1,6 @@
-import { expect, test, type Page } from '@playwright/test';
+import { type Page } from '@playwright/test';
+import { documented, expect, test } from '../support/fixtures';
+import { TOAST_SALE_REGISTERED, expectToast } from '../support/toasts';
 import { waitForSaleByMarker } from '../support/dbPolling';
 import { createRunMarker } from '../support/runMarker';
 import {
@@ -40,40 +42,57 @@ async function addBottleToCart(page: Page) {
   await confirmAddButton.click();
 }
 
-test('negative guard: mixed payment ON is rejected before simple-sale submit', async ({
-  page,
-}) => {
-  const marker = createRunMarker();
+test(
+  'negative guard: mixed payment ON is rejected before simple-sale submit',
+  documented({
+    intent:
+      'Comprobar que una venta simple no puede salir con el pago mixto encendido.',
+    steps: [
+      'Abre Agua, agrega un botellón y abre el carrito.',
+      'Enciende el pago mixto (aparece el campo del método secundario).',
+      'Aplica la guarda del checkout simple.',
+      'Escribe la nota y confirma la venta en efectivo.',
+    ],
+    expects: [
+      'Tras la guarda el interruptor de pago mixto queda apagado y el campo del método secundario desaparece.',
+      'No hay campo de propina.',
+      'Aparece el aviso «¡Venta registrada correctamente!».',
+      'La venta queda en efectivo, con la nota, sin splits ni propina.',
+    ],
+  }),
+  async ({ page }) => {
+    const marker = createRunMarker();
 
-  await gotoDashboard(page);
-  await openWaterSalesFromBottomNav(page);
-  await addBottleToCart(page);
+    await gotoDashboard(page);
+    await openWaterSalesFromBottomNav(page);
+    await addBottleToCart(page);
 
-  await page.getByTestId('water-sales-open-cart-mobile').click();
-  await expect(page.getByRole('heading', { name: /carrito/i })).toBeVisible();
+    await page.getByTestId('water-sales-open-cart-mobile').click();
+    await expect(page.getByRole('heading', { name: /carrito/i })).toBeVisible();
 
-  const mixedToggle = page.getByTestId('mixed-payment-toggle').first();
-  await expect(mixedToggle).toBeVisible();
-  await mixedToggle.click();
-  await expect(mixedToggle).toHaveAttribute('aria-pressed', 'true');
-  await expect(mixedToggle).toHaveAttribute('data-state', 'on');
-  await expect(page.getByLabel('Monto método secundario (Bs)')).toBeVisible();
+    const mixedToggle = page.getByTestId('mixed-payment-toggle').first();
+    await expect(mixedToggle).toBeVisible();
+    await mixedToggle.click();
+    await expect(mixedToggle).toHaveAttribute('aria-pressed', 'true');
+    await expect(mixedToggle).toHaveAttribute('data-state', 'on');
+    await expect(page.getByLabel('Monto método secundario (Bs)')).toBeVisible();
 
-  await assertSimpleCheckoutGuards(page, 'efectivo');
+    await assertSimpleCheckoutGuards(page, 'efectivo');
 
-  await expect(mixedToggle).toHaveAttribute('aria-pressed', 'false');
-  await expect(mixedToggle).toHaveAttribute('data-state', 'off');
-  await expect(page.getByLabel('Monto método secundario (Bs)')).toHaveCount(0);
-  await expect(page.getByTestId('cart-tip-amount-input')).toHaveCount(0);
+    await expect(mixedToggle).toHaveAttribute('aria-pressed', 'false');
+    await expect(mixedToggle).toHaveAttribute('data-state', 'off');
+    await expect(page.getByLabel('Monto método secundario (Bs)')).toHaveCount(
+      0
+    );
+    await expect(page.getByTestId('cart-tip-amount-input')).toHaveCount(0);
 
-  await page.getByTestId('cart-notes-input').fill(marker.notesValue);
-  await page.getByTestId('cart-confirm-sale').click();
-  await expect(
-    page.getByText('¡Venta registrada correctamente!')
-  ).toBeVisible();
+    await page.getByTestId('cart-notes-input').fill(marker.notesValue);
+    await page.getByTestId('cart-confirm-sale').click();
+    await expectToast(page, TOAST_SALE_REGISTERED);
 
-  const sale = await waitForSaleByMarker(marker.id);
-  expect(sale.paymentMethod).toBe('efectivo');
-  expect(sale.notes).toBe(marker.notesValue);
-  await assertSaleStoredWithoutMixedOrTip(sale.id, 'efectivo');
-});
+    const sale = await waitForSaleByMarker(marker.id);
+    expect(sale.paymentMethod).toBe('efectivo');
+    expect(sale.notes).toBe(marker.notesValue);
+    await assertSaleStoredWithoutMixedOrTip(sale.id, 'efectivo');
+  }
+);

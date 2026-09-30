@@ -3,24 +3,22 @@
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
   "sourceRoot": "apps/web-app-e2e/src",
   "projectType": "application",
-  "implicitDependencies": [
-    "web-app"
-  ],
+  "implicitDependencies": ["web-app"],
   "targets": {
     "e2e": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "playwright test -c apps/web-app-e2e/playwright.config.ts apps/web-app-e2e/src/tests/water-sale-cleanup.e2e.spec.ts && playwright test -c apps/web-app-e2e/playwright.config.ts apps/web-app-e2e/src/tests/water-sale-dashboard-metrics.e2e.spec.ts -g \"dashboard transactions and metrics validation with 4 water sales\""
+        "command": "playwright test -c apps/web-app-e2e/playwright.config.ts --project=chromium"
       },
       "configurations": {
         "headed": {
-          "command": "playwright test -c apps/web-app-e2e/playwright.config.ts --headed --workers=1 apps/web-app-e2e/src/tests/water-sale-cleanup.e2e.spec.ts && playwright test -c apps/web-app-e2e/playwright.config.ts --headed --workers=1 apps/web-app-e2e/src/tests/water-sale-dashboard-metrics.e2e.spec.ts -g \"dashboard transactions and metrics validation with 4 water sales\""
+          "command": "playwright test -c apps/web-app-e2e/playwright.config.ts --project=chromium --headed --workers=1"
         },
         "debug": {
-          "command": "playwright test -c apps/web-app-e2e/playwright.config.ts --debug --workers=1 apps/web-app-e2e/src/tests/water-sale-cleanup.e2e.spec.ts && playwright test -c apps/web-app-e2e/playwright.config.ts --debug --workers=1 apps/web-app-e2e/src/tests/water-sale-dashboard-metrics.e2e.spec.ts -g \"dashboard transactions and metrics validation with 4 water sales\""
+          "command": "playwright test -c apps/web-app-e2e/playwright.config.ts --project=chromium --debug --workers=1"
         },
         "ci": {
-          "command": "playwright test -c apps/web-app-e2e/playwright.config.ts --reporter=line --workers=1"
+          "command": "playwright test -c apps/web-app-e2e/playwright.config.ts --project=chromium --reporter=line --workers=1"
         }
       }
     },
@@ -55,14 +53,17 @@
     "e2e-preclean-dashboard": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "playwright test -c apps/web-app-e2e/playwright.config.ts apps/web-app-e2e/src/tests/water-sale-cleanup.e2e.spec.ts && playwright test -c apps/web-app-e2e/playwright.config.ts apps/web-app-e2e/src/tests/water-sale-dashboard-metrics.e2e.spec.ts -g \"dashboard transactions and metrics validation with 4 water sales\""
+        "command": "playwright test -c apps/web-app-e2e/playwright.config.ts --project=chromium"
       },
       "configurations": {
         "headed": {
-          "command": "playwright test -c apps/web-app-e2e/playwright.config.ts --headed --workers=1 apps/web-app-e2e/src/tests/water-sale-cleanup.e2e.spec.ts && playwright test -c apps/web-app-e2e/playwright.config.ts --headed --workers=1 apps/web-app-e2e/src/tests/water-sale-dashboard-metrics.e2e.spec.ts -g \"dashboard transactions and metrics validation with 4 water sales\""
+          "command": "playwright test -c apps/web-app-e2e/playwright.config.ts --project=chromium --headed --workers=1"
         },
         "debug": {
-          "command": "playwright test -c apps/web-app-e2e/playwright.config.ts --debug --workers=1 apps/web-app-e2e/src/tests/water-sale-cleanup.e2e.spec.ts && playwright test -c apps/web-app-e2e/playwright.config.ts --debug --workers=1 apps/web-app-e2e/src/tests/water-sale-dashboard-metrics.e2e.spec.ts -g \"dashboard transactions and metrics validation with 4 water sales\""
+          "command": "playwright test -c apps/web-app-e2e/playwright.config.ts --project=chromium --debug --workers=1"
+        },
+        "ci": {
+          "command": "playwright test -c apps/web-app-e2e/playwright.config.ts --project=chromium --reporter=line --workers=1"
         }
       }
     },
@@ -88,7 +89,5 @@
       }
     }
   },
-  "tags": [
-    "scope:e2e"
-  ]
+  "tags": ["scope:e2e"]
 }

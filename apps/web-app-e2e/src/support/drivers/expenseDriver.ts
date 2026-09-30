@@ -1,5 +1,9 @@
 import { expect, type Page } from '@playwright/test';
-import type { ExpenseInput, SupportedPaymentMethod } from '../masterLedger/ledgerTypes';
+import { expectToast } from '../toasts';
+import type {
+  ExpenseInput,
+  SupportedPaymentMethod,
+} from '../masterLedger/ledgerTypes';
 
 const METHOD_LABELS: Record<SupportedPaymentMethod, string> = {
   efectivo: 'Efectivo',
@@ -43,9 +47,7 @@ export async function createExpense(
   await amountInput.fill(input.amountBs.toString());
 
   // 2. Fill Description
-  await page
-    .getByPlaceholder('Ej: Compra de insumos')
-    .fill(input.description);
+  await page.getByPlaceholder('Ej: Compra de insumos').fill(input.description);
 
   // 3. Payment Method
   const primaryMethod = input.splits[0].method;
@@ -74,9 +76,7 @@ export async function createExpense(
   await expect(submitBtn).toBeEnabled();
   await submitBtn.click();
 
-  await expect(page.getByText('Egreso registrado')).toBeVisible({
-    timeout: 10_000,
-  });
+  await expectToast(page, 'Egreso registrado', { timeout: 10_000 });
 }
 
 export async function payPendingTip(

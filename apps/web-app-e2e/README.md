@@ -13,23 +13,80 @@ Aliases already supported:
 - `SUPABASE_URL` as alias for `VITE_SUPABASE_URL`
 - `SUPABASE_ANON_KEY` as alias for `VITE_SUPABASE_ANON_KEY`
 
-## Deterministic Real-DB Strategy
+## Data policy: every test starts from zero
 
-- Each run creates a unique marker: `E2E_WATER_SALE_<timestamp>_<random>`.
-- The marker is written into sale notes from UI.
-- Helpers query Supabase by marker to locate deterministic records with anon/app-compatible credentials.
-- Tests use baseline/delta assertions by marker and avoid privileged cleanup calls.
-- Baseline assertions use non-strict delta checks (`>=`) to tolerate concurrent production-like writes while still verifying propagation.
+Every spec imports `test` and `expect` from `src/support/fixtures.ts`. Before each test that fixture wipes the whole local domain (sales, rentals, expenses, tips, prepaid orders, payment balance transfers, customers, machines, exchange rates, liter pricing, products) and seeds the baseline in `src/support/reset/baseline.ts`:
+
+| Data          | Baseline                                                                        |
+| :------------ | :------------------------------------------------------------------------------ |
+| Exchange rate | today (Caracas) = 1000 Bs per USD                                               |
+| Liter pricing | 2 L = 100, 5 L = 200, 8 L = 300, 12 L = 450, 15 L = 550, 19 L = 700, 24 L = 850 |
+| Products      | the 6 products of `supabase/seed.sql` (refill priced 700)                       |
+| Machines      | Lavadora 1 to 5, 10 to 18 kg, status `disponible`                               |
+| Customers     | Cliente Prueba 1 to 4                                                           |
+
+A test can therefore delete customers or machines without affecting the next one. Baseline values are e2e-only; they do not change the defaults the app ships with. Use integer Bs amounts so the dashboard KPIs (`toFixed(0)`) never land on a half.
+
+Specs still tag their records with a run marker (`E2E_WATER_SALE_<timestamp>_<random>`) to find them in the database.
+
+### Reset commands
+
+These wipe the local database. They abort unless `VITE_SUPABASE_URL` points to `127.0.0.1` or `localhost`, and they never print credentials.
+
+- `npm run e2e:reset` wipes everything and seeds the baseline.
+- `npm run e2e:purge` wipes everything and seeds nothing (absolute zero).
+- `npm run e2e:reset:dry` prints the row count per table and deletes nothing.
+
+They run through `playwright.maintenance.config.ts`, which has no browser and no web server.
 
 ## Run Commands
 
-- Canonical local (default pre-clean dashboard smoke lane): `npx nx run web-app-e2e:e2e`
-- Headed deterministic phone lane (pre-clean by default): `npx nx run web-app-e2e:e2e --configuration=headed`
-- Debug deterministic phone lane (pre-clean by default): `npx nx run web-app-e2e:e2e --configuration=debug`
-- Full local suite (explicit): `npx nx run web-app-e2e:e2e-full`
-- Full suite headed/debug (explicit): `npx nx run web-app-e2e:e2e-full --configuration=headed` / `npx nx run web-app-e2e:e2e-full --configuration=debug`
+- Whole regression suite, every spec from zero: `npx nx run web-app-e2e:e2e` (or `npm run e2e:web-app`)
+- Headed / debug: `npx nx run web-app-e2e:e2e --configuration=headed` / `--configuration=debug`
+- Full suite including the `bugs` project: `npx nx run web-app-e2e:e2e-full`
 - CI mode: `npx nx run web-app-e2e:e2e-ci --configuration=ci`
-- Legacy explicit pre-clean wrapper target: `npx nx run web-app-e2e:e2e-preclean-dashboard`
+- `npx nx run web-app-e2e:e2e-preclean-dashboard` is kept as an alias of `e2e`; the pre-clean now happens in the fixture.
+
+### Live runner (`npm run e2e:live`)
+
+Interactive runner. For every test it shows what the test tries to do and what result it expects, runs it with a narrating reporter (`E2E_NARRATE=1`: ficha before, ✔/✘ with expected-vs-found after), and afterwards offers to reset the database to the baseline, purge it, or leave it.
+
+```bash
+npm run e2e:live                                   # menu: run, explain, database, settings
+npm run e2e:live -- --explain reset                # print fichas of matching tests, run nothing
+npm run e2e:live -- --explain all                  # every ficha
+npm run e2e:live -- --check                        # exit 1 if a test lacks a complete ficha
+npm run e2e:live -- --list                         # flat test list and database counts
+npm run e2e:live -- --spec water-sales-tips-matrix --slowmo 500
+npm run e2e:live -- --test "@efectivo" --headless --yes --after none
+npm run e2e:live -- --all --headless --yes --after reset
+npm run e2e:live -- --test "4 simple" --print      # only print the Playwright command
+```
+
+Menu selection accepts `3`, `3,5`, `3-6` or `a`. With 3 tests or fewer the full ficha is printed before asking for confirmation. Time estimates come from the last run (`node_modules/.cache/aquaguest-e2e/timings.json`). Without a terminal it requires `--yes`.
+
+### Documenting tests (required)
+
+Every test is written with `documented()` from `support/fixtures`, and the fichas are in Spanish:
+
+```ts
+test(
+  'title',
+  documented({
+    intent: 'Qué comprueba, en una frase.',
+    steps: ['Qué hace, paso a paso.'],
+    expects: ['Qué resultado espera, con cifras exactas.'],
+    data: 'Datos fijos opcionales.',
+  }),
+  async ({ page }) => {
+    /* ... */
+  }
+);
+```
+
+The ficha lives in Playwright annotations, so the runner, the narrator and the HTML report read the same source. `npm run e2e:live -- --check` fails when a test has no intent, no step or no expectation.
+
+Never assert a toast with a bare `getByText`: two identical toasts overlap for about 4 s and trigger a strict-mode violation. Use `expectToast` from `support/toasts.ts`, and prove the effect with a database check.
 
 ### Direct Playwright CLI from repo root
 
@@ -51,22 +108,9 @@ npx playwright test -c apps/web-app-e2e/playwright.config.ts apps/web-app-e2e/sr
 npx nx run web-app-e2e:e2e --configuration=headed
 ```
 
-### Pre-test DB Cleanup Flow (Water Sales)
+### The cleanup spec
 
-To guarantee dashboard/smoke E2E starts from a zero water-sales DB baseline, run cleanup first and then the target spec:
-
-```bash
-npx playwright test -c apps/web-app-e2e/playwright.config.ts apps/web-app-e2e/src/tests/water-sale-cleanup.e2e.spec.ts
-npx playwright test -c apps/web-app-e2e/playwright.config.ts apps/web-app-e2e/src/tests/water-sale-dashboard-metrics.e2e.spec.ts -g "dashboard transactions and metrics validation with 4 water sales"
-```
-
-Equivalent Nx wrapper target:
-
-```bash
-npx nx run web-app-e2e:e2e-preclean-dashboard
-```
-
-The cleanup spec now validates discoverable sales count is exactly zero at the end.
+`water-sale-cleanup.e2e.spec.ts` no longer wipes the database (the fixture does). It seeds three sales and deletes them through the UI, then checks that the database and Transactions show none.
 
 ### Startup and Responsive Stability Notes
 

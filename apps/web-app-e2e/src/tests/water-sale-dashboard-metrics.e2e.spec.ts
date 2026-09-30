@@ -1,4 +1,6 @@
-import { test, expect, type Page } from '@playwright/test';
+import { type Page } from '@playwright/test';
+import { documented, expect, test } from '../support/fixtures';
+import { TOAST_SALE_REGISTERED, expectToast } from '../support/toasts';
 import { createRunMarker } from '../support/runMarker';
 import { listSalesByMarker } from '../support/supabaseClient';
 import { waitForSaleByMarker } from '../support/dbPolling';
@@ -20,23 +22,45 @@ type SupportedMethod = 'efectivo' | 'pago_movil' | 'punto_venta' | 'divisa';
 interface MethodCase {
   tag: `@${SupportedMethod}`;
   method: SupportedMethod;
+  label: string;
   transactionLabel: RegExp;
 }
 
 const METHOD_CASES: MethodCase[] = [
-  { tag: '@efectivo', method: 'efectivo', transactionLabel: /efectivo/i },
+  {
+    tag: '@efectivo',
+    method: 'efectivo',
+    label: 'Efectivo',
+    transactionLabel: /efectivo/i,
+  },
   {
     tag: '@pago_movil',
     method: 'pago_movil',
+    label: 'Pago Móvil',
     transactionLabel: /pago\s*m[oó]vil/i,
   },
   {
     tag: '@punto_venta',
     method: 'punto_venta',
+    label: 'Punto de Venta',
     transactionLabel: /punto\s*de\s*venta/i,
   },
-  { tag: '@divisa', method: 'divisa', transactionLabel: /divisa/i },
+  {
+    tag: '@divisa',
+    method: 'divisa',
+    label: 'Divisa',
+    transactionLabel: /divisa/i,
+  },
 ];
+
+// Every sale in this spec uses a fixed price, so each figure is exact.
+const SALE_PRICE_BS = 3000;
+const FOUR_SALE_PRICES: Record<SupportedMethod, number> = {
+  efectivo: 2000,
+  pago_movil: 2500,
+  punto_venta: 3000,
+  divisa: 3500,
+};
 
 async function selectBottleProduct(page: Page, customPrice?: number) {
   await assertNoEditSaleModal(page, {
@@ -136,164 +160,190 @@ async function completeSimpleSale(
   });
 }
 
-function getRandomPrice(min = 1000, max = 5000): number {
-  return Math.floor(Math.random() * (max - min + 1)) + min;
-}
-
 test.describe('water sale propagation vertical slice', () => {
   for (const methodCase of METHOD_CASES) {
-    test(`${methodCase.tag} propagates to dashboard, transactions, and method detail`, async ({
-      page,
-    }) => {
-      const marker = createRunMarker();
-      const baselineRows = await listSalesByMarker(marker.id);
-      const baselineIds = new Set(baselineRows.map((sale) => sale.id));
+    test(
+      `${methodCase.tag} propagates to dashboard, transactions, and method detail`,
+      documented({
+        intent: `Comprobar que una venta simple pagada en ${methodCase.label} llega a la tarjeta de ${methodCase.label}, a Transacciones y al detalle del método.`,
+        steps: [
+          `Lee la tarjeta de ${methodCase.label} del dashboard (debe estar en Bs 0).`,
+          'Abre Agua, agrega un Botellón Nuevo a Bs 3000 y abre el carrito.',
+          `Deja el pago mixto y la propina apagados, elige ${methodCase.label} y confirma la venta.`,
+          'Vuelve al dashboard, abre Transacciones y luego el detalle del método.',
+        ],
+        expects: [
+          'Aparece el aviso «¡Venta registrada correctamente!».',
+          `La venta queda en la base con método ${methodCase.label} y total Bs 3000, sin splits ni propina.`,
+          `La tarjeta de ${methodCase.label} pasa de Bs 0 a Bs 3000 exactos.`,
+          'Transacciones muestra una fila «Venta de Agua» con ese método.',
+          'El detalle del método muestra la venta.',
+        ],
+        data: 'Botellón Nuevo a Bs 3000, tasa 1000.',
+      }),
+      async ({ page }) => {
+        const marker = createRunMarker();
+        const baselineRows = await listSalesByMarker(marker.id);
+        const baselineIds = new Set(baselineRows.map((sale) => sale.id));
 
-      await gotoDashboard(page);
-      await assertNoEditSaleModal(page, {
-        context: 'after dashboard bootstrap',
-        closeIfOpen: true,
-      });
+        await gotoDashboard(page);
+        await assertNoEditSaleModal(page, {
+          context: 'after dashboard bootstrap',
+          closeIfOpen: true,
+        });
 
-      const dashboardCard = page.getByTestId(
-        `dashboard-method-card-${methodCase.method}`
-      );
-      await expect(dashboardCard).toBeVisible();
-      const dashboardBefore = parseBsAmount(await dashboardCard.innerText());
+        const dashboardCard = page.getByTestId(
+          `dashboard-method-card-${methodCase.method}`
+        );
+        await expect(dashboardCard).toBeVisible();
+        const dashboardBefore = parseBsAmount(await dashboardCard.innerText());
+        expect(dashboardBefore).toBe(0);
 
-      await openWaterSalesFromBottomNav(page);
+        await openWaterSalesFromBottomNav(page);
 
-      await selectBottleProduct(page);
-      await completeSimpleSale(page, methodCase.method, marker.notesValue);
+        await selectBottleProduct(page, SALE_PRICE_BS);
+        await completeSimpleSale(page, methodCase.method, marker.notesValue);
 
-      await expect(
-        page.getByText('¡Venta registrada correctamente!')
-      ).toBeVisible();
+        await expectToast(page, TOAST_SALE_REGISTERED);
 
-      const sale = await waitForSaleByMarker(marker.id);
-      expect(sale.paymentMethod).toBe(methodCase.method);
-      expect(sale.totalBs).toBeGreaterThan(0);
-      await assertSaleStoredWithoutMixedOrTip(sale.id, methodCase.method);
+        const sale = await waitForSaleByMarker(marker.id);
+        expect(sale.paymentMethod).toBe(methodCase.method);
+        expect(sale.totalBs).toBe(SALE_PRICE_BS);
+        await assertSaleStoredWithoutMixedOrTip(sale.id, methodCase.method);
 
-      await openDashboardFromBottomNav(page);
+        await openDashboardFromBottomNav(page);
 
-      const dashboardAfter = parseBsAmount(await dashboardCard.innerText());
-      expect(dashboardAfter).toBeGreaterThanOrEqual(
-        dashboardBefore + sale.totalBs
-      );
+        const dashboardAfter = parseBsAmount(await dashboardCard.innerText());
+        expect(dashboardAfter).toBe(dashboardBefore + sale.totalBs);
 
-      await openTransactionsFromMenu(page);
-      const transactionRow = page.getByTestId(`transaction-row-${sale.id}`);
-      await expect(transactionRow).toBeVisible();
-      await expect(transactionRow).toContainText('Venta de Agua');
-      await expect(transactionRow).toContainText(methodCase.transactionLabel);
+        await openTransactionsFromMenu(page);
+        const transactionRow = page.getByTestId(`transaction-row-${sale.id}`);
+        await expect(transactionRow).toBeVisible();
+        await expect(transactionRow).toContainText('Venta de Agua');
+        await expect(transactionRow).toContainText(methodCase.transactionLabel);
 
-      await openDashboardFromBottomNav(page);
-      await dashboardCard.click();
+        await openDashboardFromBottomNav(page);
+        await dashboardCard.click();
 
-      const paymentMethodRow = page.getByTestId(
-        `payment-method-transaction-row-sale-${sale.id}`
-      );
-      await expect(paymentMethodRow).toBeVisible();
-      await expect(paymentMethodRow).toContainText('Venta de Agua');
-      await expect(paymentMethodRow).toContainText('Venta #');
+        const paymentMethodRow = page.getByTestId(
+          `payment-method-transaction-row-sale-${sale.id}`
+        );
+        await expect(paymentMethodRow).toBeVisible();
+        await expect(paymentMethodRow).toContainText('Venta de Agua');
+        await expect(paymentMethodRow).toContainText('Venta #');
 
-      const afterRows = await listSalesByMarker(marker.id);
-      const createdRows = afterRows.filter((row) => !baselineIds.has(row.id));
-      expect(createdRows.length).toBeGreaterThanOrEqual(1);
-      expect(createdRows.some((row) => row.id === sale.id)).toBeTruthy();
-    });
+        const afterRows = await listSalesByMarker(marker.id);
+        const createdRows = afterRows.filter((row) => !baselineIds.has(row.id));
+        expect(createdRows).toHaveLength(1);
+        expect(createdRows.some((row) => row.id === sale.id)).toBeTruthy();
+      }
+    );
   }
 
-  test('dashboard transactions and metrics validation with 4 simple water sales', async ({
-    page,
-  }) => {
-    await gotoDashboard(page);
-    await assertNoEditSaleModal(page, {
-      context: 'after dashboard bootstrap (4-sales scenario)',
-      closeIfOpen: true,
-    });
-    const paymentMethods = [
-      'efectivo',
-      'pago_movil',
-      'punto_venta',
-      'divisa',
-    ] as const;
-    const baselineMethodTotals = new Map<string, number>();
-    let baselineMethodsSum = 0;
+  test(
+    'dashboard transactions and metrics validation with 4 simple water sales',
+    documented({
+      intent:
+        'Comprobar que 4 ventas simples, una por método, se reflejan exactas en el dashboard.',
+      steps: [
+        'Lee las 4 tarjetas por método y el contador de transacciones (todo en 0).',
+        'Vende un Botellón por método: efectivo Bs 2000, pago móvil Bs 2500, punto de venta Bs 3000 y divisa Bs 3500, cada una sin pago mixto ni propina.',
+        'Vuelve al dashboard.',
+      ],
+      expects: [
+        'Cada venta queda en la base con su método y su total exacto, sin splits ni propina.',
+        'El contador de transacciones marca 4.',
+        'Las tarjetas muestran exactamente Bs 2000, 2500, 3000 y 3500.',
+        'La suma de las tarjetas es Bs 11000.',
+      ],
+      data: 'Precios fijos 2000, 2500, 3000 y 3500; tasa 1000.',
+    }),
+    async ({ page }) => {
+      await gotoDashboard(page);
+      await assertNoEditSaleModal(page, {
+        context: 'after dashboard bootstrap (4-sales scenario)',
+        closeIfOpen: true,
+      });
+      const paymentMethods = [
+        'efectivo',
+        'pago_movil',
+        'punto_venta',
+        'divisa',
+      ] as const;
+      const baselineMethodTotals = new Map<string, number>();
+      let baselineMethodsSum = 0;
 
-    for (const method of paymentMethods) {
-      const methodCard = page.getByTestId(`dashboard-method-card-${method}`);
-      await expect(methodCard).toBeVisible();
-      const baseline = parseBsAmount(await methodCard.innerText());
-      baselineMethodTotals.set(method, baseline);
-      baselineMethodsSum += baseline;
-    }
+      for (const method of paymentMethods) {
+        const methodCard = page.getByTestId(`dashboard-method-card-${method}`);
+        await expect(methodCard).toBeVisible();
+        const baseline = parseBsAmount(await methodCard.innerText());
+        baselineMethodTotals.set(method, baseline);
+        baselineMethodsSum += baseline;
+      }
 
-    const baselineTransactions = Number(
-      (
-        await page.getByTestId('dashboard-kpi-transactions-value').innerText()
-      ).trim()
-    );
-
-    const prices: number[] = [];
-    const runMarkers: string[] = [];
-
-    for (const method of paymentMethods) {
-      const marker = createRunMarker();
-      runMarkers.push(marker.id);
-      const randomPrice = getRandomPrice(2000, 4000);
-      prices.push(randomPrice);
-
-      await openWaterSalesFromBottomNav(page);
-      await selectBottleProduct(page, randomPrice);
-      await completeSimpleSale(page, method, marker.notesValue);
-
-      await expect(
-        page.getByText('¡Venta registrada correctamente!')
-      ).toBeVisible();
-
-      const sale = await waitForSaleByMarker(marker.id);
-      expect(sale.notes).toBe(marker.notesValue);
-      expect(runMarkers).toContain(marker.id);
-      await assertSaleStoredWithoutMixedOrTip(sale.id, method);
-    }
-
-    await openDashboardFromBottomNav(page);
-
-    await expect
-      .poll(async () => {
-        const value = await page
-          .getByTestId('dashboard-kpi-transactions-value')
-          .innerText();
-        return Number(value.trim());
-      })
-      .toBeGreaterThanOrEqual(baselineTransactions + 4);
-
-    const methodCards: { method: string; index: number }[] = [
-      { method: 'efectivo', index: 0 },
-      { method: 'pago_movil', index: 1 },
-      { method: 'punto_venta', index: 2 },
-      { method: 'divisa', index: 3 },
-    ];
-
-    let totalDisplayed = 0;
-    for (const { method, index } of methodCards) {
-      const methodCard = page.getByTestId(`dashboard-method-card-${method}`);
-      await expect(methodCard).toBeVisible();
-
-      const cardText = await methodCard.innerText();
-      const displayedPrice = parseBsAmount(cardText);
-      const baselineForMethod = baselineMethodTotals.get(method) ?? 0;
-      expect(displayedPrice).toBeGreaterThanOrEqual(
-        baselineForMethod + prices[index]
+      const baselineTransactions = Number(
+        (
+          await page.getByTestId('dashboard-kpi-transactions-value').innerText()
+        ).trim()
       );
-      totalDisplayed += displayedPrice;
-    }
+      expect(baselineMethodsSum).toBe(0);
+      expect(baselineTransactions).toBe(0);
 
-    const totalExpected = prices.reduce((sum, price) => sum + price, 0);
-    expect(totalDisplayed).toBeGreaterThanOrEqual(
-      baselineMethodsSum + totalExpected
-    );
-  });
+      const prices: number[] = [];
+      const runMarkers: string[] = [];
+
+      for (const method of paymentMethods) {
+        const marker = createRunMarker();
+        runMarkers.push(marker.id);
+        const price = FOUR_SALE_PRICES[method];
+        prices.push(price);
+
+        await openWaterSalesFromBottomNav(page);
+        await selectBottleProduct(page, price);
+        await completeSimpleSale(page, method, marker.notesValue);
+
+        await expectToast(page, TOAST_SALE_REGISTERED);
+
+        const sale = await waitForSaleByMarker(marker.id);
+        expect(sale.notes).toBe(marker.notesValue);
+        expect(sale.totalBs).toBe(price);
+        expect(runMarkers).toContain(marker.id);
+        await assertSaleStoredWithoutMixedOrTip(sale.id, method);
+      }
+
+      await openDashboardFromBottomNav(page);
+
+      await expect
+        .poll(async () => {
+          const value = await page
+            .getByTestId('dashboard-kpi-transactions-value')
+            .innerText();
+          return Number(value.trim());
+        })
+        .toBe(baselineTransactions + 4);
+
+      const methodCards: { method: string; index: number }[] = [
+        { method: 'efectivo', index: 0 },
+        { method: 'pago_movil', index: 1 },
+        { method: 'punto_venta', index: 2 },
+        { method: 'divisa', index: 3 },
+      ];
+
+      let totalDisplayed = 0;
+      for (const { method, index } of methodCards) {
+        const methodCard = page.getByTestId(`dashboard-method-card-${method}`);
+        await expect(methodCard).toBeVisible();
+
+        const cardText = await methodCard.innerText();
+        const displayedPrice = parseBsAmount(cardText);
+        const baselineForMethod = baselineMethodTotals.get(method) ?? 0;
+        expect(displayedPrice).toBe(baselineForMethod + prices[index]);
+        totalDisplayed += displayedPrice;
+      }
+
+      const totalExpected = prices.reduce((sum, price) => sum + price, 0);
+      expect(totalExpected).toBe(11000);
+      expect(totalDisplayed).toBe(baselineMethodsSum + totalExpected);
+    }
+  );
 });
