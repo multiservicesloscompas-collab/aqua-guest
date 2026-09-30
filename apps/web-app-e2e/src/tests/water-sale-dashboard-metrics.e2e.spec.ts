@@ -165,6 +165,8 @@ test.describe('water sale propagation vertical slice', () => {
     test(
       `${methodCase.tag} propagates to dashboard, transactions, and method detail`,
       documented({
+        titulo: `Venta en ${methodCase.label} llega al dashboard y a Transacciones`,
+        area: 'Ventas de agua',
         intent: `Comprobar que una venta simple pagada en ${methodCase.label} llega a la tarjeta de ${methodCase.label}, a Transacciones y al detalle del método.`,
         steps: [
           `Lee la tarjeta de ${methodCase.label} del dashboard (debe estar en Bs 0).`,
@@ -173,9 +175,9 @@ test.describe('water sale propagation vertical slice', () => {
           'Vuelve al dashboard, abre Transacciones y luego el detalle del método.',
         ],
         expects: [
+          `La tarjeta de ${methodCase.label} pasa de Bs 0 a Bs 3000 exactos.`,
           'Aparece el aviso «¡Venta registrada correctamente!».',
           `La venta queda en la base con método ${methodCase.label} y total Bs 3000, sin splits ni propina.`,
-          `La tarjeta de ${methodCase.label} pasa de Bs 0 a Bs 3000 exactos.`,
           'Transacciones muestra una fila «Venta de Agua» con ese método.',
           'El detalle del método muestra la venta.',
         ],
@@ -243,6 +245,8 @@ test.describe('water sale propagation vertical slice', () => {
   test(
     'dashboard transactions and metrics validation with 4 simple water sales',
     documented({
+      titulo: 'Cuatro ventas, una por método, suman exacto en el dashboard',
+      area: 'Ventas de agua',
       intent:
         'Comprobar que 4 ventas simples, una por método, se reflejan exactas en el dashboard.',
       steps: [

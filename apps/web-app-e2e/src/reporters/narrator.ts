@@ -62,10 +62,11 @@ export default class NarratorReporter implements Reporter {
   onTestBegin(test: TestCase): void {
     this.started += 1;
     this.annotationsAtStart.set(test.id, test.annotations.length);
+    const doc = readDoc(test.annotations);
     process.stdout.write(
       formatFicha({
-        title: displayTitle(test),
-        doc: readDoc(test.annotations),
+        title: doc.titulo || displayTitle(test),
+        doc,
         position: { index: this.started, total: this.total },
       })
     );

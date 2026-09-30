@@ -139,11 +139,11 @@ export function formatReport(report: ResetReport): string {
       )} -> ${String(report.after[table]).padStart(6)}`
   );
   const title = report.dryRun
-    ? 'DRY RUN: nothing was deleted'
+    ? 'SIMULACIÓN: no se borró nada'
     : report.seeded
-    ? 'Local e2e data reset and baseline seeded'
-    : 'Local e2e data purged (no baseline)';
-  return `\n${title}\n  table                          before ->  after\n${rows.join(
+    ? 'Base local reiniciada y línea base sembrada'
+    : 'Base local vaciada por completo (sin línea base)';
+  return `\n${title}\n  tabla                          antes  -> después\n${rows.join(
     '\n'
   )}\n`;
 }

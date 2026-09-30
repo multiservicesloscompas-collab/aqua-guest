@@ -45,6 +45,8 @@ async function addBottleToCart(page: Page) {
 test(
   'negative guard: mixed payment ON is rejected before simple-sale submit',
   documented({
+    titulo: 'Una venta simple no sale con pago mixto encendido',
+    area: 'Ventas de agua',
     intent:
       'Comprobar que una venta simple no puede salir con el pago mixto encendido.',
     steps: [

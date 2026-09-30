@@ -93,6 +93,8 @@ async function deleteSaleById(page: Page, saleId: string): Promise<boolean> {
 test(
   'purges all existing discoverable water sales and validates zero in transactions',
   documented({
+    titulo: 'Borrar ventas desde la pantalla no deja rastro',
+    area: 'Ventas de agua',
     intent:
       'Comprobar que las ventas se pueden borrar desde la interfaz y que no dejan rastro.',
     steps: [

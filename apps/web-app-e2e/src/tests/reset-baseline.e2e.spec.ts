@@ -51,6 +51,8 @@ test.describe('e2e database reset', () => {
   test(
     'every test starts from the baseline and no transactional rows',
     documented({
+      titulo: 'Cada test arranca desde la línea base',
+      area: 'Herramientas de prueba (internas)',
       intent:
         'Comprobar que cada test arranca desde la línea base exacta y sin movimientos.',
       steps: [
@@ -102,6 +104,8 @@ test.describe('e2e database reset', () => {
   test(
     'a reset repairs what a test left behind',
     documented({
+      titulo: 'El reinicio repara lo que un test dejó sucio',
+      area: 'Herramientas de prueba (internas)',
       intent:
         'Comprobar que un reset devuelve la base a la línea base aunque un test la haya ensuciado.',
       steps: [
@@ -151,11 +155,13 @@ test.describe('e2e database reset', () => {
   test(
     'a dry run reports the rows and deletes nothing',
     documented({
+      titulo: 'La simulación cuenta filas y no borra nada',
+      area: 'Herramientas de prueba (internas)',
       intent:
-        'Comprobar que el modo dry run cuenta las filas pero no borra nada.',
-      steps: ['Siembra 1 venta.', 'Ejecuta el reset en modo dry run.'],
+        'Comprobar que el modo simulación cuenta las filas pero no borra nada.',
+      steps: ['Siembra 1 venta.', 'Ejecuta el reset en modo simulación.'],
       expects: [
-        'El informe marca dry run y cuenta 1 venta antes y después.',
+        'El informe marca simulación y cuenta 1 venta antes y después.',
         'La venta sigue en la base.',
       ],
     }),
@@ -180,6 +186,8 @@ test.describe('e2e database reset', () => {
   test(
     'purge mode empties every table without seeding',
     documented({
+      titulo: 'El vaciado deja la base en cero absoluto',
+      area: 'Herramientas de prueba (internas)',
       intent: 'Comprobar que el modo purge deja la base en cero absoluto.',
       steps: ['Siembra 1 venta.', 'Ejecuta el reset sin línea base.'],
       expects: [

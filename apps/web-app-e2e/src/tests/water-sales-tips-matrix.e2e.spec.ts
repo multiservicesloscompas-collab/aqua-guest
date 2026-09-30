@@ -68,6 +68,8 @@ function assertPlannerEdgeCases(scenarios: MatrixScenario[]) {
 test(
   'water sales tips matrix validates propagation end-to-end',
   documented({
+    titulo: 'Siete ventas con propinas variadas cuadran en todo el sistema',
+    area: 'Propinas',
     intent:
       'Comprobar de punta a punta que las propinas de 7 ventas se reflejan en dashboard, propinas, egresos y transacciones.',
     steps: [

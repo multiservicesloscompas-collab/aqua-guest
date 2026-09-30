@@ -9,6 +9,8 @@ import { documented, missingDocParts, readDoc } from '../support/testDoc';
 
 // Pure text checks: no browser and no database.
 const DOC = {
+  titulo: 'Título de prueba',
+  area: 'Área de prueba',
   intent: 'Comprobar algo concreto.',
   steps: ['Hace la primera cosa.', 'Hace la segunda cosa.'],
   expects: ['Ve el primer resultado.', 'Ve el segundo resultado.'],
@@ -35,6 +37,8 @@ test.describe('narration text', () => {
   test(
     'a test introduces itself with what it does and what it expects',
     documented({
+      titulo: 'La ficha se imprime antes de cada test',
+      area: 'Herramientas de prueba (internas)',
       intent:
         'Comprobar el texto de la ficha que se imprime antes de cada test.',
       steps: ['Da formato a una ficha completa con su posición.'],
@@ -52,6 +56,7 @@ test.describe('narration text', () => {
 
       // Assert
       expect(text).toContain('▶ [2/5] mi test');
+      expect(text).toContain('Área: Área de prueba');
       expect(text).toContain('Qué prueba: Comprobar algo concreto.');
       expect(text).toContain('1. Hace la primera cosa.');
       expect(text).toContain('2. Hace la segunda cosa.');
@@ -64,6 +69,8 @@ test.describe('narration text', () => {
   test(
     'a test without documentation is flagged',
     documented({
+      titulo: 'Un test sin ficha se marca incompleto',
+      area: 'Herramientas de prueba (internas)',
       intent: 'Comprobar que un test sin ficha se marca como incompleto.',
       steps: ['Da formato a una ficha vacía.'],
       expects: ['Avisa de que falta la ficha y nombra las partes que faltan.'],
@@ -72,18 +79,20 @@ test.describe('narration text', () => {
       // Act
       const text = formatFicha({
         title: 'sin ficha',
-        doc: { intent: '', steps: [], expects: [] },
+        doc: { titulo: '', area: '', intent: '', steps: [], expects: [] },
       });
 
       // Assert
       expect(text).toContain('no tiene ficha completa');
-      expect(text).toContain('intent, steps, expects');
+      expect(text).toContain('titulo, area, intent, steps, expects');
     }
   );
 
   test(
     'documented annotations can be read back unchanged',
     documented({
+      titulo: 'La ficha viaja intacta en las anotaciones',
+      area: 'Herramientas de prueba (internas)',
       intent: 'Comprobar que la ficha viaja intacta en las anotaciones.',
       steps: ['Convierte una ficha en anotaciones y la vuelve a leer.'],
       expects: ['La ficha leída es igual a la original y no le falta nada.'],
@@ -107,6 +116,8 @@ test.describe('narration text', () => {
   test(
     'a strict mode failure is explained in plain words',
     documented({
+      titulo: 'El error de avisos duplicados se explica en palabras claras',
+      area: 'Herramientas de prueba (internas)',
       intent:
         'Comprobar que el error de los avisos duplicados se explica bien.',
       steps: ['Explica el mensaje real de Playwright de dos avisos iguales.'],
@@ -132,6 +143,8 @@ test.describe('narration text', () => {
   test(
     'a value mismatch shows expected and received',
     documented({
+      titulo: 'Una diferencia de cifras muestra esperado y encontrado',
+      area: 'Herramientas de prueba (internas)',
       intent:
         'Comprobar que una diferencia de cifras muestra esperado y encontrado.',
       steps: ['Explica un mensaje de toBe con Expected y Received.'],
@@ -151,6 +164,8 @@ test.describe('narration text', () => {
   test(
     'a test timeout is explained and a message without data is tolerated',
     documented({
+      titulo: 'El tiempo agotado se explica y un mensaje sin datos se tolera',
+      area: 'Herramientas de prueba (internas)',
       intent:
         'Comprobar el caso de tiempo agotado y el de un mensaje sin datos.',
       steps: [
@@ -177,6 +192,8 @@ test.describe('narration text', () => {
   test(
     'a failure lists where it failed, the evidence and how to open the trace',
     documented({
+      titulo: 'Un fallo indica dónde, la evidencia y cómo abrir la traza',
+      area: 'Herramientas de prueba (internas)',
       intent:
         'Comprobar el bloque completo que se imprime cuando un test falla.',
       steps: ['Da formato a un fallo con ubicación y evidencias.'],

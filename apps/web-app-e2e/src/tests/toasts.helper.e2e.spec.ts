@@ -11,6 +11,8 @@ test.describe('expectToast helper', () => {
   test(
     'a bare getByText fails when two toasts show the same text',
     documented({
+      titulo: 'Un aviso repetido rompe la comprobación simple',
+      area: 'Herramientas de prueba (internas)',
       intent:
         'Demostrar por qué un getByText desnudo no sirve para comprobar un aviso.',
       steps: [
@@ -38,6 +40,8 @@ test.describe('expectToast helper', () => {
   test(
     'expectToast passes when two toasts show the same text',
     documented({
+      titulo: 'La comprobación de avisos tolera duplicados',
+      area: 'Herramientas de prueba (internas)',
       intent: 'Comprobar que expectToast tolera avisos duplicados.',
       steps: [
         'Monta una página con dos avisos idénticos.',
@@ -57,6 +61,8 @@ test.describe('expectToast helper', () => {
   test(
     'expectToast passes with a single toast',
     documented({
+      titulo: 'La comprobación de avisos funciona con un solo aviso',
+      area: 'Herramientas de prueba (internas)',
       intent: 'Comprobar que expectToast sigue funcionando con un solo aviso.',
       steps: [
         'Monta una página con un solo aviso.',
@@ -76,6 +82,8 @@ test.describe('expectToast helper', () => {
   test(
     'expectToast still fails when no toast shows the text',
     documented({
+      titulo: 'La comprobación de avisos falla si no hay aviso',
+      area: 'Herramientas de prueba (internas)',
       intent:
         'Comprobar que expectToast no da por bueno un aviso que no aparece.',
       steps: [

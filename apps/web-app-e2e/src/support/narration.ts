@@ -34,6 +34,7 @@ export function formatFicha(input: {
       )}). Usa documented().`
     );
   }
+  if (doc.area) lines.push(`   Área: ${doc.area}`);
   if (doc.intent) lines.push(`   Qué prueba: ${doc.intent}`);
   if (doc.steps.length > 0) {
     lines.push('   Qué hace:');
