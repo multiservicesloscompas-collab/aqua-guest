@@ -1,6 +1,7 @@
 import { supabase } from '@/lib/supabaseClient';
 import { Expense } from '@/types';
 import { getSafeTimestamp, normalizeTimestamp } from '@/lib/date-utils';
+import { getDatesInRange } from '@/services/DateService';
 import { expensePaymentSplitAdapter } from '@/services/payments/paymentSplitSupabaseAdapters';
 import type { PaymentSplitRow } from '@/services/payments/paymentSplitSchemaContract';
 
@@ -184,18 +185,7 @@ export class ExpensesDataService implements IExpensesDataService {
     endDate: string
   ): Promise<Map<string, Expense[]>> {
     const results = new Map<string, Expense[]>();
-    const datesInRange: string[] = [];
-
-    const current = new Date(startDate + 'T12:00:00');
-    const end = new Date(endDate + 'T12:00:00');
-
-    while (current <= end) {
-      const y = current.getFullYear();
-      const m = String(current.getMonth() + 1).padStart(2, '0');
-      const d = String(current.getDate()).padStart(2, '0');
-      datesInRange.push(`${y}-${m}-${d}`);
-      current.setDate(current.getDate() + 1);
-    }
+    const datesInRange = getDatesInRange(startDate, endDate);
 
     const allCached = datesInRange.every((d) => this.expensesCache.has(d));
 
