@@ -3,6 +3,10 @@ import { bugDoc } from '../../support/bugs/ficha';
 import { seedPendingTip, seedSales } from '../../support/bugs/dbSeed';
 import { todayVe } from '../../support/bugs/dates';
 import { bug, useCleanDomain } from '../../support/bugs/setup';
+import {
+  createWasherRental,
+  deleteRental,
+} from '../../support/drivers/rentalDriver';
 import { createWaterSale } from '../../support/drivers/waterSaleDriver';
 import { openTipsModule } from '../../support/drivers/expenseDriver';
 import { waitForSaleByMarker } from '../../support/dbPolling';
@@ -115,6 +119,55 @@ test.describe('Propinas (rojos)', () => {
 
       // Assert
       await expect(page.getByTestId(`tip-pay-button-${tipId}`)).toHaveCount(0);
+    }
+  );
+
+  test(
+    '[B6] a rental deleted while offline takes its tip off the Tips page',
+    bugDoc({
+      id: 'B6',
+      titulo: 'Borrar un alquiler sin conexión quita su propina de Propinas',
+      intent:
+        'Comprobar que, al eliminar sin internet un alquiler con propina, la propina deja de mostrarse igual que cuando hay conexión.',
+      steps: [
+        'Registra un alquiler pagado con propina de Bs 100 y abre Propinas (la propina aparece).',
+        'Corta la conexión y elimina el alquiler.',
+        'Vuelve a abrir Propinas todavía sin conexión.',
+      ],
+      expects: ['La propina del alquiler eliminado ya no aparece.'],
+      actual:
+        'la rama sin conexión encola el borrado de la propina pero no la quita de la tienda en memoria',
+    }),
+    async ({ page, context }) => {
+      bug(
+        'B6',
+        'useRentalStore.actions.ts:164-187 (offline branch skips removeTipByOrigin)'
+      );
+      // Arrange
+      await bootstrapAtDashboard(page);
+      await createWasherRental(page, {
+        shift: 'medio',
+        totalUsd: 0,
+        isPaid: true,
+        splits: [{ method: 'efectivo', amountBs: 0 }],
+        tip: { amountBs: 100, method: 'efectivo', paid: false },
+        customerName: `Cliente B6 ${Date.now()}`,
+      });
+      const { data } = await getSupabaseClient()
+        .from('tips')
+        .select('id,origin_id')
+        .eq('origin_type', 'rental')
+        .single();
+      await openTipsModule(page);
+      await expect(page.getByTestId(`tip-card-${data?.id}`)).toBeVisible();
+
+      // Act
+      await context.setOffline(true);
+      await deleteRental(page, data?.origin_id as string);
+      await openTipsModule(page);
+
+      // Assert
+      await expect(page.getByTestId(`tip-card-${data?.id}`)).toHaveCount(0);
     }
   );
 });
