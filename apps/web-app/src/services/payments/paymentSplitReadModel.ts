@@ -1,14 +1,8 @@
 import type { PaymentMethod, Sale, WasherRental } from '@/types';
 import type { PaymentSplit } from '@/types/paymentSplits';
+import { PAYMENT_METHODS } from './paymentMethods';
 
 type MethodTotals = Record<PaymentMethod, number>;
-
-const PAYMENT_METHODS: PaymentMethod[] = [
-  'efectivo',
-  'pago_movil',
-  'punto_venta',
-  'divisa',
-];
 
 interface SplitAwareSale extends Sale {
   paymentSplits?: PaymentSplit[];
