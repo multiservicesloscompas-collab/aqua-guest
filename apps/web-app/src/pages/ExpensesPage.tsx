@@ -253,6 +253,7 @@ export function ExpensesPage({ autoOpenAdd }: ExpensesPageProps = {}) {
       {!isTabletViewport && (
         <Button
           onClick={handleOpenNew}
+          data-testid="expenses-add-fab"
           className={cn(
             'fixed bottom-24 right-4 w-14 h-14 rounded-full bg-destructive text-destructive-foreground shadow-fab z-40',
             'transition-transform hover:scale-105 active:scale-95'

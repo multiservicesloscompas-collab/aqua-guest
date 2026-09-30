@@ -80,7 +80,7 @@ export interface ExpenseLookupResult {
   createdAt: string;
 }
 
-function getSupabaseClient() {
+export function getSupabaseClient() {
   const env = getE2EEnv();
   return createClient(env.supabaseUrl, env.supabaseAnonKey, {
     auth: {

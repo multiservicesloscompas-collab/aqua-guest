@@ -10,6 +10,7 @@ export function RentalsFab({ onClick }: RentalsFabProps) {
   return (
     <Button
       onClick={onClick}
+      data-testid="rentals-add-fab"
       className={cn(
         'fixed bottom-24 right-4 w-14 h-14 rounded-full gradient-primary shadow-fab z-40',
         'transition-transform hover:scale-105 active:scale-95'

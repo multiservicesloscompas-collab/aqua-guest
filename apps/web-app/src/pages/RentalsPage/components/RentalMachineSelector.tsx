@@ -22,7 +22,7 @@ export function RentalMachineSelector({
   onSelect,
 }: RentalMachineSelectorProps) {
   return (
-    <div className="space-y-2">
+    <div className="space-y-2" data-testid="rental-machine-selector">
       <Label className="text-sm font-medium flex items-center gap-2">
         <WashingMachine className="w-4 h-4" />
         Lavadora
@@ -37,6 +37,7 @@ export function RentalMachineSelector({
             <Button
               key={machine.id}
               type="button"
+              data-testid={`rental-machine-option-${machine.id}`}
               variant={selectedMachineId === machine.id ? 'default' : 'outline'}
               disabled={machine.isUnavailable}
               onClick={() => onSelect(machine.id)}

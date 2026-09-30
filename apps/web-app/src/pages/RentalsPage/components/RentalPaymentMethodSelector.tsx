@@ -45,6 +45,7 @@ export function RentalPaymentMethodSelector({
             <Button
               key={option.value}
               type="button"
+              data-testid={`rental-payment-method-${option.value}`}
               variant={selectedMethod === option.value ? 'default' : 'outline'}
               onClick={() => onSelect(option.value)}
               className="h-14 flex flex-col gap-1 p-2"
@@ -62,6 +63,7 @@ export function RentalPaymentMethodSelector({
             <Button
               key={option.value}
               type="button"
+              data-testid={`rental-payment-method-${option.value}`}
               variant={selectedMethod === option.value ? 'default' : 'outline'}
               onClick={() => onSelect(option.value)}
               className="h-14 flex flex-col gap-1 p-2"

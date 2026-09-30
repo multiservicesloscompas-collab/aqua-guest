@@ -31,6 +31,7 @@ export function RentalShiftSelector({
           <Button
             key={option.value}
             type="button"
+            data-testid={`rental-shift-option-${option.value}`}
             variant={selectedShift === option.value ? 'default' : 'outline'}
             onClick={() => onSelect(option.value)}
             className="h-14 flex flex-col gap-0.5 p-2"

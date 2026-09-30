@@ -22,6 +22,8 @@ function loadWebAppEnvIfPresent(): void {
   webAppEnvLoaded = true;
 
   const candidates = [
+    resolve(process.cwd(), '.env'),
+    resolve(process.cwd(), '../../.env'),
     resolve(process.cwd(), 'apps/web-app/.env'),
     resolve(process.cwd(), '../web-app/.env'),
   ];
@@ -80,12 +82,28 @@ function getRequiredEnv(name: string, aliases: string[] = []): string {
   return value;
 }
 
+const LOCAL_HOSTS = new Set(['127.0.0.1', 'localhost']);
+
+
+function assertLocalSupabaseUrl(url: string): void {
+  const host = new URL(url).hostname;
+  if (!LOCAL_HOSTS.has(host)) {
+    throw new Error(
+      `E2E aborted: Supabase host "${host}" is not local. ` +
+        'E2E specs write and purge data; point VITE_SUPABASE_URL at 127.0.0.1 (npm run supabase:start).'
+    );
+  }
+}
+
 export function getE2EEnv(): E2EEnv {
   loadWebAppEnvIfPresent();
 
+  const supabaseUrl = getRequiredEnv('VITE_SUPABASE_URL', ['SUPABASE_URL']);
+  assertLocalSupabaseUrl(supabaseUrl);
+
   return {
     baseUrl: getE2EBaseUrl(),
-    supabaseUrl: getRequiredEnv('VITE_SUPABASE_URL', ['SUPABASE_URL']),
+    supabaseUrl,
     supabaseAnonKey: getRequiredEnv('VITE_SUPABASE_ANON_KEY', [
       'SUPABASE_ANON_KEY',
     ]),

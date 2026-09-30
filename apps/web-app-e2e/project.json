@@ -3,7 +3,9 @@
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
   "sourceRoot": "apps/web-app-e2e/src",
   "projectType": "application",
-  "implicitDependencies": ["web-app"],
+  "implicitDependencies": [
+    "web-app"
+  ],
   "targets": {
     "e2e": {
       "executor": "nx:run-commands",
@@ -70,7 +72,23 @@
         "cwd": "apps/web-app-e2e",
         "command": "eslint ."
       }
+    },
+    "e2e-bugs": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "playwright test -c apps/web-app-e2e/playwright.config.ts --project=bugs --workers=1"
+      },
+      "configurations": {
+        "headed": {
+          "command": "playwright test -c apps/web-app-e2e/playwright.config.ts --project=bugs --workers=1 --headed"
+        },
+        "debug": {
+          "command": "playwright test -c apps/web-app-e2e/playwright.config.ts --project=bugs --workers=1 --debug"
+        }
+      }
     }
   },
-  "tags": ["scope:e2e"]
+  "tags": [
+    "scope:e2e"
+  ]
 }
