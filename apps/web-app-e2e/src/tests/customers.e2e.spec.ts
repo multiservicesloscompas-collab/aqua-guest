@@ -13,6 +13,17 @@ async function openCustomers(page: import('@playwright/test').Page) {
   await expect(page.getByTestId('customers-add-fab')).toBeVisible();
 }
 
+async function createCustomerViaUi(
+  page: import('@playwright/test').Page,
+  customer: { name: string; phone: string; address: string }
+) {
+  await page.getByTestId('customers-add-fab').click();
+  await page.getByPlaceholder('Nombre del cliente').fill(customer.name);
+  await page.getByPlaceholder('Número de teléfono').fill(customer.phone);
+  await page.getByPlaceholder('Dirección').fill(customer.address);
+  await page.getByRole('button', { name: 'Guardar Cliente' }).click();
+}
+
 async function customerIdByName(name: string): Promise<string> {
   const { data, error } = await getSupabaseClient()
     .from('customers')
@@ -51,13 +62,11 @@ test.describe('customers screen', () => {
       await openCustomers(page);
 
       // Act
-      await page.getByTestId('customers-add-fab').click();
-      await page
-        .getByPlaceholder('Nombre del cliente')
-        .fill('Cliente Nuevo E2E');
-      await page.getByPlaceholder('Número de teléfono').fill('04141234567');
-      await page.getByPlaceholder('Dirección').fill('Calle Nueva 1');
-      await page.getByRole('button', { name: 'Guardar Cliente' }).click();
+      await createCustomerViaUi(page, {
+        name: 'Cliente Nuevo E2E',
+        phone: '04141234567',
+        address: 'Calle Nueva 1',
+      });
 
       // Assert
       await expect.poll(customerCount).toBe(BASE + 1);
@@ -74,25 +83,31 @@ test.describe('customers screen', () => {
       titulo: 'Buscar clientes por nombre',
       area: AREA,
       intent:
-        'Comprobar que el buscador filtra la lista y muestra el aviso cuando no hay coincidencias.',
+        'Comprobar que el buscador encuentra un cliente recién creado y muestra el aviso cuando no hay coincidencias.',
       steps: [
-        'Abre Clientes (hay 4 de la línea base).',
-        'Busca «Prueba 2».',
+        'Abre Clientes y crea «Cliente Buscable E2E» desde el formulario.',
+        'Busca «Buscable».',
         'Busca un texto que no existe.',
       ],
       expects: [
-        'Con «Prueba 2» queda un solo cliente: Cliente Prueba 2.',
+        'Con «Buscable» queda un solo cliente: Cliente Buscable E2E.',
         'Con el texto inexistente aparece «No se encontraron clientes».',
       ],
     }),
     async ({ page }) => {
       // Arrange
       await openCustomers(page);
+      await createCustomerViaUi(page, {
+        name: 'Cliente Buscable E2E',
+        phone: '04149876543',
+        address: 'Calle Buscable 1',
+      });
+      await expect.poll(customerCount).toBe(BASE + 1);
+      const id = await customerIdByName('Cliente Buscable E2E');
       const search = page.getByTestId('customers-search-input');
 
       // Act
-      await search.fill('Prueba 2');
-      const id = await customerIdByName('Cliente Prueba 2');
+      await search.fill('Buscable');
 
       // Assert
       await expect(page.locator('[data-testid^="customer-row-"]')).toHaveCount(
