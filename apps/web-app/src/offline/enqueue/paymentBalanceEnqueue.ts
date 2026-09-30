@@ -1,5 +1,6 @@
 import type { PaymentBalanceTransaction } from '@/types';
 import { useSyncStore } from '@/store/useSyncStore';
+import { hasAmountUpdates } from '@/store/paymentBalanceDraft';
 import { generateTempId } from './tempId';
 
 type PaymentBalanceCreateInput = Omit<
@@ -105,16 +106,7 @@ export const enqueueOfflinePaymentBalanceUpdate = (
 ) => {
   const businessKey = buildEntityBusinessKey(id);
 
-  const hasAmountMutation =
-    updates.amount !== undefined ||
-    updates.amountBs !== undefined ||
-    updates.amountUsd !== undefined ||
-    updates.amountOutBs !== undefined ||
-    updates.amountOutUsd !== undefined ||
-    updates.amountInBs !== undefined ||
-    updates.amountInUsd !== undefined ||
-    updates.differenceBs !== undefined ||
-    updates.differenceUsd !== undefined;
+  const hasAmountMutation = hasAmountUpdates(updates);
 
   const mergedTransaction = existingTransaction
     ? {
