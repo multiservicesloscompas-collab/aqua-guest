@@ -76,7 +76,7 @@ export function RentalSheet({ open, onOpenChange }: RentalSheetProps) {
           <EditRentalStatusPaymentCard
             statusOptions={[{ value: 'agendado', label: 'Agendado' }]}
             status="agendado"
-            onChangeStatus={() => {}}
+            onChangeStatus={() => undefined}
             statusEditable={false}
             paymentStatus={viewModel.isPaid ? 'paid' : 'pending'}
             onChangePaymentStatus={viewModel.onChangePaymentStatus}
