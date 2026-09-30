@@ -2,6 +2,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { WasherRental } from '@/types';
 import { getSafeTimestamp, normalizeTimestamp } from '@/lib/date-utils';
 import { getDatesInRange } from '@/services/DateService';
+import { DateKeyedLruCache } from '@/services/cache/DateKeyedLruCache';
 import {
   PAYMENT_SPLIT_SCHEMA,
   type PaymentSplitRow,
@@ -91,45 +92,12 @@ export interface IRentalsDataService {
   ): Promise<Map<string, WasherRental[]>>;
 }
 
-class RentalsCache {
-  private cache: Map<string, WasherRental[]> = new Map();
-  private maxSize = 30;
-
-  set(date: string, rentals: WasherRental[]): void {
-    if (this.cache.size >= this.maxSize && !this.cache.has(date)) {
-      const oldestKey = this.cache.keys().next().value;
-      if (oldestKey) {
-        this.cache.delete(oldestKey);
-      }
-    }
-    this.cache.set(date, rentals);
-  }
-
-  get(date: string): WasherRental[] | null {
-    return this.cache.get(date) || null;
-  }
-
-  has(date: string): boolean {
-    return this.cache.has(date);
-  }
-
-  clear(): void {
-    this.cache.clear();
-  }
-
-  delete(date: string): boolean {
-    return this.cache.delete(date);
-  }
-
-  keys(): IterableIterator<string> {
-    return this.cache.keys();
-  }
-}
-
 export class RentalsDataService implements IRentalsDataService {
-  private rentalsCache: RentalsCache;
+  private rentalsCache: DateKeyedLruCache<WasherRental>;
 
-  constructor(rentalsCache: RentalsCache = new RentalsCache()) {
+  constructor(
+    rentalsCache: DateKeyedLruCache<WasherRental> = new DateKeyedLruCache<WasherRental>()
+  ) {
     this.rentalsCache = rentalsCache;
   }
 
