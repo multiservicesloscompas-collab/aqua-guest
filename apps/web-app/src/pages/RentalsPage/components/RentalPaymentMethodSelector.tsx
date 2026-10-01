@@ -2,14 +2,10 @@ import { Banknote, CreditCard, DollarSign, Smartphone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { PaymentMethod } from '@/types';
-
-interface PaymentMethodOption {
-  value: PaymentMethod;
-  label: string;
-}
+import type { SelectOption } from '@/types/ui';
 
 interface RentalPaymentMethodSelectorProps {
-  options: PaymentMethodOption[];
+  options: SelectOption<PaymentMethod>[];
   selectedMethod: PaymentMethod;
   onSelect: (method: PaymentMethod) => void;
 }

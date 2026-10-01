@@ -2,8 +2,7 @@ import { Calendar, CalendarDays } from 'lucide-react';
 
 import { DateSelector } from '@/components/ventas/DateSelector';
 import { cn } from '@/lib/utils';
-
-type ExpensesViewMode = 'day' | 'week';
+import type { ExpensesViewMode } from '../types';
 
 interface ExpensesMobileHeaderControlsProps {
   selectedDate: string;
@@ -48,12 +47,16 @@ export function ExpensesMobileHeaderControls({
           <div
             className={cn(
               'flex items-center justify-center w-11 h-11 rounded-2xl shrink-0',
-              isDayView 
-                ? 'bg-blue-500/10 text-blue-600' 
+              isDayView
+                ? 'bg-blue-500/10 text-blue-600'
                 : 'bg-emerald-500/10 text-emerald-600'
             )}
           >
-            {isDayView ? <CalendarDays className="w-5 h-5" /> : <Calendar className="w-5 h-5" />}
+            {isDayView ? (
+              <CalendarDays className="w-5 h-5" />
+            ) : (
+              <Calendar className="w-5 h-5" />
+            )}
           </div>
           <div className="flex flex-col items-start gap-0.5 min-w-0">
             <span className="text-[15px] font-bold text-foreground truncate select-none">
@@ -64,7 +67,7 @@ export function ExpensesMobileHeaderControls({
             </span>
           </div>
         </div>
-        
+
         <div
           className={cn(
             'px-4 py-1.5 rounded-full text-[13px] font-bold whitespace-nowrap select-none',

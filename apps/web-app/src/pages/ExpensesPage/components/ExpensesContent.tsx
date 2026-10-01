@@ -5,8 +5,7 @@ import { LoadingState } from '@/components/ui/LoadingState';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { WeeklyExpensesView } from '@/components/egresos/WeeklyExpensesView';
 import { Expense } from '@/types';
-
-type ExpensesViewMode = 'day' | 'week';
+import type { ExpensesViewMode } from '../types';
 
 interface ExpensesContentProps {
   viewMode: ExpensesViewMode;

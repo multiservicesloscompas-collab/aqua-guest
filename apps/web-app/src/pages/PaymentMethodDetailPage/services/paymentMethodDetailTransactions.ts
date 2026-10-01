@@ -5,15 +5,7 @@ import {
   Receipt,
   WashingMachine,
 } from 'lucide-react';
-import type {
-  Expense,
-  PaymentBalanceTransaction,
-  PaymentMethod,
-  PrepaidOrder,
-  Sale,
-  TipPayout,
-  WasherRental,
-} from '@/types';
+import type { PaymentMethod } from '@/types';
 import {
   getRentalAmountForMethodBs,
   getRentalAmountForMethodUsd,
@@ -35,6 +27,7 @@ import {
   resolveTipPayoutDate,
 } from './paymentMethodDetailTransactionsHelpers';
 import { hasValidMixedPaymentSplits } from '@/services/payments/paymentSplitValidity';
+import type { FinancialActivitySnapshot } from '@/services/transactions/financialActivity';
 import { resolvePaymentBalanceTransferLegs } from '@/services/payments/paymentBalanceTransferSemantics';
 
 export interface PaymentMethodDetailTransactionItem {
@@ -64,16 +57,9 @@ export interface PaymentMethodDetailSummary {
   net: number;
 }
 
-export interface BuildPaymentMethodTransactionsInput {
+export interface BuildPaymentMethodTransactionsInput
+  extends FinancialActivitySnapshot {
   paymentMethod: PaymentMethod;
-  selectedDate: string;
-  exchangeRate: number;
-  sales: readonly Sale[];
-  rentals: readonly WasherRental[];
-  expenses: readonly Expense[];
-  prepaidOrders: readonly PrepaidOrder[];
-  paymentBalanceTransactions: readonly PaymentBalanceTransaction[];
-  tipPayouts?: readonly TipPayout[];
   getMethodLabel: (method: PaymentMethod) => string;
 }
 

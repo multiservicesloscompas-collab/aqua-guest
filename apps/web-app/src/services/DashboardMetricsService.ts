@@ -15,6 +15,7 @@ import {
 import { resolvePaymentBalanceTransferLegs } from '@/services/payments/paymentBalanceTransferSemantics';
 import { hasValidMixedPaymentSplits } from '@/services/payments/paymentSplitValidity';
 import type { PaymentMethodTotals } from '@aqua-guest/domain';
+import type { FinancialActivitySnapshot } from '@/services/transactions/financialActivity';
 import { normalizeToVenezuelaDate } from '@/services/DateService';
 
 export interface DateRange {
@@ -30,17 +31,6 @@ export interface ScopeMetrics {
   netBs: number;
   transactionsCount: number;
   methodTotalsBs: PaymentMethodTotals;
-}
-
-export interface DashboardMetricsInput {
-  selectedDate: string;
-  exchangeRate: number;
-  sales: readonly Sale[];
-  rentals: readonly WasherRental[];
-  expenses: readonly Expense[];
-  prepaidOrders: readonly PrepaidOrder[];
-  paymentBalanceTransactions: readonly PaymentBalanceTransaction[];
-  tipPayouts?: readonly TipPayout[];
 }
 
 export interface DashboardMetricsResult {
@@ -204,7 +194,7 @@ function computeScope(
 }
 
 export function calculateDashboardMetrics(
-  input: DashboardMetricsInput
+  input: FinancialActivitySnapshot
 ): DashboardMetricsResult {
   const {
     selectedDate,

@@ -3,7 +3,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { PaymentMethod } from '@/types';
 
-interface SummaryItem {
+export interface SummaryItem {
   incomeText: string;
   expensesText: string;
   balanceNetText: string;
@@ -12,7 +12,7 @@ interface SummaryItem {
   borderClass: string;
 }
 
-interface SwitcherItem {
+export interface SwitcherItem {
   method: PaymentMethod;
   title: string;
   icon: ComponentType<{ className?: string }>;

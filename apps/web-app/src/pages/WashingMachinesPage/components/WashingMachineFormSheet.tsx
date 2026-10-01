@@ -16,11 +16,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { MachineStatus } from '@/types';
-
-interface StatusOption {
-  value: MachineStatus;
-  label: string;
-}
+import type { SelectOption } from '@/types/ui';
 
 interface WashingMachineFormSheetProps {
   open: boolean;
@@ -30,7 +26,7 @@ interface WashingMachineFormSheetProps {
   kg: string;
   brand: string;
   status: MachineStatus;
-  statusOptions: StatusOption[];
+  statusOptions: SelectOption<MachineStatus>[];
   isSaving: boolean;
   onChangeName: (value: string) => void;
   onChangeKg: (value: string) => void;

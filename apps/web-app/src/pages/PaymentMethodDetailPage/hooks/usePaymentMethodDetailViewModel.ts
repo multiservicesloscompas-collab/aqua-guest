@@ -18,29 +18,11 @@ import {
   type PaymentMethodDetailTransactionItem,
   summarizePaymentMethodTransactions,
 } from '../services/paymentMethodDetailTransactions';
-
-interface TransactionViewItem {
-  key: string;
-  typeLabel: string;
-  description: string;
-  linkedReference: string;
-  amountText: string;
-  amountUsdText?: string;
-  paymentMethodLabel?: string;
-  icon: ComponentType<{ className?: string }>;
-  containerClass: string;
-  iconWrapperClass: string;
-  iconClass: string;
-  amountClass: string;
-}
-
-interface SwitcherItem {
-  method: PaymentMethod;
-  title: string;
-  icon: ComponentType<{ className?: string }>;
-  buttonClass: string;
-  iconClass: string;
-}
+import type {
+  SummaryItem,
+  SwitcherItem,
+} from '../components/PaymentMethodSummaryGrid';
+import type { TransactionViewItem } from '../components/PaymentMethodTransactionsCard';
 
 interface PaymentMethodDetailViewModel {
   selectedDate: string;
@@ -55,14 +37,7 @@ interface PaymentMethodDetailViewModel {
     iconClass: string;
     borderClass: string;
   };
-  summary: {
-    incomeText: string;
-    expensesText: string;
-    balanceNetText: string;
-    balanceNetClass: string;
-    balanceDetailText?: string;
-    borderClass: string;
-  };
+  summary: SummaryItem;
   switcherItems: SwitcherItem[];
   transactions: TransactionViewItem[];
   transactionsCount: number;

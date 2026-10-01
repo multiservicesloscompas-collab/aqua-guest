@@ -26,8 +26,7 @@ import { mergeExpensesWithTipPayouts } from '@/services/expenses/expensesWithTip
 import { isMixedPaymentEnabledForModule } from '@/services/payments/paymentSplitFeatureFlag';
 import { useExpenseSheetState } from './ExpensesPage/hooks/useExpenseSheetState';
 import { resolveExpensePaymentSubmit } from './ExpensesPage/utils/expensePaymentSubmit';
-
-type ExpensesViewMode = 'day' | 'week';
+import type { ExpensesViewMode } from './ExpensesPage/types';
 
 interface ExpensesPageProps {
   autoOpenAdd?: boolean;

@@ -4,8 +4,7 @@ import { TabletControlsCard } from '@/components/layout/TabletControlsCard';
 import { DateSelector } from '@/components/ventas/DateSelector';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-
-type ExpensesViewMode = 'day' | 'week';
+import type { ExpensesViewMode } from '../types';
 
 interface ExpensesTabletSidebarProps {
   selectedDate: string;
