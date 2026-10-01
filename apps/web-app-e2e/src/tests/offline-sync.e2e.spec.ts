@@ -236,4 +236,58 @@ test.describe('offline sync (legacy processor)', () => {
       ]);
     }
   );
+
+  test(
+    '[B13 corregido] a rental with a tip registered offline reaches the database with its tip',
+    documented({
+      titulo:
+        '[B13 corregido] Un alquiler con propina hecho sin conexión llega a la base con su propina',
+      area: AREA,
+      intent:
+        'Comprobar que, sin internet, un alquiler con propina (cliente ya existente) se registra y, al volver la conexión, el alquiler y su propina llegan a la base.',
+      steps: [
+        'Abre el dashboard y corta la conexión.',
+        'Registra un alquiler pagado para «Cliente Prueba 1» con propina de Bs 100.',
+        'Restablece la conexión y espera 30 segundos.',
+      ],
+      expects: [
+        'La hoja «Nuevo Alquiler» se cierra.',
+        'El alquiler existe en la base y tiene una propina de Bs 100 ligada a él.',
+      ],
+    }),
+    async ({ page, context }) => {
+      // Arrange
+      await bootstrapAtDashboard(page);
+      await context.setOffline(true);
+
+      // Act (the driver waits for the sheet to close)
+      await createWasherRental(page, {
+        shift: 'medio',
+        totalUsd: 0,
+        isPaid: true,
+        splits: [{ method: 'efectivo', amountBs: 0 }],
+        tip: { amountBs: 100, method: 'efectivo', paid: false },
+        customerName: 'Cliente Prueba 1',
+      });
+      await context.setOffline(false);
+      await page.waitForTimeout(30_000);
+
+      // Assert
+      const supabase = getSupabaseClient();
+      const { data: rentals } = await supabase
+        .from('washer_rentals')
+        .select('id');
+      const { data: tips } = await supabase
+        .from('tips')
+        .select('origin_type,origin_id,amount_bs');
+      expect(rentals).toHaveLength(1);
+      expect(
+        tips?.map((tip) => [
+          tip.origin_type,
+          tip.origin_id,
+          Number(tip.amount_bs),
+        ])
+      ).toEqual([['rental', rentals?.[0].id, 100]]);
+    }
+  );
 });

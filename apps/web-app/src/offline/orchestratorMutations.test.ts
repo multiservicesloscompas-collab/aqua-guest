@@ -3,11 +3,16 @@ import type { GlobalSyncAction } from './types';
 import { buildSupabaseMutation } from './orchestratorMutations';
 
 const rentalsInsertMock = vi.fn();
+const tipsUpsertMock = vi.fn();
 
 vi.mock('@/lib/supabaseClient', () => {
   const from = vi.fn((table: string) => {
     if (table === 'washer_rentals') {
       return { insert: rentalsInsertMock };
+    }
+
+    if (table === 'tips') {
+      return { upsert: tipsUpsertMock };
     }
 
     throw new Error(`Unexpected table ${table}`);
@@ -43,6 +48,8 @@ const buildInsertAction = (
 describe('buildSupabaseMutation temp id resolution', () => {
   beforeEach(() => {
     rentalsInsertMock.mockReset();
+    tipsUpsertMock.mockReset();
+    tipsUpsertMock.mockResolvedValue({ error: null });
     rentalsInsertMock.mockReturnValue({
       select: () => ({
         single: () =>
@@ -82,5 +89,28 @@ describe('buildSupabaseMutation temp id resolution', () => {
     expect(rentalsInsertMock).toHaveBeenCalledWith({
       customer_id: 'real-customer',
     });
+  });
+
+  it('replaces a temp rental id in a tip upsert with the real id (B13)', async () => {
+    // Arrange
+    const action: GlobalSyncAction = {
+      ...buildInsertAction({
+        origin_type: 'rental',
+        origin_id: 'temp-r1',
+        amount_bs: 100,
+        __op: 'upsert_on_origin',
+      }),
+      table: 'tips',
+    };
+    const tempIdToRealId = new Map([['temp-r1', 'real-rental']]);
+
+    // Act
+    await buildSupabaseMutation(action, tempIdToRealId);
+
+    // Assert
+    expect(tipsUpsertMock).toHaveBeenCalledWith(
+      { origin_type: 'rental', origin_id: 'real-rental', amount_bs: 100 },
+      { onConflict: 'origin_type,origin_id' }
+    );
   });
 });

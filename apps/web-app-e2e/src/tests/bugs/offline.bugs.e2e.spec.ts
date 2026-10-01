@@ -1,7 +1,6 @@
 import { expect, test, type BrowserContext, type Page } from '@playwright/test';
 import { bugDoc } from '../../support/bugs/ficha';
 import { useCleanDomain } from '../../support/bugs/setup';
-import { createWasherRental } from '../../support/drivers/rentalDriver';
 import { createWaterSale } from '../../support/drivers/waterSaleDriver';
 import { createRunMarker } from '../../support/runMarker';
 import {
@@ -85,40 +84,6 @@ test.describe('Sin conexión (rojos)', () => {
       // Assert
       expect(result.saleId, 'la venta llegó a la base').toBeTruthy();
       expect(result.tipOriginIds).toEqual([result.saleId]);
-    }
-  );
-
-  test(
-    '[B13] a rental with a tip can be registered offline',
-    bugDoc({
-      id: 'B13',
-      titulo: 'Se puede registrar sin conexión un alquiler con propina',
-      intent:
-        'Comprobar que, sin internet, un alquiler con propina (cliente ya existente) se registra y la hoja se cierra con el aviso de éxito.',
-      steps: [
-        'Abre el dashboard y corta la conexión.',
-        'Registra un alquiler pagado para «Cliente Prueba 1» con propina de Bs 100.',
-      ],
-      expects: [
-        'La hoja «Nuevo Alquiler» se cierra y el alquiler queda registrado.',
-      ],
-      actual:
-        'el alquiler se encola sin conexión, pero después se intenta crear la propina directo en el servidor, falla, y el usuario ve «Error al registrar el alquiler» con la hoja abierta y sin propina',
-    }),
-    async ({ page, context }) => {
-      // Arrange
-      await bootstrapAtDashboard(page);
-      await context.setOffline(true);
-
-      // Act + Assert (the driver waits for the sheet to close)
-      await createWasherRental(page, {
-        shift: 'medio',
-        totalUsd: 0,
-        isPaid: true,
-        splits: [{ method: 'efectivo', amountBs: 0 }],
-        tip: { amountBs: 100, method: 'efectivo', paid: false },
-        customerName: 'Cliente Prueba 1',
-      });
     }
   );
 

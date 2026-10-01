@@ -26,7 +26,7 @@ interface EnqueueOfflineRentalDeleteInput {
   actionSource?: string;
 }
 
-const buildRentalBusinessKey = (
+export const buildRentalBusinessKey = (
   rental: Omit<WasherRental, 'id' | 'createdAt' | 'updatedAt'>
 ) =>
   `rental:${rental.date}:${rental.customerId ?? 'unknown'}:${
@@ -191,6 +191,8 @@ interface EnqueueOfflineRentalTipUpsertInput {
   exchangeRateUsed?: number;
   capturePaymentMethod: PaymentMethod;
   notes?: string;
+  /** Business keys of queued actions the tip needs first (e.g. its new rental). */
+  dependencyKeys?: string[];
   actionSource?: string;
 }
 
@@ -215,8 +217,10 @@ export const enqueueOfflineRentalTipUpsert = (
     },
     enqueueSource: input.actionSource ?? 'rentals/updateRental',
     businessKey,
-    dependencyKeys: input.rentalId.startsWith('temp-')
-      ? [`rental:${input.rentalId}`]
-      : undefined,
+    dependencyKeys:
+      input.dependencyKeys ??
+      (input.rentalId.startsWith('temp-')
+        ? [`rental:${input.rentalId}`]
+        : undefined),
   });
 };

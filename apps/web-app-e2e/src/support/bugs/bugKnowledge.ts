@@ -90,13 +90,6 @@ export const BUG_KNOWLEDGE = {
     where:
       'store/useWaterSalesStore.actions.ts:44-130 (rama !navigator.onLine) · offline/enqueue/salesEnqueue.ts enqueueOfflineSale',
   },
-  B13: {
-    cause:
-      'El addRental de la tienda de alquileres encola el alquiler sin conexión y luego llama directo a tipsDataService.upsertTipForOrigin (solo online); esa llamada falla y se muestra «Error al registrar el alquiler» con la hoja abierta. La propina nunca se encola (el alquiler sí queda en la cola).',
-    fix: 'Si no hay conexión, encolar la propina con enqueueOfflineRentalTipUpsert (como hace updateRental) en lugar de llamar al servidor, y cerrar la hoja con el mensaje de éxito.',
-    where:
-      'store/useRentalStore.ts:66-90 (addRental) · offline/enqueue/rentalsEnqueue.ts (enqueueOfflineRentalTipUpsert)',
-  },
   C1: {
     cause:
       'Los ayudantes de encolado escriben claves de negocio (sale:temp-x) en dependsOn, pero el orquestador global solo compara contra ids de acción en completedIds; además el origin_id temporal de la propina solo se remapea para pagos (C2). Latente: la bandera está apagada por defecto y corre el procesador legado.',
