@@ -1,5 +1,5 @@
-import path from 'node:path';
 import { defineConfig, devices } from '@playwright/test';
+import path from 'node:path';
 import { DEFAULT_E2E_BASE_URL } from './src/support/env';
 
 const baseURL = process.env.E2E_BASE_URL ?? DEFAULT_E2E_BASE_URL;
@@ -38,7 +38,8 @@ export default defineConfig({
     video: 'retain-on-failure',
   },
   webServer: {
-    command: `npx nx serve web-app --host=localhost --port=${serverPort}`,
+    command: `npx vite --config apps/web-app/vite.config.mts --host localhost --port ${serverPort} --strictPort`,
+    cwd: path.join(configDir, '../..'),
     url: baseURL,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
