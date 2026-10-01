@@ -1,8 +1,5 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { useSyncStore } from '@/store/useSyncStore';
 import { useNetworkState } from '@/hooks/useNetworkState';
 import { supabase } from '@/lib/supabaseClient';
-import { toast } from 'sonner';
 import {
   getOfflineFeatureFlags,
   resolveOfflineSyncProcessorMode,
@@ -12,6 +9,10 @@ import {
   buildQueueObservabilitySnapshot,
   summarizeProcessResults,
 } from '@/offline/observability';
+import { buildSupabaseMutation } from '@/offline/orchestratorMutations';
+import { useSyncStore } from '@/store/useSyncStore';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { toast } from 'sonner';
 
 export const SyncManager: React.FC = () => {
   const isOnline = useNetworkState();
@@ -19,6 +20,8 @@ export const SyncManager: React.FC = () => {
   const [isSyncing, setIsSyncing] = useState(false);
   const inFlightActionIdsRef = useRef<Set<string>>(new Set());
   const wasOnlineRef = useRef(false);
+  
+  const stalledQueueLengthRef = useRef<number | null>(null);
   const queueRef = useRef(queue);
   const flags = getOfflineFeatureFlags();
   const processorMode = resolveOfflineSyncProcessorMode(flags);
@@ -74,12 +77,30 @@ export const SyncManager: React.FC = () => {
       return;
     }
 
-    // Path legado para rollout backward-safe cuando GLOBAL_OFFLINE_ORCHESTRATOR = false
+    
     const pendingActions = [...currentQueue]
       .filter((action) => !inFlightActionIdsRef.current.has(action.id))
       .sort((a, b) => a.enqueuedAt - b.enqueuedAt);
 
+    const tempIdToRealId = new Map<string, string>();
+    const handledActionIds = new Set<string>();
+    const blockedBusinessKeys = new Set<string>();
+    let hadFailure = false;
+
     for (const action of pendingActions) {
+      if (handledActionIds.has(action.id)) {
+        continue;
+      }
+
+      if (
+        blockedBusinessKeys.has(action.idempotency.businessKey) ||
+        action.dependencies.dependsOn.some((key) =>
+          blockedBusinessKeys.has(key)
+        )
+      ) {
+        continue;
+      }
+
       try {
         inFlightActionIdsRef.current.add(action.id);
 
@@ -94,6 +115,10 @@ export const SyncManager: React.FC = () => {
             .single();
 
           if (saleError) throw saleError;
+
+          if (typeof tempId === 'string') {
+            tempIdToRealId.set(tempId, saleData.id);
+          }
 
           // 2. Buscar si hay splits pendientes para esta venta (tempId)
           const splitAction = pendingActions.find(
@@ -115,6 +140,8 @@ export const SyncManager: React.FC = () => {
               .from(splitAction.table)
               .insert(finalSplits);
 
+            handledActionIds.add(splitAction.id);
+
             if (splitError) {
               console.error('Error sincronizando splits:', splitError);
               // No arrojamos para no trabar la venta, pero el usuario debería saberlo
@@ -123,38 +150,52 @@ export const SyncManager: React.FC = () => {
               inFlightActionIdsRef.current.delete(splitAction.id);
             }
           }
-
-          // 3. Actualizar el estado local (Zustand) reemplazando la venta temporal por la real
-          // Nota: Esto requiere que useWaterSalesStore tenga una forma de actualizar IDs o simplemente refrescar
-          // Por ahora, solo informamos el éxito
           removeFromQueue(action.id);
           inFlightActionIdsRef.current.delete(action.id);
+          continue;
         }
 
-        // Otras tablas se pueden agregar aquí
+        const response = await buildSupabaseMutation(action, tempIdToRealId);
+        if (response.error) throw response.error;
+
+        if (
+          action.type === 'INSERT' &&
+          typeof action.payload.tempId === 'string' &&
+          response.insertedId
+        ) {
+          tempIdToRealId.set(action.payload.tempId, response.insertedId);
+        }
+
+        removeFromQueue(action.id);
+        inFlightActionIdsRef.current.delete(action.id);
       } catch (error) {
         console.error('Error sincronizando acción:', action, error);
-        // Si falla uno, paramos el procesamiento para evitar inconsistencias?
-        // O seguimos con el siguiente? Por seguridad, paramos.
-        break;
+        blockedBusinessKeys.add(action.idempotency.businessKey);
+        hadFailure = true;
       }
     }
 
     inFlightActionIdsRef.current = new Set();
+    stalledQueueLengthRef.current = hadFailure
+      ? useSyncStore.getState().queue.length
+      : null;
     setIsSyncing(false);
     if (queueRef.current.length === 0) {
       toast.success('Sincronización completada con éxito.');
-      // Refrescar datos globales para asegurar consistencia
-      // useWaterSalesStore.getState().loadSalesByDate(today);
     }
   }, [processorMode, removeFromQueue, replaceQueue]);
 
   useEffect(() => {
+    if (!isOnline) {
+      stalledQueueLengthRef.current = null;
+    }
+
     if (
       isOnline &&
       queue.length > 0 &&
       !isSyncing &&
-      processorMode !== 'disabled'
+      processorMode !== 'disabled' &&
+      stalledQueueLengthRef.current !== queue.length
     ) {
       void processQueue();
     }

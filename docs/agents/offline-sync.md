@@ -33,6 +33,7 @@
 - Processing disabled (`queue_processing_enabled` off) gives mode `disabled`.
 - Otherwise `global_orchestrator` on gives mode `global` (`src/offline/globalOrchestrator.ts`, with `orchestratorMutations.ts`).
 - Otherwise mode `legacy`, unless `legacy_sync_manager_disabled` is on. **By default the legacy processor inside `SyncManager.tsx` is the one running.** The global orchestrator is opt-in per device.
+- The legacy processor handles `sales` INSERT (plus its splits) itself and sends every other table and action type through `buildSupabaseMutation` (`orchestratorMutations.ts`), sharing a `tempId` to real id map for the run. A failed action only blocks its own `businessKey` and the actions that depend on it; the rest of the queue keeps syncing. After a run with failures it does not retry until the queue size changes or the connection returns again.
 
 Any change to queue semantics must work in both processors, or explicitly state which one it targets.
 

@@ -104,13 +104,6 @@ export const BUG_KNOWLEDGE = {
     where:
       'store/useRentalStore.ts:66-90 (addRental) · offline/enqueue/rentalsEnqueue.ts (enqueueOfflineRentalTipUpsert)',
   },
-  B14: {
-    cause:
-      'El procesador legado de SyncManager (el que corre por defecto) solo implementa `sales` + INSERT (con sus pagos); cualquier otra tabla o tipo de acción (alquileres, clientes, egresos, updates, deletes) se deja en la cola sin procesar. El comentario del código dice «Otras tablas se pueden agregar aquí». La matriz de cobertura las declara como offline-mutation-enabled.',
-    fix: 'Implementar en el procesador legado el reemplazo de tempId y el envío de cada tabla/tipo declarado en coverageMatrix (o, mejor, completar y activar el orquestador global, que ya es genérico: ver C1). Requiere modo plan: toca la cola offline.',
-    where:
-      'components/layout/SyncManager.tsx:76-150 (path legado) · offline/coverageMatrix.ts · docs/agents/offline-sync.md',
-  },
   C1: {
     cause:
       'Los ayudantes de encolado escriben claves de negocio (sale:temp-x) en dependsOn, pero el orquestador global solo compara contra ids de acción en completedIds; además el origin_id temporal de la propina solo se remapea para pagos (C2). Latente: la bandera está apagada por defecto y corre el procesador legado.',
