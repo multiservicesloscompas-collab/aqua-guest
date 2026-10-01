@@ -93,11 +93,6 @@ export const BUG_KNOWLEDGE = {
     fix: 'Filtrar los egresos por el rango de fechas del período antes de sumarlos.',
     where: 'pages/EgresosMetricsPage/index.tsx:14-19',
   },
-  'FIN-10': {
-    cause: 'El formulario solo valida que el monto no esté vacío (!amount).',
-    fix: 'Rechazar montos menores o iguales a 0 (y no numéricos) antes de guardar, mostrando el error.',
-    where: 'pages/ExpensesPage.tsx:118-121',
-  },
   'FIN-11': {
     cause:
       'La lógica del formulario de equilibrio no valida el saldo disponible ni que la tasa sea mayor a 0 (con tasa 0 el cálculo da Infinity).',

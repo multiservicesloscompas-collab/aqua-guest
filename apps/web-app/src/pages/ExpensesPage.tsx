@@ -22,6 +22,7 @@ import {
   TABLET_SPLIT_LAYOUT_CLASS,
 } from '@/lib/responsive/tabletLayoutPatterns';
 import { cn } from '@/lib/utils';
+import { isValidExpenseAmount } from '@/services/expenses/expenseAmount';
 import { mergeExpensesWithTipPayouts } from '@/services/expenses/expensesWithTipPayouts';
 import { isMixedPaymentEnabledForModule } from '@/services/payments/paymentSplitFeatureFlag';
 import { useExpenseSheetState } from './ExpensesPage/hooks/useExpenseSheetState';
@@ -130,6 +131,11 @@ export function ExpensesPage({ autoOpenAdd }: ExpensesPageProps = {}) {
 
       if (paymentResolution.errorMessage) {
         toast.error(paymentResolution.errorMessage);
+        return;
+      }
+
+      if (!isValidExpenseAmount(amount)) {
+        toast.error('Monto inválido');
         return;
       }
 

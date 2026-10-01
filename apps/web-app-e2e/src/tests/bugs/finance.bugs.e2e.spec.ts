@@ -270,40 +270,6 @@ test.describe('FIN · egresos y validaciones (rojos)', () => {
   );
 
   test(
-    '[FIN-10] un gasto con monto 0 no se registra',
-    bugDoc({
-      id: 'FIN-10',
-      titulo: 'Un egreso de monto 0 no se registra',
-      intent:
-        'Comprobar que el formulario no permite guardar un egreso de Bs 0.',
-      steps: [
-        'Abre Egresos, escribe monto 0 y una descripción.',
-        'Intenta guardar.',
-      ],
-      expects: ['No se crea ningún egreso.'],
-      actual: 'solo se valida que el campo no esté vacío y se crea 1 egreso',
-    }),
-    async ({ page }) => {
-      await gotoDashboard(page);
-      await page.getByLabel('Abrir más opciones').click();
-      await page.getByLabel('Ir a Egresos').click();
-      await page.getByTestId('expenses-add-fab').click();
-      await page.locator('input[type="number"]').first().fill('0');
-      await page.getByPlaceholder('Ej: Compra de insumos').fill('E2E-BUG cero');
-
-      const submit = page.getByTestId('expense-submit-button');
-      if (await submit.isEnabled()) await submit.click();
-      await page.waitForTimeout(1_500);
-
-      const { count } = await getSupabaseClient()
-        .from('expenses')
-        .select('id', { count: 'exact', head: true })
-        .eq('description', 'E2E-BUG cero');
-      expect(count).toBe(0);
-    }
-  );
-
-  test(
     '[FIN-11] una transferencia mayor al saldo disponible se bloquea',
     bugDoc({
       id: 'FIN-11',
