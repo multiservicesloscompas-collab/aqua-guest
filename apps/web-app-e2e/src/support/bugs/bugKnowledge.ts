@@ -40,12 +40,6 @@ export const BUG_KNOWLEDGE = {
     where:
       'services/payments/paymentSplitValidity.ts:13 · paymentSplitAttribution.ts:61-98',
   },
-  B6: {
-    cause:
-      'La rama sin conexión de deleteRental encola el borrado de la propina pero no la quita de la tienda en memoria; la rama con conexión sí llama removeTipByOrigin.',
-    fix: "Llamar useTipStore.getState().removeTipByOrigin('rental', id) también en la rama sin conexión (y revisar si deleteSale tiene la misma asimetría).",
-    where: 'store/useRentalStore.actions.ts:164-187',
-  },
   B7: {
     cause:
       "La edición decide el precio del turno Completo con paymentMethod === 'efectivo' y la creación usa 'divisa'; la regla está duplicada y al revés. Es solo de visualización: el monto que se cobra es correcto.",

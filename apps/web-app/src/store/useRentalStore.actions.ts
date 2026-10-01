@@ -193,6 +193,7 @@ export async function deleteRentalAction(
       enqueueOfflineRentalDelete({ id });
       enqueueOfflineRentalPaymentSplitsDelete(id);
       enqueueOfflineRentalTipDelete(id);
+      useTipStore.getState().removeTipByOrigin('rental', id);
       set((state) => ({ rentals: state.rentals.filter((r) => r.id !== id) }));
       if (rentalToDelete) {
         rentalsDataService.invalidateCache(rentalToDelete.date);

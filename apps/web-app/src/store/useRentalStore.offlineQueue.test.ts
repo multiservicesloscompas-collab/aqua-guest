@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useRentalStore } from './useRentalStore';
 import { useConfigStore } from './useConfigStore';
 import { useSyncStore } from './useSyncStore';
+import { useTipStore } from './useTipStore';
 
 const washerRentalsInsertMock = vi.fn();
 const washerRentalsUpdateEqMock = vi.fn();
@@ -345,6 +346,42 @@ describe('useRentalStore offline queueing', () => {
     ]);
     expect(queue.map((q) => q.type)).toEqual(['DELETE', 'DELETE', 'DELETE']);
     expect(useRentalStore.getState().rentals).toHaveLength(0);
+  });
+
+  it('removes the rental tip from the tip store when deleting offline (B6)', async () => {
+    // Arrange
+    useTipStore.setState({
+      tips: [
+        {
+          id: 'tip-1',
+          originType: 'rental',
+          originId: 'rental-1',
+          tipDate: '2026-03-09',
+          amountBs: 100,
+          capturePaymentMethod: 'efectivo',
+          status: 'pending',
+          createdAt: '2026-03-09T10:00:00.000Z',
+          updatedAt: '2026-03-09T10:00:00.000Z',
+        },
+        {
+          id: 'tip-2',
+          originType: 'rental',
+          originId: 'rental-2',
+          tipDate: '2026-03-09',
+          amountBs: 50,
+          capturePaymentMethod: 'efectivo',
+          status: 'pending',
+          createdAt: '2026-03-09T10:00:00.000Z',
+          updatedAt: '2026-03-09T10:00:00.000Z',
+        },
+      ],
+    });
+
+    // Act
+    await useRentalStore.getState().deleteRental('rental-1');
+
+    // Assert
+    expect(useTipStore.getState().tips.map((tip) => tip.id)).toEqual(['tip-2']);
   });
 
   it('queues a new customer and a rental that depends on it when offline (B12)', async () => {
