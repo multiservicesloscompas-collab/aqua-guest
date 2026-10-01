@@ -1,8 +1,13 @@
 import { PAYMENT_SPLIT_SCHEMA } from '@/services/payments/paymentSplitSchemaContract';
 import { rentalPaymentSplitAdapter } from '@/services/payments/paymentSplitSupabaseAdapters';
 import { useSyncStore } from '@/store/useSyncStore';
-import type { PaymentMethod, WasherRental } from '@/types';
-import type { PaymentSplit, WasherRentalDraft } from '@aqua-guest/domain';
+import type { WasherRental } from '@/types';
+import type {
+  PaymentSplit,
+  TipOriginReference,
+  TipUpsertInput,
+  WasherRentalDraft,
+} from '@aqua-guest/domain';
 import { generateTempId } from './tempId';
 
 interface EnqueueOfflineRentalInput {
@@ -179,14 +184,9 @@ export const enqueueOfflineRentalTipDelete = (
   });
 };
 
-interface EnqueueOfflineRentalTipUpsertInput {
+interface EnqueueOfflineRentalTipUpsertInput
+  extends Omit<TipUpsertInput, keyof TipOriginReference> {
   rentalId: string;
-  tipDate: string;
-  amountBs: number;
-  amountUsd?: number;
-  exchangeRateUsed?: number;
-  capturePaymentMethod: PaymentMethod;
-  notes?: string;
   dependencyKeys?: string[];
   actionSource?: string;
 }

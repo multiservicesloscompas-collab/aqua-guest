@@ -11,7 +11,6 @@ import {
   type RentalRow,
   type RentalInsert,
   type RentalUpdate,
-  type CustomerUpdate,
   buildRentalWriteContext,
   mapRentalRowToWasherRental,
 } from './useRentalStore.core';
@@ -45,13 +44,7 @@ function upsertRentalTipInStore(nextTip: Tip) {
 }
 
 // Re-export everything so existing import paths continue to work
-export type {
-  RentalState,
-  RentalRow,
-  RentalInsert,
-  RentalUpdate,
-  CustomerUpdate,
-};
+export type { RentalState, RentalRow, RentalInsert, RentalUpdate };
 export {
   buildRentalWriteContext,
   mapRentalRowToWasherRental,

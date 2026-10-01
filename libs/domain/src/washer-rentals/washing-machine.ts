@@ -12,4 +12,4 @@ export interface WashingMachine {
 
 export type WashingMachineDraft = Omit<WashingMachine, 'id'>;
 
-export type WashingMachineUpdate = Partial<WashingMachine>;
+export type WashingMachineUpdate = Partial<WashingMachineDraft>;

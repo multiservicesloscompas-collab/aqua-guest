@@ -10,9 +10,8 @@ import {
   mergeTipIntoPaymentSplits,
 } from '@/services/transactions/transactionTotals';
 import type { TipCaptureInput } from '@/types/tips';
-import type { WasherRentalUpdate } from '@aqua-guest/domain';
+import type { CustomerUpdate, WasherRentalUpdate } from '@aqua-guest/domain';
 import {
-  type CustomerUpdate,
   type RentalState,
   type RentalUpdate,
   buildRentalWriteContext,

@@ -45,8 +45,6 @@ export type WasherRentalDraft = Omit<
   'id' | 'createdAt' | 'updatedAt'
 >;
 
-export type WasherRentalUpdate = Partial<WasherRental>;
+export type WasherRentalUpdate = Partial<WasherRentalDraft>;
 
 export type WasherRentalLabelReference = Pick<WasherRental, 'customerName'>;
-
-export type WasherRentalReference = Pick<WasherRental, 'id'>;

@@ -23,3 +23,32 @@ export interface Tip extends TipOriginReference {
   createdAt: string;
   updatedAt: string;
 }
+
+export type TipPayout = TipOriginReference &
+  Pick<Tip, 'id' | 'tipDate' | 'amountBs'> & {
+    paidAt: string;
+    paymentMethod: PaymentMethod;
+  };
+
+export interface TipPayoutSummary {
+  date: string;
+  paymentMethod: PaymentMethod;
+  paidCount: number;
+  totalAmountBs: number;
+}
+
+export type TipUpsertInput = TipOriginReference &
+  Pick<
+    Tip,
+    | 'tipDate'
+    | 'amountBs'
+    | 'amountUsd'
+    | 'exchangeRateUsed'
+    | 'capturePaymentMethod'
+    | 'notes'
+  >;
+
+export type TipCaptureInput = Pick<
+  Tip,
+  'amountBs' | 'capturePaymentMethod' | 'notes'
+>;

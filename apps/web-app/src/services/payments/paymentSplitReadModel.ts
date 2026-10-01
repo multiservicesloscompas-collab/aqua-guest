@@ -1,18 +1,8 @@
 import type { PaymentMethod, Sale, WasherRental } from '@/types';
-import type { PaymentSplit } from '@aqua-guest/domain';
+import type { PaymentMethodTotals, PaymentSplit } from '@aqua-guest/domain';
 import { PAYMENT_METHODS } from './paymentMethods';
 
-type MethodTotals = Record<PaymentMethod, number>;
-
-interface SplitAwareSale extends Sale {
-  paymentSplits?: PaymentSplit[];
-}
-
-interface SplitAwareRental extends WasherRental {
-  paymentSplits?: PaymentSplit[];
-}
-
-export function createEmptyMethodTotals(): MethodTotals {
+export function createEmptyMethodTotals(): PaymentMethodTotals {
   return {
     efectivo: 0,
     pago_movil: 0,
@@ -23,8 +13,8 @@ export function createEmptyMethodTotals(): MethodTotals {
 
 function allocateSplitsToTotals(
   splits: readonly PaymentSplit[],
-  totals: MethodTotals
-): MethodTotals {
+  totals: PaymentMethodTotals
+): PaymentMethodTotals {
   const next = { ...totals };
   for (const split of splits) {
     next[split.method] += Number(split.amountBs || 0);
@@ -33,9 +23,9 @@ function allocateSplitsToTotals(
 }
 
 export function allocateSaleToMethodTotalsBs(
-  sale: SplitAwareSale,
-  totals: MethodTotals = createEmptyMethodTotals()
-): MethodTotals {
+  sale: Sale,
+  totals: PaymentMethodTotals = createEmptyMethodTotals()
+): PaymentMethodTotals {
   if (sale.paymentSplits?.length) {
     return allocateSplitsToTotals(sale.paymentSplits, totals);
   }
@@ -48,10 +38,10 @@ export function allocateSaleToMethodTotalsBs(
 }
 
 export function allocateRentalToMethodTotalsBs(
-  rental: SplitAwareRental,
+  rental: WasherRental,
   exchangeRate: number,
-  totals: MethodTotals = createEmptyMethodTotals()
-): MethodTotals {
+  totals: PaymentMethodTotals = createEmptyMethodTotals()
+): PaymentMethodTotals {
   if (rental.paymentSplits?.length) {
     return allocateSplitsToTotals(rental.paymentSplits, totals);
   }

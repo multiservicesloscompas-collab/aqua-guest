@@ -160,4 +160,4 @@ export type {
   TipPayoutSummary,
   TipStatus,
 } from './tips';
-export type { DashboardStats, ChartDataPoint } from './analytics';
+export type { ChartDataPoint } from './analytics';

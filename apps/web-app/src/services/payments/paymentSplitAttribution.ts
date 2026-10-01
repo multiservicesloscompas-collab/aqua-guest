@@ -5,18 +5,6 @@ import {
   hasValidMixedPaymentSplits,
 } from '@/services/payments/paymentSplitValidity';
 
-interface SplitAwareSale extends Sale {
-  paymentSplits?: PaymentSplit[];
-}
-
-interface SplitAwareRental extends WasherRental {
-  paymentSplits?: PaymentSplit[];
-}
-
-interface SplitAwareExpense extends Expense {
-  paymentSplits?: PaymentSplit[];
-}
-
 function sumSplitsByMethod(
   splits: readonly PaymentSplit[],
   method: PaymentMethod,
@@ -35,7 +23,7 @@ function findSplitByMethod(
 }
 
 export function includesMethodInSale(
-  sale: SplitAwareSale,
+  sale: Sale,
   method: PaymentMethod
 ): boolean {
   if (hasValidMixedPaymentSplits(sale.paymentSplits)) {
@@ -45,7 +33,7 @@ export function includesMethodInSale(
 }
 
 export function getSaleAmountForMethodBs(
-  sale: SplitAwareSale,
+  sale: Sale,
   method: PaymentMethod
 ): number {
   if (hasValidMixedPaymentSplits(sale.paymentSplits)) {
@@ -56,7 +44,7 @@ export function getSaleAmountForMethodBs(
 }
 
 export function getSaleAmountForMethodUsd(
-  sale: SplitAwareSale,
+  sale: Sale,
   method: PaymentMethod,
   exchangeRate: number
 ): number {
@@ -72,7 +60,7 @@ export function getSaleAmountForMethodUsd(
 }
 
 export function includesMethodInRental(
-  rental: SplitAwareRental,
+  rental: WasherRental,
   method: PaymentMethod
 ): boolean {
   if (hasPersistedPaymentSplits(rental.paymentSplits)) {
@@ -82,7 +70,7 @@ export function includesMethodInRental(
 }
 
 export function getRentalAmountForMethodBs(
-  rental: SplitAwareRental,
+  rental: WasherRental,
   method: PaymentMethod,
   exchangeRate: number
 ): number {
@@ -95,7 +83,7 @@ export function getRentalAmountForMethodBs(
 }
 
 export function getRentalAmountForMethodUsd(
-  rental: SplitAwareRental,
+  rental: WasherRental,
   method: PaymentMethod,
   exchangeRate: number
 ): number {
@@ -111,7 +99,7 @@ export function getRentalAmountForMethodUsd(
 }
 
 export function includesMethodInExpense(
-  expense: SplitAwareExpense,
+  expense: Expense,
   method: PaymentMethod
 ): boolean {
   if (hasValidMixedPaymentSplits(expense.paymentSplits)) {
@@ -121,7 +109,7 @@ export function includesMethodInExpense(
 }
 
 export function getExpenseAmountForMethodBs(
-  expense: SplitAwareExpense,
+  expense: Expense,
   method: PaymentMethod
 ): number {
   if (hasValidMixedPaymentSplits(expense.paymentSplits)) {

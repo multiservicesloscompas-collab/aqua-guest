@@ -6,5 +6,3 @@ export interface Product {
   minLiters?: number;
   maxLiters?: number;
 }
-
-export type ProductDraft = Omit<Product, 'id'>;

@@ -12,9 +12,7 @@ export interface SplitPaymentCompatible {
   paymentSplits?: PaymentSplit[];
 }
 
-export type SplitAware<T extends SplitPaymentCompatible> = T & {
-  paymentSplits?: PaymentSplit[];
-};
+export type PaymentMethodTotals = Record<PaymentMethod, number>;
 
 export type PaymentSplitModule = 'water' | 'rentals' | 'expenses';
 

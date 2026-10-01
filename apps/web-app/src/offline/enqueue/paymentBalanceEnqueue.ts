@@ -6,10 +6,8 @@ import { enqueueEntityDelete } from './commonEnqueue';
 import type {
   PaymentBalanceOperationType,
   PaymentBalanceTransactionDraft,
+  PaymentBalanceTransactionUpdate,
 } from '@aqua-guest/domain';
-
-type PaymentBalanceCreateInput = PaymentBalanceTransactionDraft;
-type PaymentBalanceUpdateInput = Partial<PaymentBalanceTransactionDraft>;
 
 const buildEntityBusinessKey = (id: string) => `payment-balance:${id}`;
 
@@ -27,7 +25,7 @@ type NormalizedPaymentBalanceAmounts = {
 };
 
 const normalizePaymentBalanceAmounts = (
-  transaction: PaymentBalanceCreateInput | PaymentBalanceTransaction
+  transaction: PaymentBalanceTransactionDraft | PaymentBalanceTransaction
 ): NormalizedPaymentBalanceAmounts => {
   const amount = transaction.amount;
   const amountBs = transaction.amountBs ?? amount;
@@ -57,7 +55,7 @@ const normalizePaymentBalanceAmounts = (
 };
 
 export const enqueueOfflinePaymentBalanceCreate = (
-  transaction: PaymentBalanceCreateInput,
+  transaction: PaymentBalanceTransactionDraft,
   timestamps: { createdAt: string; updatedAt: string },
   actionSource = 'paymentBalance/addPaymentBalanceTransaction'
 ): PaymentBalanceTransaction => {
@@ -99,7 +97,7 @@ export const enqueueOfflinePaymentBalanceCreate = (
 
 export const enqueueOfflinePaymentBalanceUpdate = (
   id: string,
-  updates: PaymentBalanceUpdateInput,
+  updates: PaymentBalanceTransactionUpdate,
   updatedAt: string,
   actionSource = 'paymentBalance/updatePaymentBalanceTransaction',
   existingTransaction?: PaymentBalanceTransaction

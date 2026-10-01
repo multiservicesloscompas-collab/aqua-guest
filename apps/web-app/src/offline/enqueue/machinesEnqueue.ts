@@ -2,15 +2,15 @@ import type { WashingMachine } from '@/types';
 import { useSyncStore } from '@/store/useSyncStore';
 import { generateTempId } from './tempId';
 import { enqueueEntityDelete } from './commonEnqueue';
-import type { WashingMachineDraft } from '@aqua-guest/domain';
-
-type MachineCreateInput = WashingMachineDraft;
-type MachineUpdateInput = Partial<WashingMachineDraft>;
+import type {
+  WashingMachineDraft,
+  WashingMachineUpdate,
+} from '@aqua-guest/domain';
 
 const buildEntityBusinessKey = (id: string) => `machine:${id}`;
 
 export const enqueueOfflineWashingMachineCreate = (
-  machine: MachineCreateInput,
+  machine: WashingMachineDraft,
   actionSource = 'machines/addWashingMachine'
 ): WashingMachine => {
   const tempId = generateTempId();
@@ -39,7 +39,7 @@ export const enqueueOfflineWashingMachineCreate = (
 
 export const enqueueOfflineWashingMachineUpdate = (
   id: string,
-  updates: MachineUpdateInput,
+  updates: WashingMachineUpdate,
   actionSource = 'machines/updateWashingMachine'
 ) => {
   const businessKey = buildEntityBusinessKey(id);

@@ -24,4 +24,4 @@ export type PrepaidOrderDraft = Omit<
   'id' | 'createdAt' | 'updatedAt'
 >;
 
-export type PrepaidOrderUpdate = Partial<PrepaidOrder>;
+export type PrepaidOrderUpdate = Partial<PrepaidOrderDraft>;

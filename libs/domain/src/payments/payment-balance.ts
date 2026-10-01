@@ -28,7 +28,7 @@ export type PaymentBalanceTransactionDraft = Omit<
 >;
 
 export type PaymentBalanceTransactionUpdate =
-  Partial<PaymentBalanceTransaction>;
+  Partial<PaymentBalanceTransactionDraft>;
 
 export interface PaymentBalanceSummary {
   method: PaymentMethod;

@@ -22,4 +22,4 @@ export interface Expense {
 
 export type ExpenseDraft = Omit<Expense, 'id' | 'createdAt'>;
 
-export type ExpenseUpdate = Partial<Expense>;
+export type ExpenseUpdate = Partial<ExpenseDraft>;

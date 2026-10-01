@@ -2,16 +2,13 @@ import type { Customer } from '@/types';
 import { useSyncStore } from '@/store/useSyncStore';
 import { generateTempId } from './tempId';
 import { enqueueEntityDelete } from './commonEnqueue';
-import type { CustomerDraft } from '@aqua-guest/domain';
-
-type CustomerCreateInput = CustomerDraft;
-type CustomerUpdateInput = Partial<CustomerDraft>;
+import type { CustomerDraft, CustomerUpdate } from '@aqua-guest/domain';
 
 export const buildCustomerBusinessKey = (id: string) => `customer:${id}`;
 const buildEntityBusinessKey = buildCustomerBusinessKey;
 
 export const enqueueOfflineCustomerCreate = (
-  customer: CustomerCreateInput,
+  customer: CustomerDraft,
   actionSource = 'customers/addCustomer'
 ): Customer => {
   const tempId = generateTempId();
@@ -40,7 +37,7 @@ export const enqueueOfflineCustomerCreate = (
 
 export const enqueueOfflineCustomerUpdate = (
   id: string,
-  updates: CustomerUpdateInput,
+  updates: CustomerUpdate,
   actionSource = 'customers/updateCustomer'
 ) => {
   const businessKey = buildEntityBusinessKey(id);

@@ -1,18 +1,19 @@
 import type { Expense } from '@/types';
-import type { ExpenseDraft, PaymentSplit } from '@aqua-guest/domain';
+import type {
+  ExpenseDraft,
+  ExpenseUpdate,
+  PaymentSplit,
+} from '@aqua-guest/domain';
 import { PAYMENT_SPLIT_SCHEMA } from '@/services/payments/paymentSplitSchemaContract';
 import { expensePaymentSplitAdapter } from '@/services/payments/paymentSplitSupabaseAdapters';
 import { useSyncStore } from '@/store/useSyncStore';
 import { generateTempId } from './tempId';
 import { enqueueEntityDelete } from './commonEnqueue';
 
-type ExpenseCreateInput = ExpenseDraft;
-type ExpenseUpdateInput = Partial<ExpenseDraft>;
-
 const buildEntityBusinessKey = (id: string) => `expense:${id}`;
 
 export const enqueueOfflineExpenseCreate = (
-  expense: ExpenseCreateInput,
+  expense: ExpenseDraft,
   createdAt: string,
   actionSource = 'expenses/addExpense'
 ): Expense => {
@@ -62,7 +63,7 @@ export const enqueueOfflineExpenseCreate = (
 
 export const enqueueOfflineExpenseUpdate = (
   id: string,
-  updates: ExpenseUpdateInput,
+  updates: ExpenseUpdate,
   actionSource = 'expenses/updateExpense'
 ) => {
   const businessKey = buildEntityBusinessKey(id);

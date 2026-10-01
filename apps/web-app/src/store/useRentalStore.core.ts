@@ -57,12 +57,6 @@ export type RentalUpdate = Partial<RentalInsert> & {
   updated_at?: string;
 };
 
-export type CustomerUpdate = Partial<{
-  name: string;
-  phone: string;
-  address: string;
-}>;
-
 // ─── State interface ──────────────────────────────────────────────────────────
 
 export interface RentalState {
