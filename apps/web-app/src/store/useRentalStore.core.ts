@@ -1,61 +1,12 @@
 import { preparePaymentWritePayload } from '@/services/payments/paymentSplitWritePath';
-import {
-  PaymentMethod,
-  RentalShift,
-  RentalStatus,
-  WasherRental,
-} from '@/types';
+import type { RentalRow } from '@/services/rentals/rentalSchemaContract';
+import { PaymentMethod, WasherRental } from '@/types';
 import type { TipCaptureInput } from '@/types/tips';
 import type {
   PaymentSplit,
   WasherRentalDraft,
   WasherRentalUpdate,
 } from '@aqua-guest/domain';
-
-// ─── Row / Insert / Update shapes ────────────────────────────────────────────
-
-export interface RentalRow {
-  id: string;
-  date: string;
-  customer_id: string;
-  machine_id: string;
-  shift: RentalShift;
-  delivery_time: string;
-  pickup_time: string;
-  pickup_date: string;
-  delivery_fee: number;
-  total_usd: number;
-  payment_method: PaymentMethod;
-  payment_splits?: PaymentSplit[];
-  status: RentalStatus;
-  is_paid: boolean;
-  date_paid?: string | null;
-  notes?: string | null;
-  created_at?: string | null;
-  updated_at?: string | null;
-}
-
-export type RentalInsert = {
-  date: string;
-  customer_id: string;
-  machine_id: string;
-  shift: RentalShift;
-  delivery_time: string;
-  pickup_time: string;
-  pickup_date: string;
-  delivery_fee: number;
-  total_usd: number;
-  payment_method: PaymentMethod;
-  status: RentalStatus;
-  is_paid: boolean;
-  date_paid: string | null;
-  notes?: string;
-};
-
-export type RentalUpdate = Partial<RentalInsert> & {
-  customer_id?: string;
-  updated_at?: string;
-};
 
 // ─── State interface ──────────────────────────────────────────────────────────
 

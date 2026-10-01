@@ -11,11 +11,13 @@ import {
   buildCustomerBusinessKey,
   enqueueOfflineCustomerCreate,
 } from '@/offline/enqueue/customersEnqueue';
+import type {
+  RentalInsertRow,
+  RentalRow,
+} from '@/services/rentals/rentalSchemaContract';
 import { useCustomerStore } from './useCustomerStore';
 import {
   type RentalState,
-  type RentalRow,
-  type RentalInsert,
   buildRentalWriteContext,
   mapRentalRowToWasherRental,
 } from './useRentalStore.core';
@@ -119,7 +121,7 @@ export async function addRentalAction(
       totalUsd: finalTotals.totalUsd,
     });
 
-    const payload: RentalInsert = {
+    const payload: RentalInsertRow = {
       date: rental.date,
       customer_id: customerId,
       machine_id: rental.machineId,

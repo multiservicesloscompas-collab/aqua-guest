@@ -22,11 +22,11 @@ import { PaymentMethod, Sale } from '@/types';
 import type { TipCaptureInput } from '@/types/tips';
 import type { PaymentSplit } from '@aqua-guest/domain';
 import { useConfigStore } from './useConfigStore';
-import {
-  type SaleInsert,
-  type SalesRow,
-  type WaterSalesState,
-} from './useWaterSalesStore.core';
+import type {
+  SaleInsertRow,
+  SaleRow,
+} from '@/services/sales/saleSchemaContract';
+import { type WaterSalesState } from './useWaterSalesStore.core';
 export { updateSaleAction } from './useWaterSalesStore.actions.update';
 
 type SetFn = (
@@ -79,7 +79,7 @@ export async function completeSaleAction(
     exchangeRate,
   });
 
-  const newSalePayload: SaleInsert = {
+  const newSalePayload: SaleInsertRow = {
     daily_number: dailyNumber,
     date: normalizedDate,
     items: state.cart,
@@ -117,7 +117,7 @@ export async function completeSaleAction(
       .single();
     if (error) throw error;
 
-    const saleRow = data as SalesRow | null;
+    const saleRow = data as SaleRow | null;
     if (!saleRow) throw new Error('Error al crear la venta');
 
     const { error: deleteSplitsError } = await supabase

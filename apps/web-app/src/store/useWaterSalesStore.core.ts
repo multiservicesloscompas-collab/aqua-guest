@@ -2,42 +2,6 @@ import { CartItem, PaymentMethod, Sale } from '@/types';
 import type { TipCaptureInput } from '@/types/tips';
 import type { CartItemDraft, PaymentSplit } from '@aqua-guest/domain';
 
-export interface SalesRow {
-  id: string;
-  daily_number: number;
-  date: string;
-  items: CartItem[];
-  payment_method: PaymentMethod;
-  payment_splits?: PaymentSplit[];
-  total_bs: number;
-  total_usd: number;
-  exchange_rate: number;
-  notes?: string | null;
-  created_at?: string | null;
-  updated_at?: string | null;
-}
-
-export type SaleInsert = {
-  daily_number: number;
-  date: string;
-  items: CartItem[];
-  payment_method: PaymentMethod;
-  total_bs: number;
-  total_usd: number;
-  exchange_rate: number;
-  notes?: string;
-};
-
-export type SaleUpdate = Partial<{
-  payment_method: PaymentMethod;
-  paymentSplits?: PaymentSplit[];
-  total_bs: number;
-  total_usd: number;
-  notes?: string;
-  items?: CartItem[];
-  updated_at: string;
-}>;
-
 // ─── State interface ──────────────────────────────────────────────────────────
 
 export interface WaterSalesState {

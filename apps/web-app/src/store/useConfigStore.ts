@@ -16,6 +16,7 @@ import type {
   PaymentSplitModule,
 } from '@aqua-guest/domain';
 import supabase from '@/lib/supabaseClient';
+import type { LiterPricingRow } from '@/services/config/configSchemaContract';
 import { defaultProducts } from '@/data/products';
 import { getVenezuelaDate } from '@/services/DateService';
 import {
@@ -42,12 +43,6 @@ interface ConfigState {
     products: ProductWithIcon[]
   ) => void;
 }
-
-type LiterPricingRow = {
-  id: string;
-  breakpoint: number | string;
-  price: number | string;
-};
 
 export const useConfigStore = create<ConfigState>()(
   persist(

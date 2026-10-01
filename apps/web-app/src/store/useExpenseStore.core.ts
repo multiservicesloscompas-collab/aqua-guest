@@ -1,39 +1,5 @@
-import { PaymentSplitRow } from '@/services/payments/paymentSplitSchemaContract';
-import { Expense, PaymentMethod } from '@/types';
+import { Expense } from '@/types';
 import type { ExpenseDraft, ExpenseUpdate } from '@aqua-guest/domain';
-
-// ─── Row / Insert / Update shapes ────────────────────────────────────────────
-
-export type ExpenseInsertPayload = {
-  date: string;
-  description: string;
-  amount: number;
-  category: Expense['category'];
-  payment_method: PaymentMethod;
-  notes?: string;
-};
-
-export type ExpenseUpdatePayload = {
-  description?: string;
-  amount?: number;
-  category?: Expense['category'];
-  payment_method?: PaymentMethod;
-  notes?: string;
-  date?: string;
-};
-
-export type ExpenseRow = {
-  id: string;
-  date: string;
-  description: string;
-  amount: number;
-  category: Expense['category'];
-  payment_method?: PaymentMethod;
-  notes?: string | null;
-  created_at?: string;
-  expense_payment_splits?: PaymentSplitRow[];
-  payment_splits?: PaymentSplitRow[]; // Added for generic compatibility if needed
-};
 
 // ─── State interface ──────────────────────────────────────────────────────────
 

@@ -10,10 +10,10 @@ import {
   mergeTipIntoPaymentSplits,
 } from '@/services/transactions/transactionTotals';
 import type { TipCaptureInput } from '@/types/tips';
+import type { RentalUpdateRow } from '@/services/rentals/rentalSchemaContract';
 import type { CustomerUpdate, WasherRentalUpdate } from '@aqua-guest/domain';
 import {
   type RentalState,
-  type RentalUpdate,
   buildRentalWriteContext,
 } from './useRentalStore.core';
 import { replaceRentalSplits } from './useRentalStore.supabase';
@@ -31,7 +31,7 @@ export async function updateRentalAction(
   get: GetFn
 ): Promise<void> {
   try {
-    const payload: RentalUpdate = {};
+    const payload: RentalUpdateRow = {};
     const nowIso = new Date().toISOString();
     const currentRental = get().rentals.find((r) => r.id === id);
     if (!currentRental) throw new Error('Alquiler no encontrado');

@@ -1,4 +1,4 @@
-import type { PaymentBalanceInsertPayload } from './usePaymentBalanceStore.core';
+import type { PaymentBalanceInsertRow } from '@/services/payments/paymentBalanceSchemaContract';
 import type {
   PaymentBalanceOperationType,
   PaymentBalanceTransactionDraft,
@@ -6,7 +6,7 @@ import type {
 } from '@aqua-guest/domain';
 
 export type PaymentBalanceDraft = Omit<
-  PaymentBalanceInsertPayload,
+  PaymentBalanceInsertRow,
   'date' | 'from_method' | 'to_method'
 > & {
   operation_type: PaymentBalanceOperationType;

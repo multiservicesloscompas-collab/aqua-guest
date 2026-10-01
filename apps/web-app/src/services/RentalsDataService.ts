@@ -3,48 +3,13 @@ import { WasherRental } from '@/types';
 import { getSafeTimestamp, normalizeTimestamp } from '@/lib/date-utils';
 import { getDatesInRange } from '@/services/DateService';
 import { DateKeyedLruCache } from '@/services/cache/DateKeyedLruCache';
-import {
-  PAYMENT_SPLIT_SCHEMA,
-  type PaymentSplitRow,
-} from '@/services/payments/paymentSplitSchemaContract';
+import { PAYMENT_SPLIT_SCHEMA } from '@/services/payments/paymentSplitSchemaContract';
+import type { RentalReadRow } from '@/services/rentals/rentalSchemaContract';
 import { rentalPaymentSplitAdapter } from '@/services/payments/paymentSplitSupabaseAdapters';
-
-interface RentalDataRow {
-  id: string;
-  date: string;
-  customer_id?: string;
-  customer_name?: string;
-  customer_phone?: string;
-  customer_address?: string;
-  machine_id: string;
-  shift: WasherRental['shift'];
-  delivery_time?: string;
-  pickup_time?: string;
-  pickup_date: string;
-  delivery_fee: number;
-  total_usd: number;
-  payment_method?: WasherRental['paymentMethod'];
-  status: WasherRental['status'];
-  is_paid: boolean;
-  date_paid?: string | null;
-  notes?: string;
-  created_at?: string;
-  createdAt?: string;
-  updated_at?: string;
-  updatedAt?: string;
-  customers?: {
-    name?: string;
-    phone?: string;
-    address?: string;
-  };
-  rental_payment_splits?: PaymentSplitRow[];
-  payment_splits?: PaymentSplitRow[];
-  splits?: PaymentSplitRow[];
-}
 
 const RENTALS_SELECT = `*, customers(name, phone, address), ${PAYMENT_SPLIT_SCHEMA.rentalsSplitsTable}(payment_method, amount_bs, amount_usd, exchange_rate_used)`;
 
-function toRentalRow(r: RentalDataRow): WasherRental {
+function toRentalRow(r: RentalReadRow): WasherRental {
   const rawSplits =
     r.rental_payment_splits ?? r.payment_splits ?? r.splits ?? [];
   const splits = rentalPaymentSplitAdapter.fromRows(rawSplits);
@@ -120,7 +85,7 @@ export class RentalsDataService implements IRentalsDataService {
     }
 
     const rentals: WasherRental[] = (data || []).map((r) =>
-      toRentalRow(r as unknown as RentalDataRow)
+      toRentalRow(r as unknown as RentalReadRow)
     );
 
     this.rentalsCache.set(date, rentals);
@@ -173,7 +138,7 @@ export class RentalsDataService implements IRentalsDataService {
       }
 
       const rentals: WasherRental[] = (data || []).map((r) =>
-        toRentalRow(r as unknown as RentalDataRow)
+        toRentalRow(r as unknown as RentalReadRow)
       );
 
       this.rentalsCache.set(date, rentals);
@@ -231,7 +196,7 @@ export class RentalsDataService implements IRentalsDataService {
     }
 
     (data || []).forEach((item) => {
-      const r = item as unknown as RentalDataRow;
+      const r = item as unknown as RentalReadRow;
       // Agrupar por fecha de servicio (date)
       const dateKey = r.date.substring(0, 10);
 

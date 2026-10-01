@@ -1,10 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PaymentBalanceTransaction } from '@/types';
 import { mapPaymentBalanceTransactions } from './appStoreMappers';
-import {
-  rowToTransaction,
-  type PaymentBalanceRow,
-} from './usePaymentBalanceStore.core';
+import type { PaymentBalanceRow } from '@/services/payments/paymentBalanceSchemaContract';
+import { rowToTransaction } from './usePaymentBalanceStore.core';
 
 type RowMapper = (row: PaymentBalanceRow) => PaymentBalanceTransaction;
 

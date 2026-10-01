@@ -1,39 +1,13 @@
 import { supabase } from '@/lib/supabaseClient';
-import { CartItem, PaymentMethod, Sale } from '@/types';
+import { Sale } from '@/types';
 import { getSafeTimestamp, normalizeTimestamp } from '@/lib/date-utils';
 import { getDatesInRange } from '@/services/DateService';
 import { DateKeyedLruCache } from '@/services/cache/DateKeyedLruCache';
-import {
-  PAYMENT_SPLIT_SCHEMA,
-  type PaymentSplitRow,
-} from '@/services/payments/paymentSplitSchemaContract';
+import { PAYMENT_SPLIT_SCHEMA } from '@/services/payments/paymentSplitSchemaContract';
+import type { SaleReadRow } from '@/services/sales/saleSchemaContract';
 import { salePaymentSplitAdapter } from '@/services/payments/paymentSplitSupabaseAdapters';
 
-interface SalesRow {
-  id: string;
-  daily_number?: number | null;
-  dailyNumber?: number | null;
-  date: string;
-  items?: CartItem[] | null;
-  payment_method?: PaymentMethod | null;
-  paymentMethod?: PaymentMethod | null;
-  total_bs?: number | null;
-  totalBs?: number | null;
-  total_usd?: number | null;
-  totalUsd?: number | null;
-  exchange_rate?: number | null;
-  exchangeRate?: number | null;
-  notes?: string | null;
-  created_at?: string | null;
-  createdAt?: string | null;
-  updated_at?: string | null;
-  updatedAt?: string | null;
-  sale_payment_splits?: PaymentSplitRow[] | null;
-  payment_splits?: PaymentSplitRow[] | null;
-  splits?: PaymentSplitRow[] | null;
-}
-
-const toSale = (row: SalesRow, dateOverride?: string): Sale => {
+const toSale = (row: SaleReadRow, dateOverride?: string): Sale => {
   const rawSplits =
     row.sale_payment_splits ?? row.payment_splits ?? row.splits ?? [];
   const splits = salePaymentSplitAdapter.fromRows(rawSplits);
@@ -101,7 +75,7 @@ export class SalesDataService implements ISalesDataService {
     }
 
     const sales: Sale[] = (data ?? []).map((row) =>
-      toSale(row as unknown as SalesRow)
+      toSale(row as unknown as SaleReadRow)
     );
 
     // 4. Guardar en caché
@@ -154,7 +128,7 @@ export class SalesDataService implements ISalesDataService {
       }
 
       const sales: Sale[] = (data ?? []).map((row) =>
-        toSale(row as unknown as SalesRow)
+        toSale(row as unknown as SaleReadRow)
       );
 
       this.salesCache.set(date, sales);
@@ -211,7 +185,7 @@ export class SalesDataService implements ISalesDataService {
     }
 
     (data ?? []).forEach((row) => {
-      const saleRow = row as unknown as SalesRow;
+      const saleRow = row as unknown as SaleReadRow;
       const dateKey = saleRow.date.substring(0, 10);
 
       if (grouped[dateKey]) {

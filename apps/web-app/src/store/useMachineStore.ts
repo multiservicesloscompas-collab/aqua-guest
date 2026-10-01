@@ -2,6 +2,10 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { WashingMachine } from '@/types';
 import supabase from '@/lib/supabaseClient';
+import type {
+  WashingMachineRow,
+  WashingMachineUpdateRow,
+} from '@/services/machines/machineSchemaContract';
 import {
   enqueueOfflineWashingMachineCreate,
   enqueueOfflineWashingMachineDelete,
@@ -24,23 +28,6 @@ interface MachineState {
 
   loadWashingMachines: () => Promise<void>;
 }
-
-type WashingMachineUpdatePayload = {
-  name?: string;
-  kg?: number;
-  brand?: string;
-  status?: WashingMachine['status'];
-  is_available?: boolean;
-};
-
-type WashingMachineRow = {
-  id: string;
-  name: string;
-  kg: number;
-  brand: string;
-  status: WashingMachine['status'];
-  is_available: boolean;
-};
 
 export const useMachineStore = create<MachineState>()(
   persist(
@@ -100,7 +87,7 @@ export const useMachineStore = create<MachineState>()(
             return;
           }
 
-          const payload: WashingMachineUpdatePayload = {};
+          const payload: WashingMachineUpdateRow = {};
           if (updates.name !== undefined) payload.name = updates.name;
           if (updates.kg !== undefined) payload.kg = updates.kg;
           if (updates.brand !== undefined) payload.brand = updates.brand;

@@ -1,5 +1,5 @@
 import type { PaymentBalanceTransaction } from '@/types';
-import type { PaymentBalanceUpdatePayload } from './usePaymentBalanceStore.core';
+import type { PaymentBalanceUpdateRow } from '@/services/payments/paymentBalanceSchemaContract';
 import type { PaymentBalanceDraft } from './paymentBalanceDraft';
 import type {
   PaymentBalanceTransactionDraft,
@@ -51,7 +51,7 @@ export const applyLocalTransactionUpdate = (
 });
 
 export const assignUpdatePayloadFromUpdates = (
-  payload: PaymentBalanceUpdatePayload,
+  payload: PaymentBalanceUpdateRow,
   updates: PaymentBalanceTransactionUpdate
 ) => {
   if (updates.fromMethod !== undefined)
@@ -79,7 +79,7 @@ export const assignUpdatePayloadFromUpdates = (
 };
 
 export const assignUpdatePayloadFromNormalized = (
-  payload: PaymentBalanceUpdatePayload,
+  payload: PaymentBalanceUpdateRow,
   normalized: PaymentBalanceDraft
 ) => {
   payload.amount = normalized.amount;

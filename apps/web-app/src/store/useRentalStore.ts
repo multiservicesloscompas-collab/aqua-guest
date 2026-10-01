@@ -8,9 +8,6 @@ import { getDatesInRange } from '@/services/DateService';
 
 import {
   type RentalState,
-  type RentalRow,
-  type RentalInsert,
-  type RentalUpdate,
   buildRentalWriteContext,
   mapRentalRowToWasherRental,
 } from './useRentalStore.core';
@@ -44,7 +41,7 @@ function upsertRentalTipInStore(nextTip: Tip) {
 }
 
 // Re-export everything so existing import paths continue to work
-export type { RentalState, RentalRow, RentalInsert, RentalUpdate };
+export type { RentalState };
 export {
   buildRentalWriteContext,
   mapRentalRowToWasherRental,

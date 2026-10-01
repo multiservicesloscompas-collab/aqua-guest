@@ -14,7 +14,8 @@ import {
   calculateFinalSaleTotals,
   mergeTipIntoPaymentSplits,
 } from '@/services/transactions/transactionTotals';
-import type { WaterSalesState, SaleUpdate } from './useWaterSalesStore.core';
+import type { SaleUpdateRow } from '@/services/sales/saleSchemaContract';
+import type { WaterSalesState } from './useWaterSalesStore.core';
 
 type SetFn = (
   partial:
@@ -31,7 +32,7 @@ export async function updateSaleAction(
   get: GetFn
 ): Promise<void> {
   try {
-    const payload: SaleUpdate = {};
+    const payload: SaleUpdateRow = {};
     const nowIso = new Date().toISOString();
 
     const currentSale = get().sales.find((s) => s.id === id);

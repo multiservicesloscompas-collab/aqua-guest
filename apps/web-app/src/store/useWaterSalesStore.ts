@@ -10,13 +10,7 @@ import { salesDataService } from '@/services/SalesDataService';
 import { tipsDataService } from '@/services/tips/TipDataService';
 import { createCurrencyConverter } from '@/services/CurrencyService';
 
-import {
-  type WaterSalesState,
-  type SalesRow,
-  type SaleInsert,
-  type SaleUpdate,
-  generateId,
-} from './useWaterSalesStore.core';
+import { type WaterSalesState, generateId } from './useWaterSalesStore.core';
 import {
   completeSaleAction,
   updateSaleAction,
@@ -43,7 +37,7 @@ function upsertSaleTipInStore(nextTip: Tip) {
 }
 
 // Re-export everything so existing import paths continue to work
-export type { WaterSalesState, SalesRow, SaleInsert, SaleUpdate };
+export type { WaterSalesState };
 export { generateId };
 
 export const useWaterSalesStore = create<WaterSalesState>()(
