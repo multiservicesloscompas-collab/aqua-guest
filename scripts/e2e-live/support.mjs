@@ -26,6 +26,44 @@ export const yellow = (t) => paint('33', t);
 
 // ------------------------------------------------------------ playwright
 
+let activeChild = null;
+let interrupted = false;
+
+/** True once Ctrl+C / SIGTERM reached the runner: callers stop instead of prompting again. */
+export const wasInterrupted = () => interrupted;
+
+function onSignal(signal) {
+  interrupted = true;
+  const code = signal === 'SIGINT' ? 130 : 143;
+  if (!activeChild) process.exit(code);
+  // While a child runs the terminal is out of raw mode, so a Ctrl+C already
+  // reaches the whole process group (Playwright shuts its web server and
+  // browser down itself). Only forward what the terminal did not deliver.
+  if (signal !== 'SIGINT' || !process.stdin.isTTY) activeChild.kill(signal);
+}
+process.on('SIGINT', onSignal);
+process.on('SIGTERM', onSignal);
+
+/**
+ * Runs a child with inherited stdio and resolves with its exit code. The
+ * prompt (readline) keeps the terminal in raw mode, where Ctrl+C is just a key
+ * and never signals the child; raw mode is switched off for the duration of
+ * the run so Ctrl+C stops the child, and restored afterwards.
+ */
+export function spawnTracked(command, args, options) {
+  return new Promise((resolve) => {
+    const wasRaw = Boolean(process.stdin.isTTY && process.stdin.isRaw);
+    if (wasRaw) process.stdin.setRawMode(false);
+    const child = spawn(command, args, { ...options, stdio: 'inherit' });
+    activeChild = child;
+    child.on('close', (code, signal) => {
+      activeChild = null;
+      if (wasRaw) process.stdin.setRawMode(true);
+      resolve(code ?? (signal ? 128 : 1));
+    });
+  });
+}
+
 export function playwright(args, env = {}, { capture = false } = {}) {
   const options = { cwd: ROOT, env: { ...process.env, ...env } };
   if (capture) {
@@ -34,13 +72,7 @@ export function playwright(args, env = {}, { capture = false } = {}) {
       encoding: 'utf8',
     });
   }
-  return new Promise((resolve) => {
-    const child = spawn('npx', ['playwright', ...args], {
-      ...options,
-      stdio: 'inherit',
-    });
-    child.on('close', (code) => resolve(code ?? 1));
-  });
+  return spawnTracked('npx', ['playwright', ...args], options);
 }
 
 /** Row counts per table without deleting anything, or null if unreachable. */
@@ -79,7 +111,14 @@ export async function maintenance(mode) {
 
 /** Reads answers line by line and keeps lines that arrive before they are asked for. */
 export function createPrompter() {
-  const rl = createInterface({ input: process.stdin, output: process.stdout });
+  // terminal:false keeps the tty in its normal line mode: the OS delivers
+  // Enter and turns Ctrl+C into SIGINT for the whole process group, instead of
+  // readline reading raw keys (which some terminals, e.g. Warp, do not feed it).
+  const rl = createInterface({
+    input: process.stdin,
+    output: process.stdout,
+    terminal: false,
+  });
   const queued = [];
   const waiting = [];
   let closed = false;
