@@ -64,6 +64,16 @@ async function startLocal() {
     process.exit(err.status ?? 1);
   }
 
+  try {
+    console.log('🗄️  [AquaGuest] Applying pending local migrations...');
+    execSync('npx supabase migration up', { stdio: 'inherit' });
+  } catch (err) {
+    console.error(
+      '❌ Failed to apply local migrations. Fix the migration and run "npm run local" again.'
+    );
+    process.exit(err.status ?? 1);
+  }
+
   const { url, anonKey, studioUrl } = getLocalSupabaseConfig();
 
   console.log('\n=============================================');

@@ -1,12 +1,31 @@
 /// <reference types='vitest' />
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import { readdirSync } from 'node:fs';
 import { fileURLToPath } from 'url';
 import { VitePWA } from 'vite-plugin-pwa';
+
+/** Versions of `supabase/migrations/<version>_<name>.sql`, checked against the database on startup. */
+function listExpectedMigrations(): string[] {
+  const dir = fileURLToPath(
+    new URL('../../supabase/migrations', import.meta.url)
+  );
+  try {
+    return readdirSync(dir)
+      .filter((file) => file.endsWith('.sql'))
+      .map((file) => file.split('_')[0])
+      .sort();
+  } catch {
+    return [];
+  }
+}
 
 export default defineConfig(() => ({
   root: import.meta.dirname,
   cacheDir: '../../node_modules/.vite/apps/web-app',
+  define: {
+    __EXPECTED_MIGRATIONS__: JSON.stringify(listExpectedMigrations()),
+  },
   server: {
     host: true,
     port: 4200, // Allow this host so Vite accepts requests proxied from it
@@ -25,14 +44,14 @@ export default defineConfig(() => ({
           {
             src: 'pwa-192x192.png',
             sizes: '192x192',
-            type: 'image/png'
+            type: 'image/png',
           },
           {
             src: 'pwa-512x512.png',
             sizes: '512x512',
-            type: 'image/png'
-          }
-        ]
+            type: 'image/png',
+          },
+        ],
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
