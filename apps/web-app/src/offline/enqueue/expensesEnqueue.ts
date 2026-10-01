@@ -1,13 +1,13 @@
 import type { Expense } from '@/types';
-import type { PaymentSplit } from '@/types/paymentSplits';
+import type { ExpenseDraft, PaymentSplit } from '@aqua-guest/domain';
 import { PAYMENT_SPLIT_SCHEMA } from '@/services/payments/paymentSplitSchemaContract';
 import { expensePaymentSplitAdapter } from '@/services/payments/paymentSplitSupabaseAdapters';
 import { useSyncStore } from '@/store/useSyncStore';
 import { generateTempId } from './tempId';
 import { enqueueEntityDelete } from './commonEnqueue';
 
-type ExpenseCreateInput = Omit<Expense, 'id' | 'createdAt'>;
-type ExpenseUpdateInput = Partial<Omit<Expense, 'id' | 'createdAt'>>;
+type ExpenseCreateInput = ExpenseDraft;
+type ExpenseUpdateInput = Partial<ExpenseDraft>;
 
 const buildEntityBusinessKey = (id: string) => `expense:${id}`;
 

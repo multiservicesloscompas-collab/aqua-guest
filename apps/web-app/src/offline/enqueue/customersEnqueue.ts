@@ -2,9 +2,10 @@ import type { Customer } from '@/types';
 import { useSyncStore } from '@/store/useSyncStore';
 import { generateTempId } from './tempId';
 import { enqueueEntityDelete } from './commonEnqueue';
+import type { CustomerDraft } from '@aqua-guest/domain';
 
-type CustomerCreateInput = Omit<Customer, 'id'>;
-type CustomerUpdateInput = Partial<Omit<Customer, 'id'>>;
+type CustomerCreateInput = CustomerDraft;
+type CustomerUpdateInput = Partial<CustomerDraft>;
 
 export const buildCustomerBusinessKey = (id: string) => `customer:${id}`;
 const buildEntityBusinessKey = buildCustomerBusinessKey;

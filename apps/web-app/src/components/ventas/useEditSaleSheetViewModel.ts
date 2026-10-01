@@ -4,13 +4,11 @@ import { useConfigStore } from '@/store/useConfigStore';
 import { useTipStore } from '@/store/useTipStore';
 import { useWaterSalesStore } from '@/store/useWaterSalesStore';
 import { PaymentMethod, Sale } from '@/types';
-import type { PaymentSplit } from '@/types/paymentSplits';
+import type { PaymentSplit } from '@aqua-guest/domain';
 import { normalizeAndValidatePaymentSplits } from '@/services/payments/paymentSplitValidation';
 import { buildDualPaymentSplits } from '@/services/payments/paymentSplitWritePath';
 import { resolveSplitFormHydrationState } from '@/services/payments/paymentSplitFormHydration';
-import {
-  calculateFinalSaleTotals,
-} from '@/services/transactions/transactionTotals';
+import { calculateFinalSaleTotals } from '@/services/transactions/transactionTotals';
 import { resolveEditSaleTipHydration } from './editSaleTipHydration';
 import { EditableCartItem } from './EditSaleItemsEditor';
 

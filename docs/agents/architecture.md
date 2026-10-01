@@ -14,13 +14,17 @@ Keep AquaGuest flexible while it is still being built, without letting the front
 | `apps/web-app` | Main product surface and current home of most business workflows |
 | `apps/web-app/docs` | Domain-specific documentation for real product behavior |
 | `docs/agents` | Cross-cutting rules for architecture, business ripple effects, frontend patterns, and Supabase |
-| `libs/*` | Future destination for mature shared domains, reusable services, and stable packages |
+| `libs/domain` | Canonical entity types (`@aqua-guest/domain`), one folder per context under `src/<context>` |
+| `libs/*` | Future destination for other mature shared services and stable packages |
 
 ## Architectural Rules
 
 - Keep presentational UI, business logic, data access, and state orchestration clearly separated.
 - Prefer adding structure that supports later extraction instead of introducing shortcuts that hard-wire features to pages.
 - Shared logic should move toward hooks, services, mappers, and feature-local store actions before it moves into `libs/`.
+- Canonical entities (`Sale`, `WasherRental`, `Expense`, `Tip`, `Customer`, ...) live in `libs/domain/src/<context>` and are imported from `@aqua-guest/domain`. Contexts are `payments`, `expenses`, `exchange-rates`, `tips`, `customers`, `water-sales`, and `washer-rentals`; there is no catch-all `core` folder. Every context may depend on `payments`; `water-sales` and `washer-rentals` must not import each other. `libs/domain` holds types only: no labels, colors, UI metadata, or business constants.
+- Derive instead of repeating properties. Use the exported `XDraft`, `XUpdate`, and `XReference` types (or `Pick`/`Omit`/`extends` of the domain type) rather than inline `Omit<Entity, 'id' | ...>`, re-typed unions, or parallel interfaces. Persistence row types may stay `snake_case` but must type shared enums with the domain types.
+- App-only presentation fields (for example `Product.icon`) are composed in the app (`ProductWithIcon`) and never added to the domain entity. `apps/web-app/src/types` is a facade that re-exports domain types and holds UI labels/colors.
 - Avoid hidden cross-module dependencies. If Water Sales depends on Dashboard behavior, document that dependency explicitly.
 - Keep root `AGENTS.md` high-level. Put detail in focused sub-docs and feature docs.
 

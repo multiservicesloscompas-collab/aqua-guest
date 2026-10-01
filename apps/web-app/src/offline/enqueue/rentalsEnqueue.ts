@@ -2,12 +2,12 @@ import { PAYMENT_SPLIT_SCHEMA } from '@/services/payments/paymentSplitSchemaCont
 import { rentalPaymentSplitAdapter } from '@/services/payments/paymentSplitSupabaseAdapters';
 import { useSyncStore } from '@/store/useSyncStore';
 import type { PaymentMethod, WasherRental } from '@/types';
-import type { PaymentSplit } from '@/types/paymentSplits';
+import type { PaymentSplit, WasherRentalDraft } from '@aqua-guest/domain';
 import { generateTempId } from './tempId';
 
 interface EnqueueOfflineRentalInput {
   payload: Record<string, unknown>;
-  rental: Omit<WasherRental, 'id' | 'createdAt' | 'updatedAt'>;
+  rental: WasherRentalDraft;
   paymentSplits?: PaymentSplit[];
   dependencyKeys?: string[];
   actionSource?: string;
@@ -24,9 +24,7 @@ interface EnqueueOfflineRentalDeleteInput {
   actionSource?: string;
 }
 
-export const buildRentalBusinessKey = (
-  rental: Omit<WasherRental, 'id' | 'createdAt' | 'updatedAt'>
-) =>
+export const buildRentalBusinessKey = (rental: WasherRentalDraft) =>
   `rental:${rental.date}:${rental.customerId ?? 'unknown'}:${
     rental.machineId
   }:${rental.deliveryTime}`;

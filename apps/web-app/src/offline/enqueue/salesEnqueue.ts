@@ -2,7 +2,7 @@ import { PAYMENT_SPLIT_SCHEMA } from '@/services/payments/paymentSplitSchemaCont
 import { salePaymentSplitAdapter } from '@/services/payments/paymentSplitSupabaseAdapters';
 import { useSyncStore } from '@/store/useSyncStore';
 import type { PaymentMethod, Sale } from '@/types';
-import type { PaymentSplit } from '@/types/paymentSplits';
+import type { PaymentSplit } from '@aqua-guest/domain';
 import { generateTempId } from './tempId';
 
 interface EnqueueOfflineSaleInput {

@@ -41,6 +41,7 @@ npm run supabase:reset
 | Frontend app | `apps/web-app` | Main React + Vite application and current product surface |
 | Frontend domain docs | `apps/web-app/docs` | Business-domain reference for dashboard, water sales, rentals, finance, prepaid, and transactions |
 | Shared agent docs | `docs/agents` | Cross-cutting routing docs for architecture, business rules, frontend patterns, and Supabase |
+| Domain entities | `libs/domain` | Canonical entity types (`@aqua-guest/domain`), one folder per context |
 | Future shared modules | `libs/*` | Target location for stable domain logic, shared services, and reusable packages |
 
 ## Operating Mindset

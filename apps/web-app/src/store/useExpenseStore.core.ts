@@ -1,10 +1,6 @@
-/**
- * useExpenseStore.core.ts
- * Type definitions for the expense Zustand store.
- * No Zustand or Supabase dependencies — pure TypeScript.
- */
-import { Expense, PaymentMethod } from '@/types';
 import { PaymentSplitRow } from '@/services/payments/paymentSplitSchemaContract';
+import { Expense, PaymentMethod } from '@/types';
+import type { ExpenseDraft, ExpenseUpdate } from '@aqua-guest/domain';
 
 // ─── Row / Insert / Update shapes ────────────────────────────────────────────
 
@@ -44,8 +40,8 @@ export type ExpenseRow = {
 export interface ExpenseState {
   expenses: Expense[];
 
-  addExpense: (expense: Omit<Expense, 'id' | 'createdAt'>) => Promise<void>;
-  updateExpense: (id: string, updates: Partial<Expense>) => Promise<void>;
+  addExpense: (expense: ExpenseDraft) => Promise<void>;
+  updateExpense: (id: string, updates: ExpenseUpdate) => Promise<void>;
   deleteExpense: (id: string) => Promise<void>;
   getExpensesByDate: (date: string) => Expense[];
   loadExpensesByDate: (date: string) => Promise<Expense[]>;

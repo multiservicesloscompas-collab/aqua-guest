@@ -1,8 +1,4 @@
-/**
- * useRentalStore.core.ts
- * Type definitions and pure helper functions for the rental store.
- * No Zustand or Supabase dependencies — pure TypeScript.
- */
+import { preparePaymentWritePayload } from '@/services/payments/paymentSplitWritePath';
 import {
   PaymentMethod,
   RentalShift,
@@ -10,8 +6,11 @@ import {
   WasherRental,
 } from '@/types';
 import type { TipCaptureInput } from '@/types/tips';
-import type { PaymentSplit } from '@/types/paymentSplits';
-import { preparePaymentWritePayload } from '@/services/payments/paymentSplitWritePath';
+import type {
+  PaymentSplit,
+  WasherRentalDraft,
+  WasherRentalUpdate,
+} from '@aqua-guest/domain';
 
 // ─── Row / Insert / Update shapes ────────────────────────────────────────────
 
@@ -71,12 +70,12 @@ export interface RentalState {
   loadingRentalsByRange: Record<string, boolean>;
 
   addRental: (
-    rental: Omit<WasherRental, 'id' | 'createdAt' | 'updatedAt'>,
+    rental: WasherRentalDraft,
     tipInput?: TipCaptureInput
   ) => Promise<WasherRental>;
   updateRental: (
     id: string,
-    updates: Partial<WasherRental>,
+    updates: WasherRentalUpdate,
     tipInput?: TipCaptureInput | null
   ) => Promise<void>;
   deleteRental: (id: string) => Promise<void>;
@@ -116,7 +115,7 @@ export function mapRentalRowToWasherRental(
   rentalRow: RentalRow,
   normalizedSplits: PaymentSplit[],
   splitWritePaymentMethod: PaymentMethod,
-  originalRental?: Partial<WasherRental>
+  originalRental?: WasherRentalUpdate
 ): WasherRental {
   return {
     id: rentalRow.id,

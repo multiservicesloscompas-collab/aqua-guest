@@ -3,19 +3,18 @@ import { useSyncStore } from '@/store/useSyncStore';
 import { hasAmountUpdates } from '@/store/paymentBalanceDraft';
 import { generateTempId } from './tempId';
 import { enqueueEntityDelete } from './commonEnqueue';
+import type {
+  PaymentBalanceOperationType,
+  PaymentBalanceTransactionDraft,
+} from '@aqua-guest/domain';
 
-type PaymentBalanceCreateInput = Omit<
-  PaymentBalanceTransaction,
-  'id' | 'createdAt' | 'updatedAt'
->;
-type PaymentBalanceUpdateInput = Partial<
-  Omit<PaymentBalanceTransaction, 'id' | 'createdAt' | 'updatedAt'>
->;
+type PaymentBalanceCreateInput = PaymentBalanceTransactionDraft;
+type PaymentBalanceUpdateInput = Partial<PaymentBalanceTransactionDraft>;
 
 const buildEntityBusinessKey = (id: string) => `payment-balance:${id}`;
 
 type NormalizedPaymentBalanceAmounts = {
-  operationType: 'equilibrio' | 'avance';
+  operationType: PaymentBalanceOperationType;
   amount: number;
   amountBs: number;
   amountUsd?: number;

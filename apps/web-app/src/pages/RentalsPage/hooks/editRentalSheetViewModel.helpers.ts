@@ -7,14 +7,8 @@ import {
   RentalShiftConfig,
   WasherRental,
 } from '@/types';
+import type { MachineItem } from './rentalSheetViewModel.helpers';
 import { resolveSplitFormHydrationState } from '@/services/payments/paymentSplitFormHydration';
-
-export interface MachineItem {
-  id: string;
-  name: string;
-  detail: string;
-  isUnavailable: boolean;
-}
 
 export interface ShiftOption {
   value: RentalShift;

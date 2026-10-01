@@ -8,9 +8,7 @@ interface EgresosMetricsPageProps {
   onNavigate?: (route: AppRoute) => void;
 }
 
-export function EgresosMetricsPage({
-  onNavigate,
-}: EgresosMetricsPageProps = {}) {
+export function EgresosMetricsPage(_props: EgresosMetricsPageProps = {}) {
   const { expenses } = useExpenseStore();
   const { config } = useConfigStore();
 

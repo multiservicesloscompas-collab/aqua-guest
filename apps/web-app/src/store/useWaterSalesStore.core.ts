@@ -1,13 +1,6 @@
-/**
- * useWaterSalesStore.core.ts
- * Type definitions for the water sales Zustand store.
- * No Zustand or Supabase dependencies — pure TypeScript.
- */
 import { CartItem, PaymentMethod, Sale } from '@/types';
 import type { TipCaptureInput } from '@/types/tips';
-import type { PaymentSplit } from '@/types/paymentSplits';
-
-// ─── Row / Insert / Update shapes ────────────────────────────────────────────
+import type { CartItemDraft, PaymentSplit } from '@aqua-guest/domain';
 
 export interface SalesRow {
   id: string;
@@ -52,7 +45,7 @@ export interface WaterSalesState {
   cart: CartItem[];
   loadingSalesByRange: Record<string, boolean>;
 
-  addToCart: (item: Omit<CartItem, 'id' | 'subtotal'>) => void;
+  addToCart: (item: CartItemDraft) => void;
   updateCartItem: (id: string, updates: Partial<CartItem>) => void;
   removeFromCart: (id: string) => void;
   clearCart: () => void;

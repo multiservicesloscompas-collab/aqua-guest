@@ -1,5 +1,5 @@
 import type { PaymentMethod, Sale, WasherRental } from '@/types';
-import type { PaymentSplit } from '@/types/paymentSplits';
+import type { PaymentSplit } from '@aqua-guest/domain';
 import { PAYMENT_METHODS } from './paymentMethods';
 
 type MethodTotals = Record<PaymentMethod, number>;

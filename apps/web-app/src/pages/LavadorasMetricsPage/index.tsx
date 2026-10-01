@@ -30,9 +30,7 @@ interface LavadorasMetricsPageProps {
 
 type ViewMode = 'dia' | 'semana' | 'mes';
 
-export function LavadorasMetricsPage({
-  onNavigate,
-}: LavadorasMetricsPageProps = {}) {
+export function LavadorasMetricsPage(_props: LavadorasMetricsPageProps = {}) {
   const { rentals, loadRentalsByDateRange } = useRentalStore();
   const { washingMachines, loadWashingMachines } = useMachineStore();
   const { config } = useConfigStore();

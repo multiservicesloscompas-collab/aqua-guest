@@ -1,7 +1,7 @@
 import { toast } from 'sonner';
 import { getVenezuelaDate } from '@/services/DateService';
 import type { WasherRental } from '@/types';
-import type { PaymentSplit } from '@/types/paymentSplits';
+import type { PaymentSplit, WasherRentalUpdate } from '@aqua-guest/domain';
 import type { TipCaptureInput } from '@/types/tips';
 import { normalizeAndValidatePaymentSplits } from '@/services/payments/paymentSplitValidation';
 
@@ -41,7 +41,7 @@ interface SubmitEditRentalParams {
   tipInput?: TipCaptureInput | null;
   updateRental: (
     id: string,
-    updates: Partial<WasherRental>,
+    updates: WasherRentalUpdate,
     tipInput?: TipCaptureInput | null
   ) => Promise<void>;
   onSuccess: () => void;
@@ -67,7 +67,7 @@ export function getEditRentalValidationError(
 
 export function buildEditRentalUpdates(
   params: BuildRentalUpdatesParams
-): Partial<WasherRental> {
+): WasherRentalUpdate {
   return {
     machineId: params.machineId,
     shift: params.shift,

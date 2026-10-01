@@ -1,4 +1,4 @@
-import type { PaymentSplit } from '@/types/paymentSplits';
+import type { PaymentSplit } from '@aqua-guest/domain';
 
 const DEFAULT_DECIMALS = 2;
 

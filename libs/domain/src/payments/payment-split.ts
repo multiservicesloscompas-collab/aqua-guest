@@ -1,18 +1,14 @@
-export type PaymentMethodForSplit =
-  | 'pago_movil'
-  | 'efectivo'
-  | 'punto_venta'
-  | 'divisa';
+import type { PaymentMethod } from './payment-method';
 
 export interface PaymentSplit {
-  method: PaymentMethodForSplit;
+  method: PaymentMethod;
   amountBs: number;
   amountUsd?: number;
   exchangeRateUsed?: number;
 }
 
 export interface SplitPaymentCompatible {
-  paymentMethod: PaymentMethodForSplit;
+  paymentMethod: PaymentMethod;
   paymentSplits?: PaymentSplit[];
 }
 

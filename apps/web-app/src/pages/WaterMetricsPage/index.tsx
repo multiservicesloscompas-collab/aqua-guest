@@ -20,7 +20,7 @@ interface WaterMetricsPageProps {
   onNavigate?: (route: AppRoute) => void;
 }
 
-export function WaterMetricsPage({ onNavigate }: WaterMetricsPageProps = {}) {
+export function WaterMetricsPage(_props: WaterMetricsPageProps = {}) {
   const { selectedDate, setSelectedDate, range, setRange, dateRange, metrics } =
     useWaterMetricsViewModel();
 

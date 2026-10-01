@@ -1,4 +1,5 @@
 import type { PaymentBalanceTransaction } from '@/types';
+import type { PaymentBalanceOperationType } from '@aqua-guest/domain';
 
 const DIFFERENCE_EPSILON = 0.000001;
 
@@ -26,7 +27,7 @@ export interface PaymentBalanceTransferLegs {
   amountOutBs: number;
   amountInBs: number;
   differenceBs: number;
-  operationType: 'equilibrio' | 'avance';
+  operationType: PaymentBalanceOperationType;
 }
 
 export function resolvePaymentBalanceTransferLegs(

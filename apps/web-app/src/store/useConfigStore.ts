@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import {
   AppConfig,
-  Product,
+  ProductWithIcon,
   LiterPricing,
   ExchangeRateHistory,
   DEFAULT_LITER_BREAKPOINTS,
@@ -14,7 +14,7 @@ import {
 import type {
   MixedPaymentFeatureFlags,
   PaymentSplitModule,
-} from '@/types/paymentSplits';
+} from '@aqua-guest/domain';
 import supabase from '@/lib/supabaseClient';
 import { defaultProducts } from '@/data/products';
 import { getVenezuelaDate } from '@/services/DateService';
@@ -26,7 +26,7 @@ import {
 
 interface ConfigState {
   config: AppConfig;
-  products: Product[];
+  products: ProductWithIcon[];
   mixedPaymentFlags: MixedPaymentFeatureFlags;
 
   setExchangeRate: (rate: number) => Promise<void>;
@@ -39,7 +39,7 @@ interface ConfigState {
 
   setConfigData: (
     configUpdates: Partial<AppConfig>,
-    products: Product[]
+    products: ProductWithIcon[]
   ) => void;
 }
 

@@ -33,7 +33,7 @@ Today, the main business workflows live here while the product is still evolving
 | Services | `src/services` | Business logic, formatters, and Supabase-facing workflows kept out of presentational components |
 | Stores | `src/store` | Zustand feature stores, store actions, hydration helpers, and orchestration |
 | Utilities | `src/lib` | Shared utilities such as Supabase client and persistence helpers |
-| Types | `src/types` | Shared TypeScript contracts |
+| Types | `src/types` | Facade over `@aqua-guest/domain` entities plus UI labels and app-only contracts |
 
 ## Domain Context Map
 

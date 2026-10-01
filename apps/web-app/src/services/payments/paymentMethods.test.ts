@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { PaymentMethodLabels } from '@/types';
-import type { PaymentSplit } from '@/types/paymentSplits';
+import type { PaymentSplit } from '@aqua-guest/domain';
 import { PAYMENT_METHODS } from './paymentMethods';
 import { getPaymentMethods } from './paymentSplitReadModel';
 import { validatePaymentSplits } from './paymentSplitValidation';

@@ -1,4 +1,8 @@
-import type { Sale, WasherRental } from '@/types';
+import type {
+  SaleLabelReference,
+  TipOriginType,
+  WasherRentalLabelReference,
+} from '@aqua-guest/domain';
 
 const BOLIVAR_FORMATTER = new Intl.NumberFormat('es-VE', {
   minimumFractionDigits: 2,
@@ -26,10 +30,10 @@ export function formatTipsDateLabel(date: string): string {
 }
 
 export function resolveTipOriginLabel(
-  originType: 'sale' | 'rental',
+  originType: TipOriginType,
   originId: string,
-  salesById: Map<string, Pick<Sale, 'dailyNumber'>>,
-  rentalsById: Map<string, Pick<WasherRental, 'customerName'>>
+  salesById: Map<string, SaleLabelReference>,
+  rentalsById: Map<string, WasherRentalLabelReference>
 ) {
   if (originType === 'sale') {
     const sale = salesById.get(originId);

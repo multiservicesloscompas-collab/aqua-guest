@@ -1,19 +1,19 @@
-/**
- * usePaymentBalanceStore.core.ts
- * Type definitions for the payment balance Zustand store.
- * No Zustand or Supabase dependencies — pure TypeScript.
- */
 import {
-  PaymentBalanceTransaction,
   PaymentBalanceSummary,
+  PaymentBalanceTransaction,
   PaymentMethod,
 } from '@/types';
+import type {
+  PaymentBalanceOperationType,
+  PaymentBalanceTransactionDraft,
+  PaymentBalanceTransactionUpdate,
+} from '@aqua-guest/domain';
 
 // ─── Row / Insert / Update shapes ────────────────────────────────────────────
 
 export type PaymentBalanceInsertPayload = {
   date: string;
-  operation_type?: 'equilibrio' | 'avance';
+  operation_type?: PaymentBalanceOperationType;
   from_method: PaymentMethod;
   to_method: PaymentMethod;
   amount: number;
@@ -29,7 +29,7 @@ export type PaymentBalanceInsertPayload = {
 };
 
 export type PaymentBalanceUpdatePayload = {
-  operation_type?: 'equilibrio' | 'avance';
+  operation_type?: PaymentBalanceOperationType;
   from_method?: PaymentMethod;
   to_method?: PaymentMethod;
   amount?: number;
@@ -49,7 +49,7 @@ export type PaymentBalanceUpdatePayload = {
 export type PaymentBalanceRow = {
   id: string;
   date: string;
-  operation_type?: 'equilibrio' | 'avance' | null;
+  operation_type?: PaymentBalanceOperationType | null;
   from_method: PaymentMethod;
   to_method: PaymentMethod;
   amount: number | string;
@@ -72,14 +72,11 @@ export interface PaymentBalanceState {
   paymentBalanceTransactions: PaymentBalanceTransaction[];
 
   addPaymentBalanceTransaction: (
-    transaction: Omit<
-      PaymentBalanceTransaction,
-      'id' | 'createdAt' | 'updatedAt'
-    >
+    transaction: PaymentBalanceTransactionDraft
   ) => Promise<void>;
   updatePaymentBalanceTransaction: (
     id: string,
-    updates: Partial<PaymentBalanceTransaction>
+    updates: PaymentBalanceTransactionUpdate
   ) => Promise<void>;
   deletePaymentBalanceTransaction: (id: string) => Promise<void>;
   getPaymentBalanceSummary: (date: string) => PaymentBalanceSummary[];

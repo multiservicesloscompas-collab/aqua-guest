@@ -1,30 +1,33 @@
-import type { PaymentSplit } from './paymentSplits';
+import type {
+  CartItem,
+  Customer,
+  ExchangeRateHistory,
+  Expense,
+  ExpenseCategory,
+  LiterPricing,
+  MachineStatus,
+  PaymentBalanceOperationType,
+  PaymentBalanceSummary,
+  PaymentBalanceTransaction,
+  PaymentBalanceTransactionDraft,
+  PaymentBalanceTransactionUpdate,
+  PaymentMethod,
+  PrepaidOrder,
+  PrepaidStatus,
+  Product,
+  RentalExtension,
+  RentalShift,
+  RentalStatus,
+  Sale,
+  WasherRental,
+  WashingMachine,
+} from '@aqua-guest/domain';
 
-export interface Product {
-  id: string;
-  name: string;
-  defaultPrice: number; // Precio en Bolívares
-  requiresLiters: boolean; // Si requiere campo de litros
-  minLiters?: number;
-  maxLiters?: number;
-  icon?: string;
-}
+export type { Product };
 
-export interface CartItem {
-  id: string;
-  productId: string;
-  productName: string;
-  quantity: number;
-  liters?: number; // Solo si el producto lo requiere
-  unitPrice: number; // Precio por unidad en Bs
-  subtotal: number; // quantity * unitPrice
-}
+export type ProductWithIcon = Product & { icon?: string };
 
-export type PaymentMethod =
-  | 'pago_movil'
-  | 'efectivo'
-  | 'punto_venta'
-  | 'divisa';
+export type { CartItem, PaymentMethod };
 
 export const PaymentMethodLabels: Record<PaymentMethod, string> = {
   pago_movil: 'Pago Móvil',
@@ -33,42 +36,7 @@ export const PaymentMethodLabels: Record<PaymentMethod, string> = {
   divisa: 'Divisa',
 };
 
-// Registro de venta completo
-export interface Sale {
-  id: string;
-  dailyNumber: number; // ID incremental del día
-  date: string; // ISO date string
-  items: CartItem[];
-  paymentMethod: PaymentMethod;
-  paymentSplits?: PaymentSplit[];
-  totalBs: number;
-  totalUsd: number;
-  exchangeRate: number; // Tasa al momento de la venta
-  notes?: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-// Registro de egreso/gasto
-export interface Expense {
-  id: string;
-  date: string;
-  description: string;
-  amount: number; // En Bolívares
-  category: ExpenseCategory;
-  paymentMethod: PaymentMethod;
-  paymentSplits?: PaymentSplit[];
-  notes?: string;
-  createdAt: string;
-}
-
-export type ExpenseCategory =
-  | 'operativo'
-  | 'insumos'
-  | 'servicios'
-  | 'mantenimiento'
-  | 'personal'
-  | 'otros';
+export type { Sale, Expense, ExpenseCategory };
 
 export const ExpenseCategoryLabels: Record<ExpenseCategory, string> = {
   operativo: 'Operativo',
@@ -83,8 +51,7 @@ export const ExpenseCategoryLabels: Record<ExpenseCategory, string> = {
 // ALQUILER DE LAVADORAS
 // ============================================
 
-// Estado de la lavadora
-export type MachineStatus = 'disponible' | 'mantenimiento' | 'averiada';
+export type { MachineStatus };
 
 export const MachineStatusLabels: Record<MachineStatus, string> = {
   disponible: 'Disponible',
@@ -98,18 +65,7 @@ export const MachineStatusColors: Record<MachineStatus, string> = {
   averiada: 'bg-red-500/10 text-red-600 border-red-500/20',
 };
 
-// Lavadora disponible
-export interface WashingMachine {
-  id: string;
-  name: string;
-  kg: number; // Capacidad en kg
-  brand: string; // Marca
-  status: MachineStatus;
-  isAvailable: boolean; // Deprecated, usar status === 'disponible'
-}
-
-// Tipo de jornada
-export type RentalShift = 'medio' | 'completo' | 'doble';
+export type { WashingMachine, RentalShift };
 
 export const RentalShiftConfig: Record<
   RentalShift,
@@ -120,8 +76,7 @@ export const RentalShiftConfig: Record<
   doble: { label: 'Doble', priceUsd: 12, hours: 48 },
 };
 
-// Estado del alquiler
-export type RentalStatus = 'agendado' | 'enviado' | 'finalizado';
+export type { RentalStatus };
 
 export const RentalStatusLabels: Record<RentalStatus, string> = {
   agendado: 'Agendado',
@@ -129,52 +84,7 @@ export const RentalStatusLabels: Record<RentalStatus, string> = {
   finalizado: 'Finalizado',
 };
 
-// Cliente para autocompletado
-export interface Customer {
-  id: string;
-  name: string;
-  phone: string;
-  address: string;
-}
-
-// Registro de alquiler
-export interface WasherRental {
-  id: string;
-  date: string; // Fecha del servicio
-  customerId?: string;
-  customerName: string;
-  customerPhone: string;
-  customerAddress: string;
-  machineId: string; // ID de lavadora
-  shift: RentalShift;
-  deliveryTime: string; // HH:mm
-  pickupTime: string; // HH:mm calculado automáticamente
-  pickupDate: string; // Puede ser el mismo día o el siguiente
-  deliveryFee: number; // $0 - $5
-  totalUsd: number; // Precio jornada + delivery
-  paymentMethod: PaymentMethod; // Método de pago
-  paymentSplits?: PaymentSplit[];
-  status: RentalStatus;
-  isPaid: boolean;
-  datePaid?: string; // Fecha en que se realizó el pago (YYYY-MM-DD)
-  notes?: string;
-  // Campos para extensión de tiempo
-  extensions?: RentalExtension[];
-  originalPickupTime?: string; // Hora de retiro original sin extensiones
-  originalPickupDate?: string; // Fecha de retiro original sin extensiones
-  createdAt: string;
-  updatedAt: string;
-}
-
-// Extensión de alquiler
-export interface RentalExtension {
-  id: string;
-  rentalId: string;
-  additionalHours: number; // Horas adicionales
-  additionalFee: number; // Cargo adicional en USD
-  notes?: string; // Notas de la extensión
-  createdAt: string;
-}
+export type { Customer, WasherRental, RentalExtension };
 
 // Horario comercial
 export const BUSINESS_HOURS = {
@@ -188,11 +98,7 @@ export const BUSINESS_HOURS = {
 // CONFIGURACIÓN Y ESTADÍSTICAS
 // ============================================
 
-// Precios por litros (breakpoints)
-export interface LiterPricing {
-  breakpoint: number; // Litros del breakpoint
-  price: number; // Precio en Bs
-}
+export type { LiterPricing };
 
 export const DEFAULT_LITER_BREAKPOINTS: LiterPricing[] = [
   { breakpoint: 2, price: 40.0 },
@@ -204,12 +110,7 @@ export const DEFAULT_LITER_BREAKPOINTS: LiterPricing[] = [
   { breakpoint: 24, price: 300.0 },
 ];
 
-// Historial de tasas de cambio
-export interface ExchangeRateHistory {
-  date: string; // YYYY-MM-DD
-  rate: number;
-  updatedAt: string;
-}
+export type { ExchangeRateHistory };
 
 // Configuración global
 export interface AppConfig {
@@ -223,7 +124,7 @@ export interface AppConfig {
 // AGUA PREPAGADA
 // ============================================
 
-export type PrepaidStatus = 'pendiente' | 'entregado';
+export type { PrepaidStatus };
 
 export const PrepaidStatusLabels: Record<PrepaidStatus, string> = {
   pendiente: 'Pendiente',
@@ -235,55 +136,20 @@ export const PrepaidStatusColors: Record<PrepaidStatus, string> = {
   entregado: 'bg-green-500/10 text-green-600 border-green-500/20',
 };
 
-export interface PrepaidOrder {
-  id: string;
-  customerName: string;
-  customerPhone?: string;
-  liters: number;
-  amountBs: number;
-  amountUsd: number;
-  exchangeRate: number;
-  paymentMethod: PaymentMethod;
-  status: PrepaidStatus;
-  datePaid: string; // Fecha de pago
-  dateDelivered?: string; // Fecha de entrega
-  notes?: string;
-  createdAt: string;
-  updatedAt: string;
-}
+export type { PrepaidOrder };
 
 // ============================================
 // EQUILIBRIO DE TIPOS DE PAGO
 // ============================================
 
-// Transacción de equilibrio entre métodos de pago
-export interface PaymentBalanceTransaction {
-  id: string;
-  date: string; // YYYY-MM-DD
-  operationType?: 'equilibrio' | 'avance';
-  fromMethod: PaymentMethod; // Método de pago origen
-  toMethod: PaymentMethod; // Método de pago destino
-  amount: number; // Monto en Bolívares (para compatibilidad)
-  amountBs?: number; // Monto en Bolívares
-  amountUsd?: number; // Monto en USD
-  amountOutBs?: number;
-  amountOutUsd?: number;
-  amountInBs?: number;
-  amountInUsd?: number;
-  differenceBs?: number;
-  differenceUsd?: number;
-  notes?: string;
-  createdAt: string;
-  updatedAt: string;
-}
+export type {
+  PaymentBalanceOperationType,
+  PaymentBalanceSummary,
+  PaymentBalanceTransaction,
+  PaymentBalanceTransactionDraft,
+  PaymentBalanceTransactionUpdate,
+};
 
-// Resumen de equilibrio por método de pago
-export interface PaymentBalanceSummary {
-  method: PaymentMethod;
-  originalTotal: number; // Total de transacciones reales
-  adjustments: number; // Ajustes netos (+/-)
-  finalTotal: number; // Total después de ajustes
-}
 // Navegación — tipos centralizados en navigation.ts
 export type { AppRoute, ModuleRoute, ModuleSubItem } from './navigation';
 export { routeToModule } from './navigation';

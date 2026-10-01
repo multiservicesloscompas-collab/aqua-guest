@@ -5,7 +5,7 @@ import { useCustomerStore } from '@/store/useCustomerStore';
 import { useRentalStore } from '@/store/useRentalStore';
 import { useMachineStore } from '@/store/useMachineStore';
 import { useConfigStore } from '@/store/useConfigStore';
-import type { PaymentSplit } from '@/types/paymentSplits';
+import type { PaymentSplit } from '@aqua-guest/domain';
 import {
   calculatePickupTime,
   formatPickupInfo,
@@ -130,8 +130,7 @@ export function useRentalSheetViewModel({
   const totalBs = totalUsd * exchangeRate;
   const hasMixedPaymentEnabled = isMixedPaymentEnabled && isMixedPayment;
 
-  const subtotalBs =
-    exchangeRate > 0 ? subtotalUsd * exchangeRate : Number.NaN;
+  const subtotalBs = exchangeRate > 0 ? subtotalUsd * exchangeRate : Number.NaN;
 
   const paymentSplits = useMemo<PaymentSplit[]>(
     () =>

@@ -1,16 +1,11 @@
-/**
- * useRentalStore.supabase.ts
- * Low-level Supabase I/O helpers for rental payment splits.
- * No Zustand dependency — pure async Supabase calls.
- */
 import supabase from '@/lib/supabaseClient';
-import type { PaymentSplit } from '@/types/paymentSplits';
 import {
   PAYMENT_SPLIT_SCHEMA,
   type PaymentSplitRow,
   type RentalPaymentSplitInsertRow,
 } from '@/services/payments/paymentSplitSchemaContract';
 import { rentalPaymentSplitAdapter } from '@/services/payments/paymentSplitSupabaseAdapters';
+import type { PaymentSplit } from '@aqua-guest/domain';
 
 export async function replaceRentalSplits(
   rentalId: string,

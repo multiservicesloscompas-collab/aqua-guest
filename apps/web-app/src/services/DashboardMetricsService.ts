@@ -14,7 +14,7 @@ import {
 } from '@/services/payments/paymentSplitReadModel';
 import { resolvePaymentBalanceTransferLegs } from '@/services/payments/paymentBalanceTransferSemantics';
 import { hasValidMixedPaymentSplits } from '@/services/payments/paymentSplitValidity';
-import type { PaymentSplit } from '@/types/paymentSplits';
+import type { PaymentSplit } from '@aqua-guest/domain';
 import { normalizeToVenezuelaDate } from '@/services/DateService';
 
 export interface DateRange {

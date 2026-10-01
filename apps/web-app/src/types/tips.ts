@@ -1,35 +1,18 @@
-import type { PaymentMethod } from './index';
+import type {
+  PaymentMethod,
+  Tip,
+  TipOriginReference,
+  TipOriginType,
+  TipStatus,
+} from '@aqua-guest/domain';
 
-export type TipOriginType = 'sale' | 'rental';
+export type { Tip, TipOriginType, TipStatus };
 
-export type TipStatus = 'pending' | 'paid';
-
-export interface Tip {
-  id: string;
-  originType: TipOriginType;
-  originId: string;
-  tipDate: string;
-  amountBs: number;
-  amountUsd?: number;
-  exchangeRateUsed?: number;
-  capturePaymentMethod: PaymentMethod;
-  status: TipStatus;
-  paidPaymentMethod?: PaymentMethod;
-  paidAt?: string;
-  notes?: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface TipPayout {
-  id: string;
-  tipDate: string;
-  paidAt: string;
-  paymentMethod: PaymentMethod;
-  amountBs: number;
-  originType: TipOriginType;
-  originId: string;
-}
+export type TipPayout = TipOriginReference &
+  Pick<Tip, 'id' | 'tipDate' | 'amountBs'> & {
+    paidAt: string;
+    paymentMethod: PaymentMethod;
+  };
 
 export interface TipPayoutSummary {
   date: string;
@@ -38,16 +21,16 @@ export interface TipPayoutSummary {
   totalAmountBs: number;
 }
 
-export interface TipUpsertInput {
-  originType: TipOriginType;
-  originId: string;
-  tipDate: string;
-  amountBs: number;
-  amountUsd?: number;
-  exchangeRateUsed?: number;
-  capturePaymentMethod: PaymentMethod;
-  notes?: string;
-}
+export type TipUpsertInput = TipOriginReference &
+  Pick<
+    Tip,
+    | 'tipDate'
+    | 'amountBs'
+    | 'amountUsd'
+    | 'exchangeRateUsed'
+    | 'capturePaymentMethod'
+    | 'notes'
+  >;
 
 export interface TipDailyPayoutRequest {
   tipDate: string;
@@ -64,8 +47,7 @@ export interface TipSinglePayoutRequest {
   tipDate?: string;
 }
 
-export interface TipCaptureInput {
-  amountBs: number;
-  capturePaymentMethod: PaymentMethod;
-  notes?: string;
-}
+export type TipCaptureInput = Pick<
+  Tip,
+  'amountBs' | 'capturePaymentMethod' | 'notes'
+>;

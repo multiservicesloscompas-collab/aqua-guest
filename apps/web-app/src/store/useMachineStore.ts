@@ -7,14 +7,18 @@ import {
   enqueueOfflineWashingMachineDelete,
   enqueueOfflineWashingMachineUpdate,
 } from '@/offline/enqueue/machinesEnqueue';
+import type {
+  WashingMachineDraft,
+  WashingMachineUpdate,
+} from '@aqua-guest/domain';
 
 interface MachineState {
   washingMachines: WashingMachine[];
 
-  addWashingMachine: (machine: Omit<WashingMachine, 'id'>) => Promise<void>;
+  addWashingMachine: (machine: WashingMachineDraft) => Promise<void>;
   updateWashingMachine: (
     id: string,
-    updates: Partial<WashingMachine>
+    updates: WashingMachineUpdate
   ) => Promise<void>;
   deleteWashingMachine: (id: string) => Promise<void>;
 
@@ -40,7 +44,7 @@ type WashingMachineRow = {
 
 export const useMachineStore = create<MachineState>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       washingMachines: [],
 
       addWashingMachine: async (machine) => {

@@ -1,14 +1,14 @@
-import { useMemo } from 'react';
-import { Trophy, DollarSign } from 'lucide-react';
-import { useRentalStore } from '@/store/useRentalStore';
 import { useCustomerStore } from '@/store/useCustomerStore';
+import { useRentalStore } from '@/store/useRentalStore';
 import type { AppRoute } from '@/types';
+import { DollarSign, Trophy } from 'lucide-react';
+import { useMemo } from 'react';
 
 interface TopClientsPageProps {
   onNavigate?: (route: AppRoute) => void;
 }
 
-export function TopClientsPage({ onNavigate }: TopClientsPageProps = {}) {
+export function TopClientsPage(_props: TopClientsPageProps = {}) {
   const { rentals } = useRentalStore();
   const { customers } = useCustomerStore();
 
@@ -27,7 +27,6 @@ export function TopClientsPage({ onNavigate }: TopClientsPageProps = {}) {
       totals[id].count += 1;
     }
 
-    // Enrich with full customer name if available
     for (const customer of customers) {
       if (totals[customer.id]) {
         totals[customer.id].name = customer.name;

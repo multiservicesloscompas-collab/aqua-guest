@@ -12,7 +12,7 @@ import { useAppStore } from '@/store/useAppStore';
 import { useConfigStore } from '@/store/useConfigStore';
 import { useWaterSalesStore } from '@/store/useWaterSalesStore';
 import { PaymentMethod } from '@/types';
-import type { PaymentSplit } from '@/types/paymentSplits';
+import type { PaymentSplit } from '@aqua-guest/domain';
 import { Check, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { normalizeAndValidatePaymentSplits } from '@/services/payments/paymentSplitValidation';

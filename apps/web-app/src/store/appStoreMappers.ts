@@ -3,7 +3,7 @@ import type {
   PaymentBalanceTransaction,
   PaymentMethod,
   PrepaidOrder,
-  Product,
+  ProductWithIcon,
   Sale,
   Tip,
 } from '@/types';
@@ -11,6 +11,7 @@ import {
   rowToTransaction,
   type PaymentBalanceRow,
 } from './usePaymentBalanceStore.core';
+import type { PrepaidStatus } from '@aqua-guest/domain';
 
 type ProductRow = {
   id: string;
@@ -37,7 +38,7 @@ type PrepaidOrderRow = {
   exchangeRate?: number | string | null;
   payment_method?: PaymentMethod;
   paymentMethod?: PaymentMethod;
-  status: 'pendiente' | 'entregado';
+  status: PrepaidStatus;
   date_paid?: string | null;
   datePaid?: string | null;
   date_delivered?: string | null;
@@ -100,7 +101,7 @@ type ExchangeRateRow = {
   updatedAt?: string | null;
 };
 
-export const mapProducts = (rows: ProductRow[]): Product[] =>
+export const mapProducts = (rows: ProductRow[]): ProductWithIcon[] =>
   rows.map((product) => ({
     id: product.id,
     name: product.name,

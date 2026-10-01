@@ -2,13 +2,7 @@ import { WashingMachine } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
-
-interface MachineItem {
-  id: string;
-  name: string;
-  detail: string;
-  isUnavailable: boolean;
-}
+import type { MachineItem } from '../hooks/rentalSheetViewModel.helpers';
 
 interface RentalMachineSelectorProps {
   items: MachineItem[];

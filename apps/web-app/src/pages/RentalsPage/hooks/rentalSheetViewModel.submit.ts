@@ -1,6 +1,6 @@
 import { toast } from 'sonner';
 import type { PaymentMethod, WasherRental } from '@/types';
-import type { PaymentSplit } from '@/types/paymentSplits';
+import type { PaymentSplit, WasherRentalDraft } from '@aqua-guest/domain';
 import type { TipCaptureInput } from '@/types/tips';
 import { normalizeAndValidatePaymentSplits } from '@/services/payments/paymentSplitValidation';
 
@@ -12,10 +12,10 @@ interface SubmitRentalInput {
   exchangeRate: number;
   totalBs: number;
   totalUsd: number;
-  rentalPayload: Omit<WasherRental, 'id' | 'createdAt' | 'updatedAt'>;
+  rentalPayload: WasherRentalDraft;
   tipInput?: TipCaptureInput;
   addRental: (
-    rental: Omit<WasherRental, 'id' | 'createdAt' | 'updatedAt'>,
+    rental: WasherRentalDraft,
     tipInput?: TipCaptureInput
   ) => Promise<WasherRental>;
 }

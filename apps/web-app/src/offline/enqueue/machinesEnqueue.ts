@@ -2,9 +2,10 @@ import type { WashingMachine } from '@/types';
 import { useSyncStore } from '@/store/useSyncStore';
 import { generateTempId } from './tempId';
 import { enqueueEntityDelete } from './commonEnqueue';
+import type { WashingMachineDraft } from '@aqua-guest/domain';
 
-type MachineCreateInput = Omit<WashingMachine, 'id'>;
-type MachineUpdateInput = Partial<Omit<WashingMachine, 'id'>>;
+type MachineCreateInput = WashingMachineDraft;
+type MachineUpdateInput = Partial<WashingMachineDraft>;
 
 const buildEntityBusinessKey = (id: string) => `machine:${id}`;
 

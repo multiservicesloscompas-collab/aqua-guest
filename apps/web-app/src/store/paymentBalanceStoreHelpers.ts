@@ -1,10 +1,14 @@
 import type { PaymentBalanceTransaction } from '@/types';
 import type { PaymentBalanceUpdatePayload } from './usePaymentBalanceStore.core';
 import type { PaymentBalanceDraft } from './paymentBalanceDraft';
+import type {
+  PaymentBalanceTransactionDraft,
+  PaymentBalanceTransactionUpdate,
+} from '@aqua-guest/domain';
 
 export const toDraftInput = (
   transaction: PaymentBalanceTransaction
-): Omit<PaymentBalanceTransaction, 'id' | 'createdAt' | 'updatedAt'> => ({
+): PaymentBalanceTransactionDraft => ({
   date: transaction.date,
   fromMethod: transaction.fromMethod,
   toMethod: transaction.toMethod,
@@ -23,7 +27,7 @@ export const toDraftInput = (
 
 export const applyLocalTransactionUpdate = (
   transaction: PaymentBalanceTransaction,
-  updates: Partial<PaymentBalanceTransaction>,
+  updates: PaymentBalanceTransactionUpdate,
   normalized: PaymentBalanceDraft | undefined,
   updatedAt: string
 ): PaymentBalanceTransaction => ({
@@ -48,7 +52,7 @@ export const applyLocalTransactionUpdate = (
 
 export const assignUpdatePayloadFromUpdates = (
   payload: PaymentBalanceUpdatePayload,
-  updates: Partial<PaymentBalanceTransaction>
+  updates: PaymentBalanceTransactionUpdate
 ) => {
   if (updates.fromMethod !== undefined)
     payload.from_method = updates.fromMethod;

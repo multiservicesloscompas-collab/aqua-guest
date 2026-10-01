@@ -3,7 +3,7 @@ import {
   buildDualPaymentSplits,
   preparePaymentWritePayload,
 } from './paymentSplitWritePath';
-import type { PaymentSplit } from '@/types/paymentSplits';
+import type { PaymentSplit } from '@aqua-guest/domain';
 import type { PaymentMethod } from '@/types';
 
 describe('buildDualPaymentSplits', () => {

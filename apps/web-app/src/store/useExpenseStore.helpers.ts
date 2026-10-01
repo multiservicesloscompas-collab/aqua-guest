@@ -1,5 +1,9 @@
 import type { Expense } from '@/types';
-import type { PaymentSplit } from '@/types/paymentSplits';
+import type {
+  ExpenseDraft,
+  ExpenseUpdate,
+  PaymentSplit,
+} from '@aqua-guest/domain';
 import { PAYMENT_SPLIT_SCHEMA } from '@/services/payments/paymentSplitSchemaContract';
 import type { PaymentSplitRow } from '@/services/payments/paymentSplitSchemaContract';
 import type {
@@ -36,7 +40,7 @@ type SupabaseLike = {
 };
 
 export const toExpenseInsertPayload = (
-  expense: Omit<Expense, 'id' | 'createdAt'>
+  expense: ExpenseDraft
 ): ExpenseInsertPayload => ({
   date: expense.date,
   description: expense.description,
@@ -47,7 +51,7 @@ export const toExpenseInsertPayload = (
 });
 
 export const toExpenseUpdatePayload = (
-  updates: Partial<Expense>
+  updates: ExpenseUpdate
 ): ExpenseUpdatePayload => {
   const payload: ExpenseUpdatePayload = {};
   if (updates.description !== undefined)

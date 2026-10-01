@@ -29,6 +29,7 @@ import {
   calculateFinalRentalTotals,
   mergeTipIntoPaymentSplits,
 } from '@/services/transactions/transactionTotals';
+import type { WasherRentalDraft } from '@aqua-guest/domain';
 export { updateRentalAction } from './useRentalStore.actions.update';
 
 type SetFn = (
@@ -37,7 +38,7 @@ type SetFn = (
 type GetFn = () => RentalState;
 
 export async function addRentalAction(
-  rental: Omit<WasherRental, 'id' | 'createdAt' | 'updatedAt'>,
+  rental: WasherRentalDraft,
   tipInput: TipCaptureInput | undefined,
   set: SetFn,
   _get: GetFn

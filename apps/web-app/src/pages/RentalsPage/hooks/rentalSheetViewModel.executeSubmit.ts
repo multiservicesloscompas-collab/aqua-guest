@@ -1,7 +1,7 @@
 import { toast } from 'sonner';
 import { buildTipCaptureInput } from '@/services/tips/tipCaptureInput';
 import type { PaymentMethod, WasherRental } from '@/types';
-import type { PaymentSplit } from '@/types/paymentSplits';
+import type { PaymentSplit, WasherRentalDraft } from '@aqua-guest/domain';
 import { submitRental } from './rentalSheetViewModel.submit';
 
 interface ExecuteSubmitParams {
@@ -28,7 +28,7 @@ interface ExecuteSubmitParams {
   tipAmount: string;
   tipNotes: string;
   addRental: (
-    rental: Omit<WasherRental, 'id' | 'createdAt' | 'updatedAt'>,
+    rental: WasherRentalDraft,
     tipInput?: ReturnType<typeof buildTipCaptureInput>
   ) => Promise<WasherRental>;
   onOpenChange: (open: boolean) => void;

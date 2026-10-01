@@ -7,6 +7,7 @@ import {
   enqueueOfflineCustomerDelete,
   enqueueOfflineCustomerUpdate,
 } from '@/offline/enqueue/customersEnqueue';
+import type { CustomerDraft } from '@aqua-guest/domain';
 
 interface CustomerState {
   customers: Customer[];
@@ -17,8 +18,8 @@ interface CustomerState {
   setCustomers: (customers: Customer[]) => void;
 }
 
-type CustomerCreateInput = Omit<Customer, 'id'>;
-type CustomerUpdateInput = Partial<Omit<Customer, 'id'>>;
+type CustomerCreateInput = CustomerDraft;
+type CustomerUpdateInput = Partial<CustomerDraft>;
 
 const buildCustomerUpdatePayload = (
   updates: CustomerUpdateInput
