@@ -11,6 +11,8 @@
     "supabase:stop": "supabase stop",
     "supabase:status": "supabase status",
     "supabase:reset": "supabase db reset",
+    "db:migrations:status": "supabase migration list",
+    "db:migrate": "supabase db push",
     "playwright:install": "playwright install chromium",
     "e2e:web-app": "npx nx run web-app-e2e:e2e",
     "e2e:web-app:ci": "npx nx run web-app-e2e:e2e-ci",

@@ -1,6 +1,6 @@
+import { getPaymentMethods } from '@/services/payments/paymentSplitReadModel';
 import type { PaymentMethod } from '@/types';
 import type { PaymentSplit } from '@/types/paymentSplits';
-import { getPaymentMethods } from '@/services/payments/paymentSplitReadModel';
 
 function isFinitePositiveNumber(value: unknown): boolean {
   return typeof value === 'number' && Number.isFinite(value) && value > 0;
@@ -30,4 +30,17 @@ export function hasValidMixedPaymentSplits(
   }
 
   return uniqueMethods.size >= 2;
+}
+
+export function hasPersistedPaymentSplits(
+  splits: readonly PaymentSplit[] | undefined
+): splits is PaymentSplit[] {
+  if (!splits || splits.length === 0) {
+    return false;
+  }
+
+  return splits.every(
+    (split) =>
+      isValidSplitMethod(split.method) && isFinitePositiveNumber(split.amountBs)
+  );
 }

@@ -184,6 +184,7 @@ La documentación detallada del proyecto se encuentra en la carpeta `docs/`:
 - [`docs/prd-agua.md`](docs/prd-agua.md) - Especificaciones de venta de agua
 - [`docs/prd-lavadora.md`](docs/prd-lavadora.md) - Especificaciones de alquiler de lavadoras
 - [`docs/tech.md`](docs/tech.md) - Especificaciones técnicas y convenciones
+- [`supabase/README.md`](supabase/README.md) - Migraciones de la base de datos, paso a paso (local y producción)
 
 ## 🚢 Despliegue
 
@@ -197,6 +198,10 @@ npx nx build web-app
 
 # El directorio de salida es: dist/apps/web-app
 ```
+
+### Base de datos (Supabase)
+
+Los cambios de esquema son migraciones versionadas en `supabase/migrations/`. En local se aplican solas con `npm run local`; en producción las aplicas tú con `npm run db:migrate` **antes** de desplegar. La app avisa al entrar al Dashboard si falta alguna. Guía completa: [`supabase/README.md`](supabase/README.md).
 
 ## 🤝 Contribución
 

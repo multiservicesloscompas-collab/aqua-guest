@@ -41,7 +41,19 @@ AquaGuest talks to Supabase directly from repository code.
   - `npm run supabase:start`: Starts local Supabase stack in background.
   - `npm run supabase:stop`: Stops local Supabase containers.
   - `npm run supabase:status`: Prints local endpoints and keys.
-  - `npm run supabase:reset`: Resets the local database and re-applies whatever is in the local `supabase/migrations` and `supabase/seed.sql`. `supabase/` is gitignored, so a fresh clone has no migrations or seed: the local schema must be recreated by hand (see `docs/agents/workflow.md`, Environments).
+  - `npm run supabase:reset`: Resets the local database and re-applies `supabase/migrations` and `supabase/seed.sql`. Destructive: needs the user's approval.
+  - `npm run db:migrations:status`: Lists which migrations are applied and which are pending (`supabase migration list`).
+  - `npm run db:migrate`: Applies the pending migrations to the linked remote project (`supabase db push`) and records them in the registry.
+
+## Migrations
+
+- `supabase/` is versioned (`config.toml`, `migrations/`, `seed.sql`). Never commit `supabase/.temp`, `.branches` or `.env*` (already ignored by `supabase/.gitignore`).
+- One file per change: `supabase/migrations/<YYYYMMDDHHMMSS>_<name>.sql`, additive first, with the rollback SQL as a comment at the top (`docs/agents/workflow.md`, Database Changes).
+- The registry is Supabase's own `supabase_migrations.schema_migrations`. `npm run local` runs `supabase migration up` before serving, so local databases never fall behind.
+- The app does not check or apply migrations; the user runs `npm run db:migrate`. There is no startup warning for pending migrations on purpose: it needed a database function exposed to `anon` and was removed.
+- Step-by-step guide for the user (local and production, with credentials): `supabase/README.md`.
+- One-time production setup: `npx supabase login`, `npx supabase link --project-ref <ref>`, then `npx supabase migration repair --status applied 20260101000000 20260717120000` for the two migrations that were applied by hand before the registry existed. The production registry was aligned this way on 2026-09-30 (its 10 older versions, which have no local file, were removed from the registry).
+- Before merging a PR that adds a migration, apply it to production first (expand first), so the deployed code never runs against a missing column or table.
 
 ## Documentation Sync
 
