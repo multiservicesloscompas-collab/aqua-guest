@@ -16,6 +16,8 @@ import { useConfigStore } from './useConfigStore';
 import { useRentalStore } from './useRentalStore';
 import { useWaterSalesStore } from './useWaterSalesStore';
 import { usePrepaidStore } from './usePrepaidStore';
+import { useExpenseStore } from './useExpenseStore';
+import { useTipStore } from './useTipStore';
 import type {
   PaymentBalanceInsertRow,
   PaymentBalanceRow,
@@ -238,6 +240,8 @@ export const usePaymentBalanceStore = create<PaymentBalanceState>()(
         const prepaidOrders = usePrepaidStore.getState().prepaidOrders;
         const config = useConfigStore.getState().config;
         const rentals = useRentalStore.getState().rentals;
+        const expenses = useExpenseStore.getState().expenses;
+        const tipPayouts = useTipStore.getState().tipPayouts;
         return calculatePaymentBalanceSummary({
           date,
           exchangeRate: config.exchangeRate,
@@ -245,6 +249,8 @@ export const usePaymentBalanceStore = create<PaymentBalanceState>()(
           prepaidOrders,
           rentals,
           paymentBalanceTransactions,
+          expenses,
+          tipPayouts,
         });
       },
 

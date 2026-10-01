@@ -73,24 +73,12 @@ export const BUG_KNOWLEDGE = {
     where:
       'pages/TransactionsSummaryPage/services/buildTransactionsSummaryItems.ts:262 · TransactionsSummaryPage.tsx:68',
   },
-  'FIN-03': {
-    cause:
-      'El resumen se calcula en un useMemo sin las dependencias de estado, así que no se recalcula al registrar una transferencia.',
-    fix: 'Agregar al useMemo las dependencias reales (transferencias, ventas, alquileres, egresos) o derivar el resumen sin memo.',
-    where: 'usePaymentBalancePageViewModel.ts:56',
-  },
   'FIN-04': {
     cause:
       'Equilibrio agrupa el alquiler por `date || datePaid` (fecha del servicio) mientras el dashboard usa datePaid (fecha de pago).',
     fix: 'Usar datePaid en Equilibrio, como DashboardMetricsService.',
     where:
       'paymentBalanceSummary.ts:56-59 · DashboardMetricsService.ts:113 (referencia)',
-  },
-  'FIN-05': {
-    cause:
-      'El resumen de Equilibrio no resta egresos ni pagos de propina, que sí descuenta la tarjeta de Efectivo del dashboard.',
-    fix: 'Restar egresos y pagos de propina por método en el resumen, reutilizando el cálculo que ya usa la tarjeta.',
-    where: 'paymentBalanceSummary.ts:17-24',
   },
   'FIN-06': {
     cause:

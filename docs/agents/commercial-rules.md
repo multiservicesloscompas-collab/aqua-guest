@@ -47,6 +47,7 @@ For implementation detail and visual mapping, also load `apps/web-app/docs/busin
 - Dashboard metrics are aggregated results, not isolated source-of-truth records.
 - Transactions and payment summaries are derived views built from multiple domains.
 - Any commercial change that affects payment shape, paid status, dates, or tips can alter these derived views.
+- Equilibrio (`calculatePaymentBalanceSummary`) must agree with the dashboard per-method cards: its per-method `originalTotal` is the day's income minus the day's expenses and paid tip payouts on that method (`services/payments/methodOutflows.ts`, shared with the dashboard); `adjustments` are transfers only.
 
 ## Practical Rule
 

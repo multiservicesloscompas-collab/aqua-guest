@@ -1,8 +1,14 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { useAppStore } from '@/store/useAppStore';
 import { useConfigStore } from '@/store/useConfigStore';
+import { useExpenseStore } from '@/store/useExpenseStore';
 import { usePaymentBalanceStore } from '@/store/usePaymentBalanceStore';
+import { usePrepaidStore } from '@/store/usePrepaidStore';
+import { useRentalStore } from '@/store/useRentalStore';
+import { useTipStore } from '@/store/useTipStore';
+import { useWaterSalesStore } from '@/store/useWaterSalesStore';
+import { calculatePaymentBalanceSummary } from '@/services/payments/paymentBalanceSummary';
 import { PaymentBalanceTransaction, PaymentMethod } from '@/types';
 import {
   mapTransactionToFormData,
@@ -39,8 +45,18 @@ export function usePaymentBalancePageViewModel() {
     addPaymentBalanceTransaction,
     updatePaymentBalanceTransaction,
     deletePaymentBalanceTransaction,
-    getPaymentBalanceSummary,
   } = usePaymentBalanceStore();
+  const sales = useWaterSalesStore((state) => state.sales);
+  const rentals = useRentalStore((state) => state.rentals);
+  const prepaidOrders = usePrepaidStore((state) => state.prepaidOrders);
+  const expenses = useExpenseStore((state) => state.expenses);
+  const loadExpensesByDate = useExpenseStore(
+    (state) => state.loadExpensesByDate
+  );
+  const tipPayouts = useTipStore((state) => state.tipPayouts);
+  const loadPaidTipsByDateRange = useTipStore(
+    (state) => state.loadPaidTipsByDateRange
+  );
   const { selectedDate, setSelectedDate } = useAppStore();
   const { config } = useConfigStore();
 
@@ -55,9 +71,41 @@ export function usePaymentBalancePageViewModel() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  const balanceSummary = useMemo(() => {
-    return getPaymentBalanceSummary(selectedDate);
-  }, [selectedDate, getPaymentBalanceSummary]);
+  // The summary reads these slices directly (not through a store getter) so it
+  // recalculates whenever any of them changes, e.g. expenses that finish
+  // loading after the page rendered, or a transfer just registered.
+  const balanceSummary = useMemo(
+    () =>
+      calculatePaymentBalanceSummary({
+        date: selectedDate,
+        exchangeRate: config.exchangeRate,
+        sales,
+        prepaidOrders,
+        rentals,
+        paymentBalanceTransactions,
+        expenses,
+        tipPayouts,
+      }),
+    [
+      selectedDate,
+      config.exchangeRate,
+      sales,
+      prepaidOrders,
+      rentals,
+      paymentBalanceTransactions,
+      expenses,
+      tipPayouts,
+    ]
+  );
+
+  useEffect(() => {
+    void Promise.all([
+      loadExpensesByDate(selectedDate),
+      loadPaidTipsByDateRange(selectedDate, selectedDate),
+    ]).catch((error) => {
+      console.error('Error loading expenses and tips for Equilibrio', error);
+    });
+  }, [selectedDate, loadExpensesByDate, loadPaidTipsByDateRange]);
 
   const transactionsForDate = useMemo(() => {
     return paymentBalanceTransactions

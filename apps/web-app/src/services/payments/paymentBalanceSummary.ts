@@ -1,9 +1,11 @@
 import type {
+  Expense,
   PaymentBalanceSummary,
   PaymentBalanceTransaction,
   PaymentMethod,
   PrepaidOrder,
   Sale,
+  TipPayout,
   WasherRental,
 } from '@/types';
 import {
@@ -13,6 +15,11 @@ import {
   getPaymentMethods,
 } from '@/services/payments/paymentSplitReadModel';
 import { resolvePaymentBalanceTransferLegs } from '@/services/payments/paymentBalanceTransferSemantics';
+import {
+  computeExpenseTotalsByMethod,
+  dedupeTipPayouts,
+  resolveTipPayoutDate,
+} from '@/services/payments/methodOutflows';
 
 interface PaymentBalanceSummaryInput {
   date: string;
@@ -21,6 +28,8 @@ interface PaymentBalanceSummaryInput {
   prepaidOrders: readonly PrepaidOrder[];
   rentals: readonly WasherRental[];
   paymentBalanceTransactions: readonly PaymentBalanceTransaction[];
+  expenses?: readonly Expense[];
+  tipPayouts?: readonly TipPayout[];
 }
 
 export function calculatePaymentBalanceSummary(
@@ -33,6 +42,8 @@ export function calculatePaymentBalanceSummary(
     prepaidOrders,
     rentals,
     paymentBalanceTransactions,
+    expenses = [],
+    tipPayouts = [],
   } = input;
 
   const methods = getPaymentMethods();
@@ -62,6 +73,21 @@ export function calculatePaymentBalanceSummary(
       originalTotals,
       allocateRentalToMethodTotalsBs(rental, exchangeRate, originalTotals)
     );
+  }
+
+  // What actually left each method that day (expenses and paid tip payouts), so
+  // the per-method total matches the dashboard cards.
+  const expenseTotals = computeExpenseTotalsByMethod(
+    expenses.filter((expense) => expense.date === date)
+  );
+  const payoutsOfDay = dedupeTipPayouts(tipPayouts).filter(
+    (payout) => resolveTipPayoutDate(payout) === date
+  );
+  for (const method of methods) {
+    originalTotals[method] -= expenseTotals[method];
+  }
+  for (const payout of payoutsOfDay) {
+    originalTotals[payout.paymentMethod] -= Number(payout.amountBs || 0);
   }
 
   const adjustments = createEmptyMethodTotals();
