@@ -1,6 +1,6 @@
+import { getPaymentMethods } from '@/services/payments/paymentSplitReadModel';
 import type { PaymentMethod } from '@/types';
 import type { PaymentSplit } from '@/types/paymentSplits';
-import { getPaymentMethods } from '@/services/payments/paymentSplitReadModel';
 
 function isFinitePositiveNumber(value: unknown): boolean {
   return typeof value === 'number' && Number.isFinite(value) && value > 0;
@@ -32,11 +32,6 @@ export function hasValidMixedPaymentSplits(
   return uniqueMethods.size >= 2;
 }
 
-/**
- * True when the record carries stored payments we can trust as historical
- * amounts (one or more valid splits), unlike `hasValidMixedPaymentSplits`,
- * which only accepts 2+ distinct methods.
- */
 export function hasPersistedPaymentSplits(
   splits: readonly PaymentSplit[] | undefined
 ): splits is PaymentSplit[] {

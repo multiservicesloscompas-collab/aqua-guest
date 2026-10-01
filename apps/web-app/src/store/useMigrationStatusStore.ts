@@ -1,12 +1,11 @@
-import { create } from 'zustand';
 import supabase from '@/lib/supabaseClient';
 import {
   checkMigrationStatus,
   type MigrationStatus,
 } from '@/services/migrations/migrationStatus';
+import { create } from 'zustand';
 
 interface MigrationStatusState extends MigrationStatus {
-  /** True once the pending-migrations toast was shown in this session. */
   notified: boolean;
   check: () => Promise<void>;
   markNotified: () => void;
