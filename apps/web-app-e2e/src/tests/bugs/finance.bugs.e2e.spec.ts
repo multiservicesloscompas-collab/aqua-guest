@@ -337,40 +337,4 @@ test.describe('FIN · egresos y validaciones (rojos)', () => {
       expect(count).toBe(0);
     }
   );
-
-  test(
-    '[FIN-12] Neto Mes includes expenses of earlier days of the month',
-    bugDoc({
-      id: 'FIN-12',
-      titulo: 'El neto del mes descuenta los egresos de días anteriores',
-      intent:
-        'Comprobar que, al abrir la app, «Neto Mes» resta los egresos de todo el mes y no solo los de los días ya visitados.',
-      steps: [
-        'Siembra una venta de Bs 2000 y un egreso de Bs 500 de ayer (mismo mes).',
-        'Abre el dashboard de hoy sin visitar antes ningún otro día.',
-      ],
-      expects: ['Acumulado Mes muestra Bs 2000 y Neto Mes muestra Bs 1500.'],
-      actual:
-        'el dashboard carga las ventas de todo el mes pero no los egresos, así que Neto Mes muestra Bs 2000 hasta que se visita ese día en Egresos',
-    }),
-    async ({ page }) => {
-      // Arrange
-      const today = todayVe();
-      test.skip(today.endsWith('-01'), 'Yesterday falls in the previous month');
-      const yesterday = addDays(today, -1);
-      await seedSales([
-        { date: yesterday, dailyNumber: 1, totalBs: 2000, exchangeRate: 1000 },
-      ]);
-      await seedExpense({ date: yesterday, amount: 500 });
-
-      // Act
-      await gotoDashboard(page);
-      await page.waitForTimeout(2_000);
-      const snapshot = await captureDashboardSnapshot(page);
-
-      // Assert
-      expect(snapshot.mtdIncomeBs).toBe(2000);
-      expect(snapshot.mtdNetBs).toBe(1500);
-    }
-  );
 });

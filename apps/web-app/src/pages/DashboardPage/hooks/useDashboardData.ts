@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useAppStore } from '@/store/useAppStore';
 
 interface DashboardDataLoaders {
   loadSalesByDateRange: (start: string, end: string) => Promise<void>;
@@ -60,6 +61,17 @@ export function useDashboardData(
   useEffect(() => {
     loadMonthData(selectedDate, false);
   }, [selectedDate, loadMonthData]);
+
+  // The global sync (loadFromSupabase) replaces sales, tips and expenses when it
+  // finishes, which can wipe what the month load just fetched. Reload the month
+  // after every global sync so the totals do not wait for another screen (FIN-12).
+  const coreLoadedAt = useAppStore((state) => state.coreLoadedAt);
+  const seenCoreLoadRef = useRef(coreLoadedAt);
+  useEffect(() => {
+    if (seenCoreLoadRef.current === coreLoadedAt) return;
+    seenCoreLoadRef.current = coreLoadedAt;
+    void loadMonthData(selectedDate, true);
+  }, [coreLoadedAt, selectedDate, loadMonthData]);
 
   const reloadMonth = useCallback(() => {
     loadMonthData(selectedDate, true);

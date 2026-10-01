@@ -12,4 +12,3 @@ FIN-01 is bug B5 in `docs/audit/production-bugs.md` and is **fixed** (its spec n
 | FIN-09      | Expense metrics add every expense in the store (Bs 50)                                 | Only the selected period (Bs 30)                        |
 | FIN-10      | An expense of Bs 0 is saved                                                            | Reject it                                               |
 | FIN-11      | A transfer larger than the balance is saved                                            | Block it                                                |
-| FIN-12      | Neto Mes omits expenses of earlier days until that day is visited in Egresos (Bs 2000) | Subtract them from the first load (Bs 1500)             |

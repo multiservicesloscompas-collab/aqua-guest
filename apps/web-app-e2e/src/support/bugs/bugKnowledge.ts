@@ -104,13 +104,6 @@ export const BUG_KNOWLEDGE = {
     fix: 'Bloquear la transferencia si el monto supera el saldo del método de origen o si la tasa no es positiva.',
     where: 'paymentBalanceFormLogic.ts:55-79 (líneas 93 y 97 para la tasa)',
   },
-  'FIN-12': {
-    cause:
-      'useDashboardData carga las ventas de todo el mes pero no los egresos; la tienda de egresos solo tiene los días ya visitados en Egresos.',
-    fix: 'Cargar los egresos del mes completo en los mismos cargadores de rango del dashboard (relacionado con C4 y C6 del audit).',
-    where:
-      'useDashboardData.ts (cargadores por rango) · caché de la tienda de egresos',
-  },
 } as const satisfies Record<string, BugKnowledge>;
 
 export type BugId = keyof typeof BUG_KNOWLEDGE;

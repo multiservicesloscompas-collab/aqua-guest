@@ -98,6 +98,8 @@ export function usePaymentBalancePageViewModel() {
     ]
   );
 
+  // coreLoadedAt: the global sync replaces expenses and tips, so reload after it.
+  const coreLoadedAt = useAppStore((state) => state.coreLoadedAt);
   useEffect(() => {
     void Promise.all([
       loadExpensesByDate(selectedDate),
@@ -105,7 +107,7 @@ export function usePaymentBalancePageViewModel() {
     ]).catch((error) => {
       console.error('Error loading expenses and tips for Equilibrio', error);
     });
-  }, [selectedDate, loadExpensesByDate, loadPaidTipsByDateRange]);
+  }, [selectedDate, coreLoadedAt, loadExpensesByDate, loadPaidTipsByDateRange]);
 
   const transactionsForDate = useMemo(() => {
     return paymentBalanceTransactions
