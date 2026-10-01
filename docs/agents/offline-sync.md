@@ -8,7 +8,7 @@
 - When the browser is offline, store actions apply an optimistic local update and enqueue the Supabase mutation into `useSyncStore` (`src/store/useSyncStore.ts`, persisted).
 - Enqueue helpers live in `src/offline/enqueue/*Enqueue.ts`, one per entity (sales, rentals, expenses, customers, machines, prepaid, payment balance, config).
 - Shared enqueue building blocks live in the same folder: `tempId.ts` (`generateTempId`, the `temp-<random>` id) and `commonEnqueue.ts` (`enqueueEntityDelete`, used for deletes by id of customers, machines, expenses, prepaid and payment balance). Sales and rentals keep their own deletes.
-- Records created offline get a `temp-<random>` id until the queue replays them.
+- Records created offline get a `temp-<random>` id until the queue replays them. When the queue replays an INSERT, `buildSupabaseMutation` replaces any payload field that holds a known temp id with the real one (e.g. a rental's `customer_id`), so a record that references another queued record must declare it in `dependencyKeys` (a rental for a new customer depends on `customer:<temp id>`, and the tip of a new rental or sale depends on that record's INSERT business key via `buildRentalBusinessKey` / `buildSaleCreateBusinessKey`).
 - `src/components/layout/SyncManager.tsx` replays the queue when connectivity returns.
 - An update or delete of a record that still has a `temp-` id depends on that record's own create through `dependencyKeys` (its `businessKey`). Child rows such as `sale_payment_splits` are enqueued after their parent, and the coverage matrix names each table's dependency group.
 
@@ -33,6 +33,7 @@
 - Processing disabled (`queue_processing_enabled` off) gives mode `disabled`.
 - Otherwise `global_orchestrator` on gives mode `global` (`src/offline/globalOrchestrator.ts`, with `orchestratorMutations.ts`).
 - Otherwise mode `legacy`, unless `legacy_sync_manager_disabled` is on. **By default the legacy processor inside `SyncManager.tsx` is the one running.** The global orchestrator is opt-in per device.
+- The legacy processor handles `sales` INSERT (plus its splits) itself and sends every other table and action type through `buildSupabaseMutation` (`orchestratorMutations.ts`), sharing a `tempId` to real id map for the run. A failed action only blocks its own `businessKey` and the actions that depend on it; the rest of the queue keeps syncing. After a run with failures it does not retry until the queue size changes or the connection returns again.
 
 Any change to queue semantics must work in both processors, or explicitly state which one it targets.
 
