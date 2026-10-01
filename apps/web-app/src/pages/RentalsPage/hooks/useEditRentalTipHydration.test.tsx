@@ -92,15 +92,18 @@ function Harness({
   open,
   rental,
   tipCapture,
+  onTipHydrated,
 }: {
   open: boolean;
   rental: WasherRental | null;
   tipCapture: TipCaptureMockApi;
+  onTipHydrated?: (tip: Tip) => void;
 }) {
   useEditRentalTipHydration({
     open,
     rental,
     tipCapture,
+    onTipHydrated,
   });
   return null;
 }
@@ -134,6 +137,80 @@ describe('useEditRentalTipHydration', () => {
       });
     });
     expect(loadTipsByDateRangeMock).not.toHaveBeenCalled();
+  });
+
+  it('reports the persisted tip when it is already cached (B3b)', async () => {
+    // Arrange
+    const tipCapture = {
+      hydrateTipCapture: vi.fn(),
+      resetTipCapture: vi.fn(),
+    };
+    const onTipHydrated = vi.fn();
+    const tip = buildTip('rental-1', 200);
+    setCurrentTips([tip]);
+
+    // Act
+    render(
+      <Harness
+        open={true}
+        rental={buildRental('rental-1')}
+        tipCapture={tipCapture}
+        onTipHydrated={onTipHydrated}
+      />
+    );
+
+    // Assert
+    await waitFor(() => {
+      expect(onTipHydrated).toHaveBeenCalledWith(tip);
+    });
+  });
+
+  it('reports the persisted tip when it arrives after loading (B3b)', async () => {
+    const tipCapture = {
+      hydrateTipCapture: vi.fn(),
+      resetTipCapture: vi.fn(),
+    };
+    const onTipHydrated = vi.fn();
+    const tip = buildTip('rental-3', 120);
+    loadTipsByDateRangeMock.mockImplementationOnce(async () => {
+      setCurrentTips([tip]);
+    });
+
+    render(
+      <Harness
+        open={true}
+        rental={buildRental('rental-3')}
+        tipCapture={tipCapture}
+        onTipHydrated={onTipHydrated}
+      />
+    );
+
+    await waitFor(() => {
+      expect(onTipHydrated).toHaveBeenCalledWith(tip);
+    });
+  });
+
+  it('does not report a tip when the rental has none (B3b)', async () => {
+    const tipCapture = {
+      hydrateTipCapture: vi.fn(),
+      resetTipCapture: vi.fn(),
+    };
+    const onTipHydrated = vi.fn();
+    loadTipsByDateRangeMock.mockResolvedValueOnce(undefined);
+
+    render(
+      <Harness
+        open={true}
+        rental={buildRental('rental-4')}
+        tipCapture={tipCapture}
+        onTipHydrated={onTipHydrated}
+      />
+    );
+
+    await waitFor(() => {
+      expect(tipCapture.resetTipCapture).toHaveBeenCalled();
+    });
+    expect(onTipHydrated).not.toHaveBeenCalled();
   });
 
   it('keeps default state when no tip exists', async () => {

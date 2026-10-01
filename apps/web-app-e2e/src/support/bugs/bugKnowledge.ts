@@ -19,13 +19,6 @@ export const BUG_KNOWLEDGE = {
     where:
       'pages/RentalsPage/hooks/useEditRentalFormState.ts:39-60 · EditRentalSheet.tsx',
   },
-  B3b: {
-    cause:
-      'Igual que B3 pero en alquileres: los pagos guardados ya incluyen la propina, el formulario de edición los hidrata sin restarla y al guardar la tienda la suma otra vez.',
-    fix: 'Aplicar la misma hidratación con propina de B3 a alquileres (resolveRentalSplitState y useEditRentalTipHydration) y rehidratar al cargar la propina. Depende de B2 para que el formulario no se reinicie.',
-    where:
-      'pages/RentalsPage/hooks/editRentalSheetViewModel.helpers.ts:49-58 · useEditRentalTipHydration.ts · store/useRentalStore.actions.update.ts:42-66',
-  },
   B4: {
     cause:
       'Los ayudantes de atribución solo confían en los pagos guardados cuando el pago es mixto (2+ métodos distintos); con un solo pago recalculan totalUsd × tasa de hoy.',

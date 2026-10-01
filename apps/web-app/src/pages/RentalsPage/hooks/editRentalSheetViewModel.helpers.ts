@@ -35,12 +35,14 @@ function resolveRentalTotalBs(
 
 export function resolveRentalSplitState(
   rental: WasherRental,
-  exchangeRate: number
+  exchangeRate: number,
+  tip?: { amountBs: number; paymentMethod: PaymentMethod }
 ) {
   return resolveSplitFormHydrationState({
     paymentMethod: rental.paymentMethod,
     paymentSplits: rental.paymentSplits,
     totalBs: resolveRentalTotalBs(rental, exchangeRate),
+    tip,
   });
 }
 
