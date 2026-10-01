@@ -8,7 +8,7 @@
 - When the browser is offline, store actions apply an optimistic local update and enqueue the Supabase mutation into `useSyncStore` (`src/store/useSyncStore.ts`, persisted).
 - Enqueue helpers live in `src/offline/enqueue/*Enqueue.ts`, one per entity (sales, rentals, expenses, customers, machines, prepaid, payment balance, config).
 - Shared enqueue building blocks live in the same folder: `tempId.ts` (`generateTempId`, the `temp-<random>` id) and `commonEnqueue.ts` (`enqueueEntityDelete`, used for deletes by id of customers, machines, expenses, prepaid and payment balance). Sales and rentals keep their own deletes.
-- Records created offline get a `temp-<random>` id until the queue replays them.
+- Records created offline get a `temp-<random>` id until the queue replays them. When the queue replays an INSERT, `buildSupabaseMutation` replaces any payload field that holds a known temp id with the real one (e.g. a rental's `customer_id`), so a record that references another queued record must declare it in `dependencyKeys` (a rental for a new customer depends on `customer:<temp id>`).
 - `src/components/layout/SyncManager.tsx` replays the queue when connectivity returns.
 - An update or delete of a record that still has a `temp-` id depends on that record's own create through `dependencyKeys` (its `businessKey`). Child rows such as `sale_payment_splits` are enqueued after their parent, and the coverage matrix names each table's dependency group.
 

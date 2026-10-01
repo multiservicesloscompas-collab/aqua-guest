@@ -90,13 +90,6 @@ export const BUG_KNOWLEDGE = {
     where:
       'store/useWaterSalesStore.actions.ts:44-130 (rama !navigator.onLine) · offline/enqueue/salesEnqueue.ts enqueueOfflineSale',
   },
-  B12: {
-    cause:
-      'addRentalAction, cuando el nombre de cliente no existe, inserta el cliente en Supabase antes de comprobar si hay conexión; sin conexión esa llamada falla, se lanza el error y el alquiler nunca se encola.',
-    fix: 'Crear el cliente con el mismo mecanismo offline que useCustomerStore (enqueueOfflineCustomerCreate, id temporal) y encolar el alquiler dependiendo de ese cliente; o, como mínimo, mostrar el error en vez de dejar la hoja abierta sin aviso.',
-    where:
-      'store/useRentalStore.actions.ts:36-80 (addRentalAction) · offline/enqueue/customersEnqueue.ts',
-  },
   B13: {
     cause:
       'El addRental de la tienda de alquileres encola el alquiler sin conexión y luego llama directo a tipsDataService.upsertTipForOrigin (solo online); esa llamada falla y se muestra «Error al registrar el alquiler» con la hoja abierta. La propina nunca se encola (el alquiler sí queda en la cola).',

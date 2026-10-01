@@ -340,4 +340,39 @@ describe('useRentalStore offline queueing', () => {
     expect(queue.map((q) => q.type)).toEqual(['DELETE', 'DELETE', 'DELETE']);
     expect(useRentalStore.getState().rentals).toHaveLength(0);
   });
+
+  it('queues a new customer and a rental that depends on it when offline (B12)', async () => {
+    // Act
+    const rental = await useRentalStore.getState().addRental({
+      date: '2026-03-09',
+      customerName: 'Cliente Nuevo',
+      customerPhone: '0414-1111111',
+      customerAddress: 'Calle 1',
+      machineId: 'machine-1',
+      shift: 'medio',
+      deliveryTime: '09:00',
+      pickupTime: '13:00',
+      pickupDate: '2026-03-09',
+      deliveryFee: 0,
+      totalUsd: 2,
+      paymentMethod: 'efectivo',
+      status: 'agendado',
+      isPaid: false,
+    });
+
+    // Assert (the supabase mock throws on any call to `customers`)
+    const queue = useSyncStore.getState().queue;
+    const customerAction = queue.find((entry) => entry.table === 'customers');
+    const rentalAction = queue.find(
+      (entry) => entry.table === 'washer_rentals'
+    );
+    const customerTempId = customerAction?.payload.tempId as string;
+    expect(customerTempId).toMatch(/^temp-/);
+    expect(rentalAction?.payload.customer_id).toBe(customerTempId);
+    expect(rentalAction?.dependencies.dependsOn).toEqual([
+      `customer:${customerTempId}`,
+    ]);
+    expect(rental.customerId).toBe(customerTempId);
+    expect(useRentalStore.getState().rentals).toHaveLength(1);
+  });
 });

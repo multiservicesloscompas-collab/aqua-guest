@@ -20,7 +20,7 @@ test.describe('offline sync (legacy processor)', () => {
     'a rental registered offline reaches the database when the connection returns',
     documented({
       titulo:
-        'Un alquiler hecho sin conexión llega a la base al volver la conexión',
+        '[B14 corregido] Un alquiler hecho sin conexión llega a la base al volver la conexión',
       area: AREA,
       intent:
         'Comprobar que un alquiler registrado sin internet (cliente ya existente, sin propina) se sincroniza cuando vuelve la conexión.',
@@ -59,7 +59,7 @@ test.describe('offline sync (legacy processor)', () => {
     'an expense registered offline reaches the database when the connection returns',
     documented({
       titulo:
-        'Un egreso hecho sin conexión llega a la base al volver la conexión',
+        '[B14 corregido] Un egreso hecho sin conexión llega a la base al volver la conexión',
       area: AREA,
       intent:
         'Comprobar que un egreso registrado sin internet se sincroniza cuando vuelve la conexión.',
@@ -97,7 +97,7 @@ test.describe('offline sync (legacy processor)', () => {
     'a customer created offline reaches the database when the connection returns',
     documented({
       titulo:
-        'Un cliente creado sin conexión llega a la base al volver la conexión',
+        '[B14 corregido] Un cliente creado sin conexión llega a la base al volver la conexión',
       area: AREA,
       intent:
         'Comprobar que un cliente guardado sin internet se sincroniza cuando vuelve la conexión.',
@@ -141,7 +141,7 @@ test.describe('offline sync (legacy processor)', () => {
     'a sale edited offline is updated in the database when the connection returns',
     documented({
       titulo:
-        'Una venta editada sin conexión se actualiza en la base al volver la conexión',
+        '[B14 corregido] Una venta editada sin conexión se actualiza en la base al volver la conexión',
       area: AREA,
       intent:
         'Comprobar que el cambio de subtotal hecho sin internet sobre una venta ya guardada llega a la base cuando vuelve la conexión.',
@@ -182,6 +182,58 @@ test.describe('offline sync (legacy processor)', () => {
         .eq('id', sale.id)
         .single();
       expect(Number(data?.total_bs)).toBe(1500);
+    }
+  );
+
+  test(
+    'a rental for a new customer registered offline reaches the database with its customer',
+    documented({
+      titulo:
+        '[B12 corregido] Un alquiler para un cliente nuevo hecho sin conexión llega a la base con su cliente',
+      area: AREA,
+      intent:
+        'Comprobar que, sin internet, un alquiler para un cliente que todavía no existe se registra y, al volver la conexión, llega a la base ligado a ese cliente.',
+      steps: [
+        'Abre el dashboard y corta la conexión.',
+        'Registra un alquiler pagado escribiendo el nombre de un cliente nuevo.',
+        'Restablece la conexión y espera 30 segundos.',
+      ],
+      expects: [
+        'La hoja «Nuevo Alquiler» se cierra.',
+        'El cliente nuevo y el alquiler existen en la base, y el alquiler apunta a ese cliente.',
+      ],
+    }),
+    async ({ page, context }) => {
+      // Arrange
+      await bootstrapAtDashboard(page);
+      await context.setOffline(true);
+      const customerName = `Cliente offline ${Date.now()}`;
+
+      // Act (the driver waits for the sheet to close)
+      await createWasherRental(page, {
+        shift: 'medio',
+        totalUsd: 0,
+        isPaid: true,
+        splits: [{ method: 'efectivo', amountBs: 0 }],
+        customerName,
+      });
+      await context.setOffline(false);
+      await page.waitForTimeout(30_000);
+
+      // Assert
+      const supabase = getSupabaseClient();
+      const { data: customer } = await supabase
+        .from('customers')
+        .select('id')
+        .eq('name', customerName)
+        .maybeSingle();
+      const { data: rentals } = await supabase
+        .from('washer_rentals')
+        .select('customer_id');
+      expect(customer?.id).toBeTruthy();
+      expect(rentals?.map((rental) => rental.customer_id)).toEqual([
+        customer?.id,
+      ]);
     }
   );
 });

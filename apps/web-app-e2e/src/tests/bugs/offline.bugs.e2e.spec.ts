@@ -89,40 +89,6 @@ test.describe('Sin conexión (rojos)', () => {
   );
 
   test(
-    '[B12] a rental for a new customer can be registered offline',
-    bugDoc({
-      id: 'B12',
-      titulo:
-        'Se puede registrar sin conexión un alquiler para un cliente nuevo',
-      intent:
-        'Comprobar que, sin internet, un alquiler para un cliente que todavía no existe se registra y la hoja se cierra con el aviso de éxito.',
-      steps: [
-        'Abre el dashboard y corta la conexión.',
-        'Registra un alquiler pagado escribiendo el nombre de un cliente nuevo.',
-      ],
-      expects: [
-        'La hoja «Nuevo Alquiler» se cierra y el alquiler queda registrado.',
-      ],
-      actual:
-        'el formulario intenta crear el cliente en el servidor antes de mirar si hay conexión, falla y el usuario ve «Error al registrar el alquiler» con la hoja abierta: el alquiler no se guarda',
-    }),
-    async ({ page, context }) => {
-      // Arrange
-      await bootstrapAtDashboard(page);
-      await context.setOffline(true);
-
-      // Act + Assert (the driver waits for the sheet to close)
-      await createWasherRental(page, {
-        shift: 'medio',
-        totalUsd: 0,
-        isPaid: true,
-        splits: [{ method: 'efectivo', amountBs: 0 }],
-        customerName: `Cliente B12 ${Date.now()}`,
-      });
-    }
-  );
-
-  test(
     '[B13] a rental with a tip can be registered offline',
     bugDoc({
       id: 'B13',

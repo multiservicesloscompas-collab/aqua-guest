@@ -10,6 +10,8 @@ interface EnqueueOfflineRentalInput {
   payload: Record<string, unknown>;
   rental: Omit<WasherRental, 'id' | 'createdAt' | 'updatedAt'>;
   paymentSplits?: PaymentSplit[];
+  /** Business keys of queued actions this rental needs first (e.g. a new customer). */
+  dependencyKeys?: string[];
   actionSource?: string;
 }
 
@@ -43,6 +45,7 @@ export const enqueueOfflineRental = (
     payload: { ...input.payload, tempId },
     enqueueSource: input.actionSource ?? 'rentals/addRental',
     businessKey: rentalBusinessKey,
+    dependencyKeys: input.dependencyKeys,
   });
 
   if (input.paymentSplits?.length) {

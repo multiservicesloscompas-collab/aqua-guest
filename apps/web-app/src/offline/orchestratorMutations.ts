@@ -19,7 +19,13 @@ const resolveInsertPayload = (
 ): Record<string, unknown> => {
   if (!action.payload.isSplit || !Array.isArray(action.payload.splits)) {
     const { tempId: _tempId, ...payload } = action.payload;
-    return payload;
+    // Any field may reference a record created offline (e.g. `customer_id`)
+    return Object.fromEntries(
+      Object.entries(payload).map(([key, value]) => [
+        key,
+        typeof value === 'string' ? tempIdToRealId.get(value) ?? value : value,
+      ])
+    );
   }
 
   const parentTempId = action.payload.parentId;
