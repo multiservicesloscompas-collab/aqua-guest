@@ -8,10 +8,7 @@ import {
 } from './supabaseClient';
 import { bootstrapAtDashboard } from './waterSalesTipsMatrix/uiHelpers';
 
-/**
- * Registers a Bs 1000 sale while offline, reconnects and waits for the sync.
- * Returns what reached the database (sale id, payment splits, tip origins).
- */
+
 export async function registerSaleOffline(
   page: Page,
   context: BrowserContext,

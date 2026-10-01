@@ -1,17 +1,6 @@
-/**
- * What we know about each open bug beyond the test itself: why it happens, what
- * to change so the spec turns green, and where. Sources: docs/audit/production-bugs.md
- * and the `*.bugs.e2e.spec.md` tables. Line numbers come from the audit; re-grep before fixing.
- *
- * `fix` is a proposal, not a verified patch. The flow is still: the user confirms
- * the red test, then one bug is fixed at a time (docs/agents/workflow.md).
- */
 export interface BugKnowledge {
-  /** Plain-language root cause (why the app behaves wrong). */
   cause: string;
-  /** What to change so the test stops failing. */
   fix: string;
-  /** Files and functions to touch. */
   where: string;
 }
 

@@ -1,21 +1,16 @@
-import { documented, expect, test } from '../support/fixtures';
+import { waitForSaleByMarker } from '../support/dbPolling';
 import { createExpense } from '../support/drivers/expenseDriver';
 import { createWasherRental } from '../support/drivers/rentalDriver';
 import { createWaterSale } from '../support/drivers/waterSaleDriver';
-import { waitForSaleByMarker } from '../support/dbPolling';
-import { createRunMarker } from '../support/runMarker';
+import { documented, expect, test } from '../support/fixtures';
 import { registerSaleOffline } from '../support/offlineSale';
-import { gotoDashboard } from '../support/uiNavigation';
+import { createRunMarker } from '../support/runMarker';
 import { getSupabaseClient } from '../support/supabaseClient';
+import { gotoDashboard } from '../support/uiNavigation';
 import { bootstrapAtDashboard } from '../support/waterSalesTipsMatrix/uiHelpers';
 
 const AREA = 'Sin conexión';
 
-/**
- * Regression guard for B14: the default (legacy) offline processor used to
- * replay only `sales` INSERT. Every other table and action type must reach
- * the database once the connection returns.
- */
 test.describe('offline sync (legacy processor)', () => {
   test(
     'a rental registered offline reaches the database when the connection returns',

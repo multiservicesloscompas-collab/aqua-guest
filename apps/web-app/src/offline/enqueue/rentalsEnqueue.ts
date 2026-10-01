@@ -1,16 +1,14 @@
-import type { WasherRental } from '@/types';
-import type { PaymentMethod } from '@/types';
-import type { PaymentSplit } from '@/types/paymentSplits';
 import { PAYMENT_SPLIT_SCHEMA } from '@/services/payments/paymentSplitSchemaContract';
 import { rentalPaymentSplitAdapter } from '@/services/payments/paymentSplitSupabaseAdapters';
 import { useSyncStore } from '@/store/useSyncStore';
+import type { PaymentMethod, WasherRental } from '@/types';
+import type { PaymentSplit } from '@/types/paymentSplits';
 import { generateTempId } from './tempId';
 
 interface EnqueueOfflineRentalInput {
   payload: Record<string, unknown>;
   rental: Omit<WasherRental, 'id' | 'createdAt' | 'updatedAt'>;
   paymentSplits?: PaymentSplit[];
-  /** Business keys of queued actions this rental needs first (e.g. a new customer). */
   dependencyKeys?: string[];
   actionSource?: string;
 }
@@ -191,7 +189,6 @@ interface EnqueueOfflineRentalTipUpsertInput {
   exchangeRateUsed?: number;
   capturePaymentMethod: PaymentMethod;
   notes?: string;
-  /** Business keys of queued actions the tip needs first (e.g. its new rental). */
   dependencyKeys?: string[];
   actionSource?: string;
 }
