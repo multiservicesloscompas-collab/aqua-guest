@@ -1,24 +1,22 @@
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-import { PrepaidOrder, PrepaidStatus } from '@/types';
 import supabase from '@/lib/supabaseClient';
-import { getVenezuelaDate } from '@/services/DateService';
 import {
   enqueueOfflinePrepaidCreate,
   enqueueOfflinePrepaidDelete,
   enqueueOfflinePrepaidUpdate,
 } from '@/offline/enqueue/prepaidEnqueue';
+import { getVenezuelaDate } from '@/services/DateService';
+import type { PrepaidOrderUpdateRow } from '@/services/prepaid/prepaidSchemaContract';
+import { PrepaidOrder, PrepaidStatus } from '@/types';
+import type { PrepaidOrderDraft, PrepaidOrderUpdate } from '@aqua-guest/domain';
+import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 
 interface PrepaidState {
   prepaidOrders: PrepaidOrder[];
-
-  // Acciones de prepagados
-  addPrepaidOrder: (
-    order: Omit<PrepaidOrder, 'id' | 'createdAt' | 'updatedAt'>
-  ) => Promise<PrepaidOrder>;
+  addPrepaidOrder: (order: PrepaidOrderDraft) => Promise<PrepaidOrder>;
   updatePrepaidOrder: (
     id: string,
-    updates: Partial<PrepaidOrder>
+    updates: PrepaidOrderUpdate
   ) => Promise<void>;
   deletePrepaidOrder: (id: string) => Promise<void>;
   markPrepaidAsDelivered: (id: string) => Promise<void>;
@@ -27,24 +25,9 @@ interface PrepaidState {
   setPrepaidOrders: (orders: PrepaidOrder[]) => void;
 }
 
-type PrepaidOrderUpdatePayload = {
-  customer_name?: string;
-  customer_phone?: string;
-  liters?: number;
-  amount_bs?: number;
-  amount_usd?: number;
-  exchange_rate?: number;
-  payment_method?: PrepaidOrder['paymentMethod'];
-  status?: PrepaidOrder['status'];
-  date_paid?: string;
-  date_delivered?: string;
-  notes?: string;
-  updated_at?: string;
-};
-
 export const usePrepaidStore = create<PrepaidState>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       prepaidOrders: [],
 
       setPrepaidOrders: (orders) => set({ prepaidOrders: orders }),
@@ -118,7 +101,7 @@ export const usePrepaidStore = create<PrepaidState>()(
       updatePrepaidOrder: async (id, updates) => {
         try {
           const updatedAt = new Date().toISOString();
-          const payload: PrepaidOrderUpdatePayload = {};
+          const payload: PrepaidOrderUpdateRow = {};
           if (updates.customerName !== undefined)
             payload.customer_name = updates.customerName;
           if (updates.customerPhone !== undefined)

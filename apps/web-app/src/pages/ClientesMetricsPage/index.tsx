@@ -8,9 +8,7 @@ interface ClientesMetricsPageProps {
   onNavigate?: (route: AppRoute) => void;
 }
 
-export function ClientesMetricsPage({
-  onNavigate,
-}: ClientesMetricsPageProps = {}) {
+export function ClientesMetricsPage(_props: ClientesMetricsPageProps = {}) {
   const { customers } = useCustomerStore();
   const { rentals } = useRentalStore();
 

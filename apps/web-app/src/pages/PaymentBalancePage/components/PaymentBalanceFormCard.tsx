@@ -14,6 +14,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { PaymentMethod, PaymentMethodLabels } from '@/types';
 import { PaymentBalanceFormData } from '../hooks/usePaymentBalancePageViewModel';
+import type { PaymentBalanceOperationType } from '@aqua-guest/domain';
 
 interface PaymentBalanceFormCardProps {
   formData: PaymentBalanceFormData;
@@ -60,7 +61,7 @@ export function PaymentBalanceFormCard({
               value={formData.operationType}
               onValueChange={(value) =>
                 onFormDataChange((prev) => {
-                  const operationType = value as 'equilibrio' | 'avance';
+                  const operationType = value as PaymentBalanceOperationType;
                   return {
                     ...prev,
                     operationType,

@@ -5,7 +5,7 @@ import {
   includesMethodInRental,
 } from './paymentSplitAttribution';
 import type { WasherRental } from '@/types';
-import type { PaymentSplit } from '@/types/paymentSplits';
+import type { PaymentSplit } from '@aqua-guest/domain';
 
 function buildRental(paymentSplits?: PaymentSplit[]): WasherRental & {
   paymentSplits?: PaymentSplit[];

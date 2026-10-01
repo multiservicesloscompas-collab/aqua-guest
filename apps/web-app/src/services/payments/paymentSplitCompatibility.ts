@@ -1,5 +1,5 @@
 import type { PaymentMethod, Sale, WasherRental } from '@/types';
-import type { PaymentSplit, SplitAware } from '@/types/paymentSplits';
+import type { PaymentSplit } from '@aqua-guest/domain';
 
 export function deriveLegacyPaymentMethodFromSplits(
   splits: readonly PaymentSplit[],
@@ -31,9 +31,7 @@ export function toPaymentSplitsFromLegacy(
   ];
 }
 
-export function resolvePaymentSplitsForSale(
-  sale: SplitAware<Sale>
-): PaymentSplit[] {
+export function resolvePaymentSplitsForSale(sale: Sale): PaymentSplit[] {
   if (sale.paymentSplits?.length) return sale.paymentSplits;
 
   return toPaymentSplitsFromLegacy(
@@ -45,7 +43,7 @@ export function resolvePaymentSplitsForSale(
 }
 
 export function resolvePaymentSplitsForRental(
-  rental: SplitAware<WasherRental>,
+  rental: WasherRental,
   exchangeRate: number
 ): PaymentSplit[] {
   if (rental.paymentSplits?.length) return rental.paymentSplits;
@@ -62,7 +60,7 @@ export function resolvePaymentSplitsForRental(
 export function withSplitCompatibilityForSale(
   sale: Sale,
   paymentSplits?: PaymentSplit[]
-): SplitAware<Sale> {
+): Sale {
   const resolvedSplits =
     paymentSplits && paymentSplits.length
       ? paymentSplits
@@ -87,7 +85,7 @@ export function withSplitCompatibilityForRental(
   rental: WasherRental,
   paymentSplits: PaymentSplit[] | undefined,
   exchangeRate: number
-): SplitAware<WasherRental> {
+): WasherRental {
   const resolvedSplits =
     paymentSplits && paymentSplits.length
       ? paymentSplits

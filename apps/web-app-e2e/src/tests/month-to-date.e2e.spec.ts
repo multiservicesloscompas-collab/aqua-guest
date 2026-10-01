@@ -1,5 +1,9 @@
-import { addDays, todayVe } from '../support/bugs/dates';
-import { seedSales } from '../support/bugs/dbSeed';
+import {
+  addDays,
+  firstDayOfPreviousMonth,
+  todayVe,
+} from '../support/bugs/dates';
+import { seedSales, setExchangeRate } from '../support/bugs/dbSeed';
 import { captureDashboardSnapshot } from '../support/drivers/dashboardDriver';
 import { createExpense } from '../support/drivers/expenseDriver';
 import { createWaterSale } from '../support/drivers/waterSaleDriver';
@@ -24,13 +28,14 @@ test(
       'Egresos del día: Bs 300 y neto del día Bs 700.',
       'Transacciones del día: 1 (solo la venta de hoy).',
     ],
-    data: 'Se omite si hoy es día 1 del mes (ayer cae en otro mes). Los egresos de días anteriores del mes no se siembran: ver el bug FIN-12.',
+    data: 'El navegador corre con el reloj fijo en el día 15 del mes anterior (mediodía de Caracas), así que ayer es siempre del mismo mes y el test corre todos los días. Los egresos de días anteriores del mes no se siembran: ver el bug FIN-12.',
   }),
   async ({ page }) => {
     // Arrange
-    const today = todayVe();
-    test.skip(today.endsWith('-01'), 'Yesterday falls in the previous month');
+    const today = firstDayOfPreviousMonth(todayVe()).replace(/-01$/, '-15');
     const yesterday = addDays(today, -1);
+    await page.clock.setFixedTime(new Date(`${today}T12:00:00-04:00`));
+    await setExchangeRate(today, 1000);
     await seedSales([
       { date: yesterday, dailyNumber: 1, totalBs: 2000, exchangeRate: 1000 },
     ]);

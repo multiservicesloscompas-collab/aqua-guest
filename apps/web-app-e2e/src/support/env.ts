@@ -7,9 +7,16 @@ export interface E2EEnv {
   supabaseAnonKey: string;
 }
 
+/**
+ * The e2e suite owns its dev server on a dedicated port, so it never attaches
+ * to the one `npm run local` serves on 4200 (which may be watching another
+ * branch and reloads the page whenever files change).
+ */
+export const DEFAULT_E2E_BASE_URL = 'http://localhost:4300';
+
 export function getE2EBaseUrl(): string {
   loadWebAppEnvIfPresent();
-  return process.env.E2E_BASE_URL ?? 'http://localhost:4200';
+  return process.env.E2E_BASE_URL ?? DEFAULT_E2E_BASE_URL;
 }
 
 let webAppEnvLoaded = false;
@@ -83,7 +90,6 @@ function getRequiredEnv(name: string, aliases: string[] = []): string {
 }
 
 const LOCAL_HOSTS = new Set(['127.0.0.1', 'localhost']);
-
 
 function assertLocalSupabaseUrl(url: string): void {
   const host = new URL(url).hostname;

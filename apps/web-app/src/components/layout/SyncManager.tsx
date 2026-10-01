@@ -20,7 +20,7 @@ export const SyncManager: React.FC = () => {
   const [isSyncing, setIsSyncing] = useState(false);
   const inFlightActionIdsRef = useRef<Set<string>>(new Set());
   const wasOnlineRef = useRef(false);
-  
+
   const stalledQueueLengthRef = useRef<number | null>(null);
   const queueRef = useRef(queue);
   const flags = getOfflineFeatureFlags();
@@ -77,7 +77,6 @@ export const SyncManager: React.FC = () => {
       return;
     }
 
-    
     const pendingActions = [...currentQueue]
       .filter((action) => !inFlightActionIdsRef.current.has(action.id))
       .sort((a, b) => a.enqueuedAt - b.enqueuedAt);

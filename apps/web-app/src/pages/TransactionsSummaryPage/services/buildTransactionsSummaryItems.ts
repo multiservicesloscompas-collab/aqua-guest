@@ -1,19 +1,12 @@
 import { PaymentMethodLabels } from '@/types';
-import type {
-  Expense,
-  PaymentBalanceTransaction,
-  PaymentMethod,
-  PrepaidOrder,
-  Sale,
-  TipPayout,
-  WasherRental,
-} from '@/types';
-import type { PaymentSplit } from '@/types/paymentSplits';
+import type { PaymentMethod, TipPayout } from '@/types';
+import type { PaymentSplit } from '@aqua-guest/domain';
 import {
   hasPersistedPaymentSplits,
   hasValidMixedPaymentSplits,
 } from '@/services/payments/paymentSplitValidity';
 import { normalizeToVenezuelaDate } from '@/services/DateService';
+import type { FinancialActivitySnapshot } from '@/services/transactions/financialActivity';
 import { resolvePaymentBalanceTransferLegs } from '@/services/payments/paymentBalanceTransferSemantics';
 
 export type TransactionType =
@@ -35,17 +28,6 @@ export interface TransactionItem {
   paymentMethod?: string;
   timestamp: string;
   originalDate: string;
-}
-
-interface BuildTransactionsSummaryInput {
-  selectedDate: string;
-  exchangeRate: number;
-  sales: readonly Sale[];
-  rentals: readonly WasherRental[];
-  expenses: readonly Expense[];
-  prepaidOrders: readonly PrepaidOrder[];
-  paymentBalanceTransactions: readonly PaymentBalanceTransaction[];
-  tipPayouts?: readonly TipPayout[];
 }
 
 function hasPaymentSplits(
@@ -95,7 +77,7 @@ function resolveTipPayoutDate(payout: TipPayout): string {
 }
 
 export function buildTransactionsSummaryItems(
-  input: BuildTransactionsSummaryInput
+  input: FinancialActivitySnapshot
 ): TransactionItem[] {
   const {
     selectedDate,

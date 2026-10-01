@@ -22,14 +22,10 @@ import {
 import { Calendar as CalendarPicker } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { RentalStatus } from '@/types';
-
-interface StatusOption {
-  value: RentalStatus;
-  label: string;
-}
+import type { SelectOption } from '@/types/ui';
 
 interface EditRentalStatusPaymentCardProps {
-  statusOptions: StatusOption[];
+  statusOptions: SelectOption<RentalStatus>[];
   status: RentalStatus;
   onChangeStatus: (value: RentalStatus) => void;
   statusEditable?: boolean;

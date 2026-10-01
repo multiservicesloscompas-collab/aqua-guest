@@ -1,6 +1,6 @@
 import { getPaymentMethods } from '@/services/payments/paymentSplitReadModel';
 import type { PaymentMethod } from '@/types';
-import type { PaymentSplit } from '@/types/paymentSplits';
+import type { PaymentSplit } from '@aqua-guest/domain';
 
 function isFinitePositiveNumber(value: unknown): boolean {
   return typeof value === 'number' && Number.isFinite(value) && value > 0;

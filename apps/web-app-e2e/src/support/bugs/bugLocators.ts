@@ -14,7 +14,8 @@ export const rentalCardDeleteButton = (card: Locator): Locator =>
 export const rentalCardExtendButton = (card: Locator): Locator =>
   card.locator('[title="Extender tiempo"]').first();
 
-export const saleRow = (page: Page, id: string): Locator => page.getByTestId(`sale-row-${id}`);
+export const saleRow = (page: Page, id: string): Locator =>
+  page.getByTestId(`sale-row-${id}`);
 
 export const toMoney = (text: string | null): number => {
   const cleaned = (text ?? '').replace(/[^0-9,.-]/g, '');

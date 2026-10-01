@@ -3,7 +3,7 @@ import { useAppStore } from '@/store/useAppStore';
 import { useWaterSalesStore } from '@/store/useWaterSalesStore';
 import { Sale, CartItem } from '@/types';
 
-export type DateRange = 'day' | 'week' | 'month';
+export type WaterMetricsPeriod = 'day' | 'week' | 'month';
 
 export interface LiterBreakdown {
   liters: number;
@@ -41,7 +41,7 @@ function formatDate(date: Date): string {
 export function useWaterMetricsViewModel() {
   const { selectedDate, setSelectedDate } = useAppStore();
   const { sales } = useWaterSalesStore();
-  const [range, setRange] = useState<DateRange>('day');
+  const [range, setRange] = useState<WaterMetricsPeriod>('day');
 
   const dateRange = useMemo<DateRangeResult>(() => {
     const selected = new Date(selectedDate + 'T12:00:00');

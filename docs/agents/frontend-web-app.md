@@ -28,6 +28,8 @@ Do not force all state into a single global store. AquaGuest already uses multip
 - Write full TypeScript and maintain strict type safety. Do not use `any`.
 - Search for existing interfaces, types, helpers, hooks, store actions, services, and components before writing new code.
 - Reuse existing code when it fits instead of creating near-duplicates.
+- Import entity types from `@aqua-guest/domain` and derive variants (`SaleDraft`, `WasherRentalUpdate`, ...) instead of re-declaring their properties; see `docs/agents/architecture.md`.
+- Supabase row shapes (`XRow`, `XInsertRow`, `XUpdateRow`) live in `src/services/<context>/*SchemaContract.ts`, one contract per table. Never redeclare them in a store, mapper, or data service; take column types from the domain unions. Shared view shapes use `SelectOption<T>` (`src/types/ui.ts`) and `FinancialActivitySnapshot` (`src/services/transactions/financialActivity.ts`).
 - Apply dependency injection when a service, hook, or use case depends on external collaborators, storage, or network boundaries.
 - Respect SOLID while staying practical.
 - Prefer the simplest correct implementation under KISS.

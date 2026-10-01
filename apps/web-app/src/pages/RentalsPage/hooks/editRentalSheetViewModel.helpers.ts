@@ -7,25 +7,12 @@ import {
   RentalShiftConfig,
   WasherRental,
 } from '@/types';
+import type {
+  MachineItem,
+  PaymentMethodOption,
+  ShiftOption,
+} from './rentalSheetViewModel.helpers';
 import { resolveSplitFormHydrationState } from '@/services/payments/paymentSplitFormHydration';
-
-export interface MachineItem {
-  id: string;
-  name: string;
-  detail: string;
-  isUnavailable: boolean;
-}
-
-export interface ShiftOption {
-  value: RentalShift;
-  label: string;
-  priceText: string;
-}
-
-export interface PaymentMethodOption {
-  value: PaymentMethod;
-  label: string;
-}
 
 export const DELIVERY_FEE_OPTIONS = [0, 1, 2, 3, 4, 5];
 

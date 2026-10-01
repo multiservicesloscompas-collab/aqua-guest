@@ -4,6 +4,7 @@ import { useAppStore } from '@/store/useAppStore';
 import { useRentalStore } from '@/store/useRentalStore';
 import { getVenezuelaDate } from '@/services/DateService';
 import { RentalStatus, WasherRental } from '@/types';
+import type { WasherRentalUpdate } from '@aqua-guest/domain';
 
 interface RentalListViewModel {
   rentals: WasherRental[];
@@ -56,7 +57,7 @@ export function useRentalListViewModel(): RentalListViewModel {
       if (!rental) return;
 
       const newIsPaid = !rental.isPaid;
-      const updates: Partial<WasherRental> = { isPaid: newIsPaid };
+      const updates: WasherRentalUpdate = { isPaid: newIsPaid };
 
       if (newIsPaid) {
         updates.datePaid = datePaid || getVenezuelaDate();

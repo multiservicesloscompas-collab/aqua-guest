@@ -24,10 +24,10 @@
 
 `src/offline/featureFlags.ts` reads `localStorage` flags and `resolveOfflineSyncProcessorMode` returns the active mode:
 
-| Flag (localStorage key) | Default |
-| :---------------------- | :------ |
-| `offline.flag.queue_processing_enabled` | `true` |
-| `offline.flag.global_orchestrator` | `false` |
+| Flag (localStorage key)                     | Default |
+| :------------------------------------------ | :------ |
+| `offline.flag.queue_processing_enabled`     | `true`  |
+| `offline.flag.global_orchestrator`          | `false` |
 | `offline.flag.legacy_sync_manager_disabled` | `false` |
 
 - Processing disabled (`queue_processing_enabled` off) gives mode `disabled`.

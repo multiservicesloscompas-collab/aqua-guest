@@ -1,13 +1,5 @@
 import { WashingMachineCard } from './WashingMachineCard';
-
-interface MachineListItem {
-  id: string;
-  name: string;
-  statusLabel: string;
-  statusColor: string;
-  kgText: string;
-  brandText: string;
-}
+import type { MachineListItem } from '../hooks/useWashingMachinesViewModel';
 
 interface WashingMachineListProps {
   items: MachineListItem[];

@@ -1,13 +1,11 @@
-/**
- * useWaterSalesStore.actions.ts
- * Extracted async action implementations for the water sales Zustand store.
- * Each function accepts Zustand's set/get so they can be used inside create().
- */
-import supabase from '@/lib/supabaseClient';
-import { Sale } from '@/types';
-import type { PaymentSplit } from '@/types/paymentSplits';
-import { PaymentMethod } from '@/types';
 import { getSafeTimestamp, normalizeTimestamp } from '@/lib/date-utils';
+import supabase from '@/lib/supabaseClient';
+import {
+  enqueueOfflineSale,
+  enqueueOfflineSaleDelete,
+  enqueueOfflineSalePaymentSplitsDelete,
+  enqueueOfflineSaleTipDelete,
+} from '@/offline/enqueue/salesEnqueue';
 import { dateService } from '@/services/DateService';
 import { salesDataService } from '@/services/SalesDataService';
 import {
@@ -17,22 +15,18 @@ import {
 import { salePaymentSplitAdapter } from '@/services/payments/paymentSplitSupabaseAdapters';
 import { preparePaymentWritePayload } from '@/services/payments/paymentSplitWritePath';
 import {
-  enqueueOfflineSale,
-  enqueueOfflineSaleDelete,
-  enqueueOfflineSalePaymentSplitsDelete,
-  enqueueOfflineSaleTipDelete,
-} from '@/offline/enqueue/salesEnqueue';
-import { useConfigStore } from './useConfigStore';
-import {
-  type WaterSalesState,
-  type SaleInsert,
-  type SalesRow,
-} from './useWaterSalesStore.core';
-import type { TipCaptureInput } from '@/types/tips';
-import {
   calculateFinalSaleTotals,
   mergeTipIntoPaymentSplits,
 } from '@/services/transactions/transactionTotals';
+import { PaymentMethod, Sale } from '@/types';
+import type { TipCaptureInput } from '@/types/tips';
+import type { PaymentSplit } from '@aqua-guest/domain';
+import { useConfigStore } from './useConfigStore';
+import type {
+  SaleInsertRow,
+  SaleRow,
+} from '@/services/sales/saleSchemaContract';
+import { type WaterSalesState } from './useWaterSalesStore.core';
 export { updateSaleAction } from './useWaterSalesStore.actions.update';
 
 type SetFn = (
@@ -85,7 +79,7 @@ export async function completeSaleAction(
     exchangeRate,
   });
 
-  const newSalePayload: SaleInsert = {
+  const newSalePayload: SaleInsertRow = {
     daily_number: dailyNumber,
     date: normalizedDate,
     items: state.cart,
@@ -123,7 +117,7 @@ export async function completeSaleAction(
       .single();
     if (error) throw error;
 
-    const saleRow = data as SalesRow | null;
+    const saleRow = data as SaleRow | null;
     if (!saleRow) throw new Error('Error al crear la venta');
 
     const { error: deleteSplitsError } = await supabase

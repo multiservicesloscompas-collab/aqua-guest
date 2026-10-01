@@ -8,8 +8,9 @@ import {
   mapTransactionToFormData,
   validatePaymentBalanceForm,
 } from './paymentBalanceFormLogic';
+import type { PaymentBalanceOperationType } from '@aqua-guest/domain';
 
-export type PaymentBalanceOperationType = 'equilibrio' | 'avance';
+export type { PaymentBalanceOperationType };
 
 export interface PaymentBalanceFormData {
   operationType: PaymentBalanceOperationType;

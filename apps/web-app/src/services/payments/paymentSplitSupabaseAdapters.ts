@@ -1,5 +1,5 @@
 import type { PaymentMethod } from '@/types';
-import type { PaymentSplit } from '@/types/paymentSplits';
+import type { PaymentSplit } from '@aqua-guest/domain';
 import type {
   PaymentSplitAdapter,
   PaymentSplitRow,

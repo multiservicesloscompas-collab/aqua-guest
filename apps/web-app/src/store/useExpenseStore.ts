@@ -19,20 +19,11 @@ import {
   toExpenseUpdatePayload,
   updateExpenseWithSplitCompensationStrict,
 } from './useExpenseStore.helpers';
-import {
-  type ExpenseState,
-  type ExpenseInsertPayload,
-  type ExpenseUpdatePayload,
-  type ExpenseRow,
-} from './useExpenseStore.core';
+import type { ExpenseRow } from '@/services/expenses/expenseSchemaContract';
+import { type ExpenseState } from './useExpenseStore.core';
 
 // Re-export types so existing import paths continue to work
-export type {
-  ExpenseState,
-  ExpenseInsertPayload,
-  ExpenseUpdatePayload,
-  ExpenseRow,
-};
+export type { ExpenseState };
 
 const loadingExpenseRanges = new Set<string>();
 

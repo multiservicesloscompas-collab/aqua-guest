@@ -1,70 +1,9 @@
-/**
- * usePaymentBalanceStore.core.ts
- * Type definitions for the payment balance Zustand store.
- * No Zustand or Supabase dependencies — pure TypeScript.
- */
-import {
-  PaymentBalanceTransaction,
-  PaymentBalanceSummary,
-  PaymentMethod,
-} from '@/types';
-
-// ─── Row / Insert / Update shapes ────────────────────────────────────────────
-
-export type PaymentBalanceInsertPayload = {
-  date: string;
-  operation_type?: 'equilibrio' | 'avance';
-  from_method: PaymentMethod;
-  to_method: PaymentMethod;
-  amount: number;
-  amount_bs?: number;
-  amount_usd?: number;
-  amount_out_bs?: number;
-  amount_out_usd?: number;
-  amount_in_bs?: number;
-  amount_in_usd?: number;
-  difference_bs?: number;
-  difference_usd?: number;
-  notes?: string;
-};
-
-export type PaymentBalanceUpdatePayload = {
-  operation_type?: 'equilibrio' | 'avance';
-  from_method?: PaymentMethod;
-  to_method?: PaymentMethod;
-  amount?: number;
-  amount_bs?: number;
-  amount_usd?: number;
-  amount_out_bs?: number;
-  amount_out_usd?: number;
-  amount_in_bs?: number;
-  amount_in_usd?: number;
-  difference_bs?: number;
-  difference_usd?: number;
-  notes?: string;
-  date?: string;
-  updated_at: string;
-};
-
-export type PaymentBalanceRow = {
-  id: string;
-  date: string;
-  operation_type?: 'equilibrio' | 'avance' | null;
-  from_method: PaymentMethod;
-  to_method: PaymentMethod;
-  amount: number | string;
-  amount_bs?: number | string | null;
-  amount_usd?: number | string | null;
-  amount_out_bs?: number | string | null;
-  amount_out_usd?: number | string | null;
-  amount_in_bs?: number | string | null;
-  amount_in_usd?: number | string | null;
-  difference_bs?: number | string | null;
-  difference_usd?: number | string | null;
-  notes?: string | null;
-  created_at?: string | null;
-  updated_at?: string | null;
-};
+import type { PaymentBalanceRow } from '@/services/payments/paymentBalanceSchemaContract';
+import { PaymentBalanceSummary, PaymentBalanceTransaction } from '@/types';
+import type {
+  PaymentBalanceTransactionDraft,
+  PaymentBalanceTransactionUpdate,
+} from '@aqua-guest/domain';
 
 // ─── State interface ──────────────────────────────────────────────────────────
 
@@ -72,14 +11,11 @@ export interface PaymentBalanceState {
   paymentBalanceTransactions: PaymentBalanceTransaction[];
 
   addPaymentBalanceTransaction: (
-    transaction: Omit<
-      PaymentBalanceTransaction,
-      'id' | 'createdAt' | 'updatedAt'
-    >
+    transaction: PaymentBalanceTransactionDraft
   ) => Promise<void>;
   updatePaymentBalanceTransaction: (
     id: string,
-    updates: Partial<PaymentBalanceTransaction>
+    updates: PaymentBalanceTransactionUpdate
   ) => Promise<void>;
   deletePaymentBalanceTransaction: (id: string) => Promise<void>;
   getPaymentBalanceSummary: (date: string) => PaymentBalanceSummary[];

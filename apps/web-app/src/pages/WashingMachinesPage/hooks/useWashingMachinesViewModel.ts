@@ -6,13 +6,9 @@ import {
   MachineStatusLabels,
   MachineStatusColors,
 } from '@/types';
+import type { SelectOption } from '@/types/ui';
 
-interface StatusOption {
-  value: MachineStatus;
-  label: string;
-}
-
-interface MachineListItem {
+export interface MachineListItem {
   id: string;
   name: string;
   statusLabel: string;
@@ -21,7 +17,7 @@ interface MachineListItem {
   brandText: string;
 }
 
-const STATUS_OPTIONS: StatusOption[] = [
+const STATUS_OPTIONS: SelectOption<MachineStatus>[] = [
   { value: 'disponible', label: 'Disponible' },
   { value: 'mantenimiento', label: 'En Mantenimiento' },
   { value: 'averiada', label: 'Averiada' },

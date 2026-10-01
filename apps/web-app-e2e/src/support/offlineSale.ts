@@ -8,7 +8,6 @@ import {
 } from './supabaseClient';
 import { bootstrapAtDashboard } from './waterSalesTipsMatrix/uiHelpers';
 
-
 export async function registerSaleOffline(
   page: Page,
   context: BrowserContext,

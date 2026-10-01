@@ -121,7 +121,7 @@ export async function assertTransactionsRows(input: {
     if (!dailyNumber) {
       continue;
     }
-    
+
     await expect(
       page.locator('[data-testid^="transaction-row-"]').filter({
         has: page.getByText(`Venta de Agua #${dailyNumber}`, { exact: true }),

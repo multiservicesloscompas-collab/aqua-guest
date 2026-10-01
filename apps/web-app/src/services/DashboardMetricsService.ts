@@ -14,7 +14,8 @@ import {
 } from '@/services/payments/paymentSplitReadModel';
 import { resolvePaymentBalanceTransferLegs } from '@/services/payments/paymentBalanceTransferSemantics';
 import { hasValidMixedPaymentSplits } from '@/services/payments/paymentSplitValidity';
-import type { PaymentSplit } from '@/types/paymentSplits';
+import type { PaymentMethodTotals } from '@aqua-guest/domain';
+import type { FinancialActivitySnapshot } from '@/services/transactions/financialActivity';
 import { normalizeToVenezuelaDate } from '@/services/DateService';
 
 export interface DateRange {
@@ -29,18 +30,7 @@ export interface ScopeMetrics {
   expenseBs: number;
   netBs: number;
   transactionsCount: number;
-  methodTotalsBs: Record<PaymentMethod, number>;
-}
-
-export interface DashboardMetricsInput {
-  selectedDate: string;
-  exchangeRate: number;
-  sales: readonly Sale[];
-  rentals: readonly WasherRental[];
-  expenses: readonly Expense[];
-  prepaidOrders: readonly PrepaidOrder[];
-  paymentBalanceTransactions: readonly PaymentBalanceTransaction[];
-  tipPayouts?: readonly TipPayout[];
+  methodTotalsBs: PaymentMethodTotals;
 }
 
 export interface DashboardMetricsResult {
@@ -71,28 +61,16 @@ const PAYMENT_METHODS: PaymentMethod[] = [
   'divisa',
 ];
 
-function emptyMethodTotals(): Record<PaymentMethod, number> {
+function emptyMethodTotals(): PaymentMethodTotals {
   return createEmptyMethodTotals();
-}
-
-interface SplitAwareSale extends Sale {
-  paymentSplits?: PaymentSplit[];
-}
-
-interface SplitAwareRental extends WasherRental {
-  paymentSplits?: PaymentSplit[];
-}
-
-interface SplitAwareExpense extends Expense {
-  paymentSplits?: PaymentSplit[];
 }
 
 function computeExpenseTotalsByMethod(
   expenses: readonly Expense[]
-): Record<PaymentMethod, number> {
+): PaymentMethodTotals {
   const totals = createEmptyMethodTotals();
 
-  for (const expense of expenses as readonly SplitAwareExpense[]) {
+  for (const expense of expenses) {
     if (hasValidMixedPaymentSplits(expense.paymentSplits)) {
       for (const split of expense.paymentSplits) {
         totals[split.method] += Number(split.amountBs || 0);
@@ -116,14 +94,10 @@ function computeScope(
   paymentBalanceTransactions: readonly PaymentBalanceTransaction[],
   tipPayouts: readonly TipPayout[]
 ): ScopeMetrics {
-  const filteredSales = filterByDateRange(
-    sales as readonly SplitAwareSale[],
-    range,
-    (s) => s.date
-  );
+  const filteredSales = filterByDateRange(sales, range, (s) => s.date);
   const filteredRentals = filterByDateRange(
-    (rentals as readonly SplitAwareRental[]).filter(
-      (r): r is SplitAwareRental & { datePaid: string } =>
+    rentals.filter(
+      (r): r is WasherRental & { datePaid: string } =>
         r.isPaid && Boolean(r.datePaid)
     ),
     range,
@@ -220,7 +194,7 @@ function computeScope(
 }
 
 export function calculateDashboardMetrics(
-  input: DashboardMetricsInput
+  input: FinancialActivitySnapshot
 ): DashboardMetricsResult {
   const {
     selectedDate,

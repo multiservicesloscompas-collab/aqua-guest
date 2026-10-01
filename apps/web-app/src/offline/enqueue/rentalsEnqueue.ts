@@ -1,13 +1,18 @@
 import { PAYMENT_SPLIT_SCHEMA } from '@/services/payments/paymentSplitSchemaContract';
 import { rentalPaymentSplitAdapter } from '@/services/payments/paymentSplitSupabaseAdapters';
 import { useSyncStore } from '@/store/useSyncStore';
-import type { PaymentMethod, WasherRental } from '@/types';
-import type { PaymentSplit } from '@/types/paymentSplits';
+import type { WasherRental } from '@/types';
+import type {
+  PaymentSplit,
+  TipOriginReference,
+  TipUpsertInput,
+  WasherRentalDraft,
+} from '@aqua-guest/domain';
 import { generateTempId } from './tempId';
 
 interface EnqueueOfflineRentalInput {
   payload: Record<string, unknown>;
-  rental: Omit<WasherRental, 'id' | 'createdAt' | 'updatedAt'>;
+  rental: WasherRentalDraft;
   paymentSplits?: PaymentSplit[];
   dependencyKeys?: string[];
   actionSource?: string;
@@ -24,9 +29,7 @@ interface EnqueueOfflineRentalDeleteInput {
   actionSource?: string;
 }
 
-export const buildRentalBusinessKey = (
-  rental: Omit<WasherRental, 'id' | 'createdAt' | 'updatedAt'>
-) =>
+export const buildRentalBusinessKey = (rental: WasherRentalDraft) =>
   `rental:${rental.date}:${rental.customerId ?? 'unknown'}:${
     rental.machineId
   }:${rental.deliveryTime}`;
@@ -181,14 +184,9 @@ export const enqueueOfflineRentalTipDelete = (
   });
 };
 
-interface EnqueueOfflineRentalTipUpsertInput {
+interface EnqueueOfflineRentalTipUpsertInput
+  extends Omit<TipUpsertInput, keyof TipOriginReference> {
   rentalId: string;
-  tipDate: string;
-  amountBs: number;
-  amountUsd?: number;
-  exchangeRateUsed?: number;
-  capturePaymentMethod: PaymentMethod;
-  notes?: string;
   dependencyKeys?: string[];
   actionSource?: string;
 }

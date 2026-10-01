@@ -1,4 +1,5 @@
 import type { PaymentMethod, TipOriginType } from '@/types';
+import type { TipStatus } from '@aqua-guest/domain';
 
 export const TIP_SCHEMA_CONTRACT = {
   tables: {
@@ -35,7 +36,7 @@ export interface TipRow {
   amount_usd?: number | null;
   exchange_rate_used?: number | null;
   capture_payment_method: PaymentMethod;
-  status: 'pending' | 'paid';
+  status: TipStatus;
   paid_payment_method?: PaymentMethod | null;
   paid_at?: string | null;
   notes?: string | null;

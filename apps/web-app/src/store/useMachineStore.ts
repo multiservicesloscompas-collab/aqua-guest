@@ -2,45 +2,36 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { WashingMachine } from '@/types';
 import supabase from '@/lib/supabaseClient';
+import type {
+  WashingMachineRow,
+  WashingMachineUpdateRow,
+} from '@/services/machines/machineSchemaContract';
 import {
   enqueueOfflineWashingMachineCreate,
   enqueueOfflineWashingMachineDelete,
   enqueueOfflineWashingMachineUpdate,
 } from '@/offline/enqueue/machinesEnqueue';
+import type {
+  WashingMachineDraft,
+  WashingMachineUpdate,
+} from '@aqua-guest/domain';
 
 interface MachineState {
   washingMachines: WashingMachine[];
 
-  addWashingMachine: (machine: Omit<WashingMachine, 'id'>) => Promise<void>;
+  addWashingMachine: (machine: WashingMachineDraft) => Promise<void>;
   updateWashingMachine: (
     id: string,
-    updates: Partial<WashingMachine>
+    updates: WashingMachineUpdate
   ) => Promise<void>;
   deleteWashingMachine: (id: string) => Promise<void>;
 
   loadWashingMachines: () => Promise<void>;
 }
 
-type WashingMachineUpdatePayload = {
-  name?: string;
-  kg?: number;
-  brand?: string;
-  status?: WashingMachine['status'];
-  is_available?: boolean;
-};
-
-type WashingMachineRow = {
-  id: string;
-  name: string;
-  kg: number;
-  brand: string;
-  status: WashingMachine['status'];
-  is_available: boolean;
-};
-
 export const useMachineStore = create<MachineState>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       washingMachines: [],
 
       addWashingMachine: async (machine) => {
@@ -96,7 +87,7 @@ export const useMachineStore = create<MachineState>()(
             return;
           }
 
-          const payload: WashingMachineUpdatePayload = {};
+          const payload: WashingMachineUpdateRow = {};
           if (updates.name !== undefined) payload.name = updates.name;
           if (updates.kg !== undefined) payload.kg = updates.kg;
           if (updates.brand !== undefined) payload.brand = updates.brand;

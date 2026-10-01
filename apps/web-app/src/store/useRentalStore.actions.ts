@@ -11,11 +11,13 @@ import {
   buildCustomerBusinessKey,
   enqueueOfflineCustomerCreate,
 } from '@/offline/enqueue/customersEnqueue';
+import type {
+  RentalInsertRow,
+  RentalRow,
+} from '@/services/rentals/rentalSchemaContract';
 import { useCustomerStore } from './useCustomerStore';
 import {
   type RentalState,
-  type RentalRow,
-  type RentalInsert,
   buildRentalWriteContext,
   mapRentalRowToWasherRental,
 } from './useRentalStore.core';
@@ -29,6 +31,7 @@ import {
   calculateFinalRentalTotals,
   mergeTipIntoPaymentSplits,
 } from '@/services/transactions/transactionTotals';
+import type { WasherRentalDraft } from '@aqua-guest/domain';
 export { updateRentalAction } from './useRentalStore.actions.update';
 
 type SetFn = (
@@ -37,7 +40,7 @@ type SetFn = (
 type GetFn = () => RentalState;
 
 export async function addRentalAction(
-  rental: Omit<WasherRental, 'id' | 'createdAt' | 'updatedAt'>,
+  rental: WasherRentalDraft,
   tipInput: TipCaptureInput | undefined,
   set: SetFn,
   _get: GetFn
@@ -118,7 +121,7 @@ export async function addRentalAction(
       totalUsd: finalTotals.totalUsd,
     });
 
-    const payload: RentalInsert = {
+    const payload: RentalInsertRow = {
       date: rental.date,
       customer_id: customerId,
       machine_id: rental.machineId,

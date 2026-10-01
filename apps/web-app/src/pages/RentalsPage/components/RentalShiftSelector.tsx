@@ -2,12 +2,7 @@ import { Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { RentalShift } from '@/types';
-
-interface ShiftOption {
-  value: RentalShift;
-  label: string;
-  priceText: string;
-}
+import type { ShiftOption } from '../hooks/rentalSheetViewModel.helpers';
 
 interface RentalShiftSelectorProps {
   options: ShiftOption[];

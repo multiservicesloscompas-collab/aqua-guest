@@ -96,7 +96,9 @@ export async function assertDashboardMatchesLedger(
 
   // Top KPI values in Bs use toFixed(0) formatting in Dashboard
   expect(Math.round(snapshot.mtdIncomeBs)).toBe(Math.round(expected.incomeBs));
-  expect(Math.round(snapshot.dayExpensesBs)).toBe(Math.round(expected.expenseBs));
+  expect(Math.round(snapshot.dayExpensesBs)).toBe(
+    Math.round(expected.expenseBs)
+  );
   expect(Math.round(snapshot.mtdNetBs)).toBe(Math.round(expected.netBs));
   expect(snapshot.transactionsCount).toBe(expected.dashboardTransactionsCount);
 

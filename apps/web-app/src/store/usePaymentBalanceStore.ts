@@ -16,11 +16,13 @@ import { useConfigStore } from './useConfigStore';
 import { useRentalStore } from './useRentalStore';
 import { useWaterSalesStore } from './useWaterSalesStore';
 import { usePrepaidStore } from './usePrepaidStore';
+import type {
+  PaymentBalanceInsertRow,
+  PaymentBalanceRow,
+  PaymentBalanceUpdateRow,
+} from '@/services/payments/paymentBalanceSchemaContract';
 import {
   type PaymentBalanceState,
-  type PaymentBalanceInsertPayload,
-  type PaymentBalanceUpdatePayload,
-  type PaymentBalanceRow,
   rowToTransaction,
 } from './usePaymentBalanceStore.core';
 import {
@@ -35,12 +37,7 @@ import {
 } from './paymentBalanceStoreHelpers';
 
 // Re-export types so existing import paths continue to work
-export type {
-  PaymentBalanceState,
-  PaymentBalanceInsertPayload,
-  PaymentBalanceUpdatePayload,
-  PaymentBalanceRow,
-};
+export type { PaymentBalanceState };
 export { rowToTransaction };
 
 export const usePaymentBalanceStore = create<PaymentBalanceState>()(
@@ -82,7 +79,7 @@ export const usePaymentBalanceStore = create<PaymentBalanceState>()(
             return;
           }
 
-          const payload: PaymentBalanceInsertPayload = {
+          const payload: PaymentBalanceInsertRow = {
             date: transaction.date,
             operation_type: normalized.operation_type,
             from_method: transaction.fromMethod,
@@ -168,7 +165,7 @@ export const usePaymentBalanceStore = create<PaymentBalanceState>()(
             return;
           }
 
-          const payload: PaymentBalanceUpdatePayload = {
+          const payload: PaymentBalanceUpdateRow = {
             updated_at: updatedAt,
           };
           assignUpdatePayloadFromUpdates(payload, updates);

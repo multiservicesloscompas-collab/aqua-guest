@@ -8,9 +8,7 @@ interface EntregasMetricsPageProps {
   onNavigate?: (route: AppRoute) => void;
 }
 
-export function EntregasMetricsPage({
-  onNavigate,
-}: EntregasMetricsPageProps = {}) {
+export function EntregasMetricsPage(_props: EntregasMetricsPageProps = {}) {
   const { rentals } = useRentalStore();
   const { config } = useConfigStore();
 

@@ -1,11 +1,15 @@
-import type { PaymentBalanceTransaction } from '@/types';
-import type { PaymentBalanceInsertPayload } from './usePaymentBalanceStore.core';
+import type { PaymentBalanceInsertRow } from '@/services/payments/paymentBalanceSchemaContract';
+import type {
+  PaymentBalanceOperationType,
+  PaymentBalanceTransactionDraft,
+  PaymentBalanceTransactionUpdate,
+} from '@aqua-guest/domain';
 
 export type PaymentBalanceDraft = Omit<
-  PaymentBalanceInsertPayload,
+  PaymentBalanceInsertRow,
   'date' | 'from_method' | 'to_method'
 > & {
-  operation_type: 'equilibrio' | 'avance';
+  operation_type: PaymentBalanceOperationType;
   amount: number;
   amount_bs: number;
   amount_out_bs: number;
@@ -14,7 +18,7 @@ export type PaymentBalanceDraft = Omit<
 };
 
 export const normalizeTransactionDraft = (
-  transaction: Omit<PaymentBalanceTransaction, 'id' | 'createdAt' | 'updatedAt'>
+  transaction: PaymentBalanceTransactionDraft
 ): PaymentBalanceDraft => {
   const amount = transaction.amount;
   const amountBs = transaction.amountBs ?? amount;
@@ -43,7 +47,7 @@ export const normalizeTransactionDraft = (
   };
 };
 
-export const hasAmountUpdates = (updates: Partial<PaymentBalanceTransaction>) =>
+export const hasAmountUpdates = (updates: PaymentBalanceTransactionUpdate) =>
   updates.amount !== undefined ||
   updates.amountBs !== undefined ||
   updates.amountUsd !== undefined ||

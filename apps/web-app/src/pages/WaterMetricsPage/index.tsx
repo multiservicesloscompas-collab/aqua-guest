@@ -11,7 +11,7 @@ import { AppRoute } from '@/types';
 
 import {
   useWaterMetricsViewModel,
-  DateRange,
+  WaterMetricsPeriod,
 } from './hooks/useWaterMetricsViewModel';
 import { WaterMetricsKpiCards } from './components/WaterMetricsKpiCards';
 import { WaterMetricsBreakdownList } from './components/WaterMetricsBreakdownList';
@@ -20,7 +20,7 @@ interface WaterMetricsPageProps {
   onNavigate?: (route: AppRoute) => void;
 }
 
-export function WaterMetricsPage({ onNavigate }: WaterMetricsPageProps = {}) {
+export function WaterMetricsPage(_props: WaterMetricsPageProps = {}) {
   const { selectedDate, setSelectedDate, range, setRange, dateRange, metrics } =
     useWaterMetricsViewModel();
 
@@ -29,7 +29,10 @@ export function WaterMetricsPage({ onNavigate }: WaterMetricsPageProps = {}) {
       <main className="flex-1 px-4 py-4 space-y-4 max-w-lg mx-auto w-full">
         {/* Selector de rango */}
         <div className="flex items-center gap-3">
-          <Select value={range} onValueChange={(v) => setRange(v as DateRange)}>
+          <Select
+            value={range}
+            onValueChange={(v) => setRange(v as WaterMetricsPeriod)}
+          >
             <SelectTrigger className="h-12 flex-1">
               <SelectValue />
             </SelectTrigger>

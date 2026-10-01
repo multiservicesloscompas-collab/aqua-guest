@@ -1,68 +1,12 @@
-/**
- * useRentalStore.core.ts
- * Type definitions and pure helper functions for the rental store.
- * No Zustand or Supabase dependencies — pure TypeScript.
- */
-import {
-  PaymentMethod,
-  RentalShift,
-  RentalStatus,
-  WasherRental,
-} from '@/types';
-import type { TipCaptureInput } from '@/types/tips';
-import type { PaymentSplit } from '@/types/paymentSplits';
 import { preparePaymentWritePayload } from '@/services/payments/paymentSplitWritePath';
-
-// ─── Row / Insert / Update shapes ────────────────────────────────────────────
-
-export interface RentalRow {
-  id: string;
-  date: string;
-  customer_id: string;
-  machine_id: string;
-  shift: RentalShift;
-  delivery_time: string;
-  pickup_time: string;
-  pickup_date: string;
-  delivery_fee: number;
-  total_usd: number;
-  payment_method: PaymentMethod;
-  payment_splits?: PaymentSplit[];
-  status: RentalStatus;
-  is_paid: boolean;
-  date_paid?: string | null;
-  notes?: string | null;
-  created_at?: string | null;
-  updated_at?: string | null;
-}
-
-export type RentalInsert = {
-  date: string;
-  customer_id: string;
-  machine_id: string;
-  shift: RentalShift;
-  delivery_time: string;
-  pickup_time: string;
-  pickup_date: string;
-  delivery_fee: number;
-  total_usd: number;
-  payment_method: PaymentMethod;
-  status: RentalStatus;
-  is_paid: boolean;
-  date_paid: string | null;
-  notes?: string;
-};
-
-export type RentalUpdate = Partial<RentalInsert> & {
-  customer_id?: string;
-  updated_at?: string;
-};
-
-export type CustomerUpdate = Partial<{
-  name: string;
-  phone: string;
-  address: string;
-}>;
+import type { RentalRow } from '@/services/rentals/rentalSchemaContract';
+import { PaymentMethod, WasherRental } from '@/types';
+import type { TipCaptureInput } from '@/types/tips';
+import type {
+  PaymentSplit,
+  WasherRentalDraft,
+  WasherRentalUpdate,
+} from '@aqua-guest/domain';
 
 // ─── State interface ──────────────────────────────────────────────────────────
 
@@ -71,12 +15,12 @@ export interface RentalState {
   loadingRentalsByRange: Record<string, boolean>;
 
   addRental: (
-    rental: Omit<WasherRental, 'id' | 'createdAt' | 'updatedAt'>,
+    rental: WasherRentalDraft,
     tipInput?: TipCaptureInput
   ) => Promise<WasherRental>;
   updateRental: (
     id: string,
-    updates: Partial<WasherRental>,
+    updates: WasherRentalUpdate,
     tipInput?: TipCaptureInput | null
   ) => Promise<void>;
   deleteRental: (id: string) => Promise<void>;
@@ -116,7 +60,7 @@ export function mapRentalRowToWasherRental(
   rentalRow: RentalRow,
   normalizedSplits: PaymentSplit[],
   splitWritePaymentMethod: PaymentMethod,
-  originalRental?: Partial<WasherRental>
+  originalRental?: WasherRentalUpdate
 ): WasherRental {
   return {
     id: rentalRow.id,

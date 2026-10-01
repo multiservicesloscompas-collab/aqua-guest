@@ -1,11 +1,5 @@
 import type { PaymentMethod } from '@/types';
-
-interface CustomerRef {
-  id: string;
-  name: string;
-  phone: string;
-  address: string;
-}
+import type { Customer } from '@aqua-guest/domain';
 
 interface TipToggleParams {
   setTipEnabled: (updater: (value: boolean) => boolean) => void;
@@ -15,7 +9,7 @@ interface TipToggleParams {
 
 export function handleRentalCustomerSelect(params: {
   customerId: string | null;
-  customers: CustomerRef[];
+  customers: Customer[];
   setSelectedCustomerId: (value: string) => void;
   setCustomerName: (value: string) => void;
   setCustomerPhone: (value: string) => void;

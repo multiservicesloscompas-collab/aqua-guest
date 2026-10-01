@@ -56,7 +56,13 @@ export interface WasherRentalInput {
 export interface ExpenseInput {
   description: string;
   amountBs: number;
-  category: 'operativo' | 'insumos' | 'servicios' | 'mantenimiento' | 'personal' | 'otros';
+  category:
+    | 'operativo'
+    | 'insumos'
+    | 'servicios'
+    | 'mantenimiento'
+    | 'personal'
+    | 'otros';
   splits: SplitEntry[];
   notes?: string;
 }

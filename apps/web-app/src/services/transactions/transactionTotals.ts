@@ -1,5 +1,5 @@
 import type { PaymentMethod } from '@/types';
-import type { PaymentSplit } from '@/types/paymentSplits';
+import type { PaymentSplit } from '@aqua-guest/domain';
 interface FinalSaleTotalsInput {
   principalBs: number;
   exchangeRate: number;
@@ -110,7 +110,6 @@ export function mergeTipIntoPaymentSplits(
   const tipAmountUsd =
     input.exchangeRate > 0 ? safeTipBs / input.exchangeRate : undefined;
 
-  // Initialize base from existing splits OR create a default one with the principal amount
   const base: PaymentSplit[] =
     input.paymentSplits && input.paymentSplits.length > 0
       ? input.paymentSplits.map((split) => ({ ...split }))

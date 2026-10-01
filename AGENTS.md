@@ -36,12 +36,13 @@ npm run supabase:reset
 
 ## Project Map
 
-| Area | Location | Purpose |
-| :--- | :------- | :------ |
-| Frontend app | `apps/web-app` | Main React + Vite application and current product surface |
-| Frontend domain docs | `apps/web-app/docs` | Business-domain reference for dashboard, water sales, rentals, finance, prepaid, and transactions |
-| Shared agent docs | `docs/agents` | Cross-cutting routing docs for architecture, business rules, frontend patterns, and Supabase |
-| Future shared modules | `libs/*` | Target location for stable domain logic, shared services, and reusable packages |
+| Area                  | Location            | Purpose                                                                                           |
+| :-------------------- | :------------------ | :------------------------------------------------------------------------------------------------ |
+| Frontend app          | `apps/web-app`      | Main React + Vite application and current product surface                                         |
+| Frontend domain docs  | `apps/web-app/docs` | Business-domain reference for dashboard, water sales, rentals, finance, prepaid, and transactions |
+| Shared agent docs     | `docs/agents`       | Cross-cutting routing docs for architecture, business rules, frontend patterns, and Supabase      |
+| Domain entities       | `libs/domain`       | Canonical entity types (`@aqua-guest/domain`), one folder per context                             |
+| Future shared modules | `libs/*`            | Target location for stable domain logic, shared services, and reusable packages                   |
 
 ## Operating Mindset
 
@@ -97,18 +98,18 @@ For this repository, the phrase `commercial modules` means the Water Sales and W
 
 ## Task Routing
 
-| Task Category | Load This | When to Load |
-| :------------ | :-------- | :----------- |
-| Frontend product work | `apps/web-app/AGENTS.md` | Any task touching `apps/web-app` code, routes, components, stores, services, or frontend docs |
-| Shared architecture and modularization | `docs/agents/architecture.md` | Changing folder boundaries, extracting shared logic, planning `libs/`, or reviewing coupling |
-| Commercial rules and financial ripple effects | `docs/agents/commercial-rules.md` | Editing water sales, rentals, mixed payments, tips, dashboard totals, expenses, or transaction summaries |
-| Frontend architecture and state patterns | `docs/agents/frontend-web-app.md` | Working on React structure, Zustand, React Query, UI composition, or frontend layering |
-| Supabase data access and persistence rules | `docs/agents/supabase.md` | Working on queries, tables, RLS, data hydration, synchronization, or persistence contracts |
-| Database schema reference | `docs/agents/database.md` | Inspecting current tables, relationships, enums, constraints, or Supabase-managed schemas before changing the database |
-| Offline queue and sync | `docs/agents/offline-sync.md` | Anything that enqueues mutations, changes `src/offline/*`, `SyncManager`, feature flags, or offline behavior of a store |
-| Bug, refactor, migration, release, and test-triage workflow | `docs/agents/workflow.md` | Fixing a bug, refactoring, touching migrations, preparing a release, or investigating failing tests |
-| Testing discipline and workflow | `docs/agents/frontend-web-app.md` | Writing or updating frontend tests, enforcing TDD, AAA, or reuse-first implementation in `apps/web-app` |
-| AGENTS maintenance | `docs/agents/agents-guidelines.md` | Before editing any `AGENTS.md` or files inside `docs/agents/` |
+| Task Category                                               | Load This                          | When to Load                                                                                                            |
+| :---------------------------------------------------------- | :--------------------------------- | :---------------------------------------------------------------------------------------------------------------------- |
+| Frontend product work                                       | `apps/web-app/AGENTS.md`           | Any task touching `apps/web-app` code, routes, components, stores, services, or frontend docs                           |
+| Shared architecture and modularization                      | `docs/agents/architecture.md`      | Changing folder boundaries, extracting shared logic, planning `libs/`, or reviewing coupling                            |
+| Commercial rules and financial ripple effects               | `docs/agents/commercial-rules.md`  | Editing water sales, rentals, mixed payments, tips, dashboard totals, expenses, or transaction summaries                |
+| Frontend architecture and state patterns                    | `docs/agents/frontend-web-app.md`  | Working on React structure, Zustand, React Query, UI composition, or frontend layering                                  |
+| Supabase data access and persistence rules                  | `docs/agents/supabase.md`          | Working on queries, tables, RLS, data hydration, synchronization, or persistence contracts                              |
+| Database schema reference                                   | `docs/agents/database.md`          | Inspecting current tables, relationships, enums, constraints, or Supabase-managed schemas before changing the database  |
+| Offline queue and sync                                      | `docs/agents/offline-sync.md`      | Anything that enqueues mutations, changes `src/offline/*`, `SyncManager`, feature flags, or offline behavior of a store |
+| Bug, refactor, migration, release, and test-triage workflow | `docs/agents/workflow.md`          | Fixing a bug, refactoring, touching migrations, preparing a release, or investigating failing tests                     |
+| Testing discipline and workflow                             | `docs/agents/frontend-web-app.md`  | Writing or updating frontend tests, enforcing TDD, AAA, or reuse-first implementation in `apps/web-app`                 |
+| AGENTS maintenance                                          | `docs/agents/agents-guidelines.md` | Before editing any `AGENTS.md` or files inside `docs/agents/`                                                           |
 
 ## Definition Of Done
 

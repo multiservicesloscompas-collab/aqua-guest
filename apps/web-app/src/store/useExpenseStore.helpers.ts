@@ -1,12 +1,16 @@
 import type { Expense } from '@/types';
-import type { PaymentSplit } from '@/types/paymentSplits';
+import type {
+  ExpenseDraft,
+  ExpenseUpdate,
+  PaymentSplit,
+} from '@aqua-guest/domain';
 import { PAYMENT_SPLIT_SCHEMA } from '@/services/payments/paymentSplitSchemaContract';
 import type { PaymentSplitRow } from '@/services/payments/paymentSplitSchemaContract';
 import type {
+  ExpenseInsertRow,
   ExpenseRow,
-  ExpenseUpdatePayload,
-  ExpenseInsertPayload,
-} from './useExpenseStore.core';
+  ExpenseUpdateRow,
+} from '@/services/expenses/expenseSchemaContract';
 import { expensePaymentSplitAdapter } from '@/services/payments/paymentSplitSupabaseAdapters';
 
 export const dedupExpensesByDateRange = (
@@ -36,8 +40,8 @@ type SupabaseLike = {
 };
 
 export const toExpenseInsertPayload = (
-  expense: Omit<Expense, 'id' | 'createdAt'>
-): ExpenseInsertPayload => ({
+  expense: ExpenseDraft
+): ExpenseInsertRow => ({
   date: expense.date,
   description: expense.description,
   amount: expense.amount,
@@ -47,9 +51,9 @@ export const toExpenseInsertPayload = (
 });
 
 export const toExpenseUpdatePayload = (
-  updates: Partial<Expense>
-): ExpenseUpdatePayload => {
-  const payload: ExpenseUpdatePayload = {};
+  updates: ExpenseUpdate
+): ExpenseUpdateRow => {
+  const payload: ExpenseUpdateRow = {};
   if (updates.description !== undefined)
     payload.description = updates.description;
   if (updates.amount !== undefined) payload.amount = updates.amount;
@@ -140,7 +144,7 @@ export type SupabaseCompensatingLike = SupabaseLike & {
 export const updateExpenseWithSplitCompensationStrict = async (
   supabase: SupabaseCompensatingLike,
   expenseId: string,
-  payload: ExpenseUpdatePayload,
+  payload: ExpenseUpdateRow,
   paymentSplits: PaymentSplit[]
 ) => {
   const splitsTable = supabase.from(PAYMENT_SPLIT_SCHEMA.expensesSplitsTable);

@@ -4,25 +4,10 @@ import { getSafeTimestamp, normalizeTimestamp } from '@/lib/date-utils';
 import { getDatesInRange } from '@/services/DateService';
 import { DateKeyedLruCache } from '@/services/cache/DateKeyedLruCache';
 import { expensePaymentSplitAdapter } from '@/services/payments/paymentSplitSupabaseAdapters';
-import type { PaymentSplitRow } from '@/services/payments/paymentSplitSchemaContract';
+import type { ExpenseReadRow } from '@/services/expenses/expenseSchemaContract';
 
-type ExpenseDbRow = {
-  id: string;
-  date: string;
-  description: string;
-  amount: number | string;
-  category: Expense['category'];
-  payment_method?: Expense['paymentMethod'];
-  notes?: string;
-  created_at?: string;
-  createdAt?: string;
-  expense_payment_splits?: PaymentSplitRow[];
-  payment_splits?: PaymentSplitRow[];
-};
-
-const mapExpenseRow = (row: ExpenseDbRow): Expense => {
-  const rawSplits =
-    row.expense_payment_splits ?? row.payment_splits ?? [];
+const mapExpenseRow = (row: ExpenseReadRow): Expense => {
+  const rawSplits = row.expense_payment_splits ?? row.payment_splits ?? [];
 
   return {
     id: row.id,
@@ -81,7 +66,7 @@ export class ExpensesDataService implements IExpensesDataService {
       throw error;
     }
 
-    const expenses = ((data || []) as ExpenseDbRow[]).map(mapExpenseRow);
+    const expenses = ((data || []) as ExpenseReadRow[]).map(mapExpenseRow);
 
     this.expensesCache.set(date, expenses);
 
@@ -130,7 +115,7 @@ export class ExpensesDataService implements IExpensesDataService {
         return { date, expenses: [] };
       }
 
-      const expenses = ((data || []) as ExpenseDbRow[]).map(mapExpenseRow);
+      const expenses = ((data || []) as ExpenseReadRow[]).map(mapExpenseRow);
 
       this.expensesCache.set(date, expenses);
 
@@ -185,7 +170,7 @@ export class ExpensesDataService implements IExpensesDataService {
       grouped[date] = [];
     }
 
-    ((data || []) as ExpenseDbRow[]).forEach((e) => {
+    ((data || []) as ExpenseReadRow[]).forEach((e) => {
       const dateKey = e.date.substring(0, 10);
 
       if (grouped[dateKey]) {

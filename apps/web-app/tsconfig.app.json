@@ -7,7 +7,9 @@
     "lib": ["dom"],
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["src/*"],
+      "@aqua-guest/domain": ["../../libs/domain/src/index.ts"],
+      "@aqua-guest/domain/*": ["../../libs/domain/src/*"]
     },
     "types": [
       "node",
@@ -39,5 +41,10 @@
     "eslint.config.cjs",
     "eslint.config.mjs"
   ],
-  "include": ["src/**/*.js", "src/**/*.jsx", "src/**/*.ts", "src/**/*.tsx"]
+  "include": ["src/**/*.js", "src/**/*.jsx", "src/**/*.ts", "src/**/*.tsx"],
+  "references": [
+    {
+      "path": "../../libs/domain/tsconfig.lib.json"
+    }
+  ]
 }

@@ -4,7 +4,7 @@ Playwright E2E suite for AquaGest `web-app`.
 
 ## Required Environment Variables
 
-- `E2E_BASE_URL` (optional): base URL for the app. Defaults to `http://localhost:4200`.
+- `E2E_BASE_URL` (optional): base URL for the app. Defaults to `http://localhost:4300`, a dev server dedicated to e2e (never the one `npm run local` serves on 4200).
 - `VITE_SUPABASE_URL` (required for DB determinism helpers)
 - `VITE_SUPABASE_ANON_KEY` (required for DB determinism helpers)
 
@@ -131,7 +131,7 @@ npx nx run web-app-e2e:e2e --configuration=headed
 
 ### Startup and Responsive Stability Notes
 
-- Local startup and navigation are aligned to `http://localhost:4200` across `playwright.config.ts` and E2E env helpers.
+- Local startup and navigation are aligned to `http://localhost:4300` across `playwright.config.ts` and E2E env helpers.
 - Headed/debug runs keep deterministic iPhone 14 defaults (Playwright device profile, touch/mobile, viewport/device settings) unless explicitly overridden by CLI/project options.
 - Navigation helpers in `src/support/uiNavigation.ts` use adaptive paths (mobile controls first, dashboard KPI fallback for tablet/desktop) to reduce responsive selector brittleness.
 

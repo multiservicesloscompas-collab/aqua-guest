@@ -4,7 +4,7 @@ import {
   type Sale,
   type WasherRental,
 } from '@/types';
-import type { PaymentSplit } from '@/types/paymentSplits';
+import type { SplitPaymentCompatible } from '@aqua-guest/domain';
 import {
   getRentalAmountForMethodBs,
   getRentalAmountForMethodUsd,
@@ -31,11 +31,6 @@ export interface PaymentDisplayModel {
   totalBs: number;
   totalUsd: number;
 }
-
-type SplitAwareEntity = {
-  paymentMethod: PaymentMethod;
-  paymentSplits?: PaymentSplit[];
-};
 
 function fallbackAmountUsd(amountBs: number, exchangeRate: number): number {
   if (exchangeRate <= 0) {
@@ -187,6 +182,6 @@ export function buildRentalPaymentDisplayModel(
   });
 }
 
-export function isMixedPaymentEntity(entity: SplitAwareEntity): boolean {
+export function isMixedPaymentEntity(entity: SplitPaymentCompatible): boolean {
   return hasValidMixedPaymentSplits(entity.paymentSplits);
 }

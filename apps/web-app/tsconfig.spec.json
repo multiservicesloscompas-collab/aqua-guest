@@ -4,7 +4,9 @@
     "outDir": "./out-tsc/jest",
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["src/*"],
+      "@aqua-guest/domain": ["../../libs/domain/src/index.ts"],
+      "@aqua-guest/domain/*": ["../../libs/domain/src/*"]
     },
     "types": [
       "jest",

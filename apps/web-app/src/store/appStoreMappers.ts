@@ -1,106 +1,23 @@
 import type {
   ExchangeRateHistory,
   PaymentBalanceTransaction,
-  PaymentMethod,
   PrepaidOrder,
-  Product,
+  ProductWithIcon,
   Sale,
   Tip,
 } from '@/types';
-import {
-  rowToTransaction,
-  type PaymentBalanceRow,
-} from './usePaymentBalanceStore.core';
+import type { PaymentBalanceRow } from '@/services/payments/paymentBalanceSchemaContract';
+import { rowToTransaction } from './usePaymentBalanceStore.core';
+import type {
+  ExchangeRateRow,
+  LiterPricingRow,
+  ProductRow,
+} from '@/services/config/configSchemaContract';
+import type { PrepaidOrderRow } from '@/services/prepaid/prepaidSchemaContract';
+import type { TipRow } from '@/services/tips/tipSchemaContract';
+import type { SaleRow } from '@/services/sales/saleSchemaContract';
 
-type ProductRow = {
-  id: string;
-  name: string;
-  default_price: number | string;
-  requires_liters: boolean;
-  minLiters?: number | null;
-  max_liters?: number | null;
-  icon?: string | null;
-};
-
-type PrepaidOrderRow = {
-  id: string;
-  customer_name?: string | null;
-  customerName?: string | null;
-  customer_phone?: string | null;
-  customerPhone?: string | null;
-  liters: number | string;
-  amount_bs?: number | string | null;
-  amountBs?: number | string | null;
-  amount_usd?: number | string | null;
-  amountUsd?: number | string | null;
-  exchange_rate?: number | string | null;
-  exchangeRate?: number | string | null;
-  payment_method?: PaymentMethod;
-  paymentMethod?: PaymentMethod;
-  status: 'pendiente' | 'entregado';
-  date_paid?: string | null;
-  datePaid?: string | null;
-  date_delivered?: string | null;
-  dateDelivered?: string | null;
-  notes?: string | null;
-  created_at?: string | null;
-  createdAt?: string | null;
-  updated_at?: string | null;
-  updatedAt?: string | null;
-};
-
-type LiterPricingRow = {
-  breakpoint: number | string;
-  price: number | string;
-};
-
-type SalePaymentSplitRow = {
-  payment_method: PaymentMethod;
-  amount_bs: number | string;
-  amount_usd: number | string;
-  exchange_rate_used: number | string;
-};
-
-type SaleRow = {
-  id: string;
-  daily_number: number;
-  date: string;
-  items: Sale['items'];
-  payment_method: PaymentMethod;
-  total_bs: number | string;
-  total_usd: number | string;
-  exchange_rate: number | string;
-  notes?: string | null;
-  created_at: string;
-  updated_at: string;
-  sale_payment_splits?: SalePaymentSplitRow[];
-};
-
-type TipRow = {
-  id: string;
-  origin_type: Tip['originType'];
-  origin_id: string;
-  tip_date: string;
-  amount_bs: number | string;
-  amount_usd: number | string | null;
-  exchange_rate_used: number | string | null;
-  capture_payment_method: PaymentMethod;
-  status: Tip['status'];
-  paid_payment_method: PaymentMethod | null;
-  paid_at: string | null;
-  notes: string | null;
-  created_at: string;
-  updated_at: string;
-};
-
-type ExchangeRateRow = {
-  date: string;
-  rate: number | string;
-  updated_at?: string | null;
-  updatedAt?: string | null;
-};
-
-export const mapProducts = (rows: ProductRow[]): Product[] =>
+export const mapProducts = (rows: ProductRow[]): ProductWithIcon[] =>
   rows.map((product) => ({
     id: product.id,
     name: product.name,

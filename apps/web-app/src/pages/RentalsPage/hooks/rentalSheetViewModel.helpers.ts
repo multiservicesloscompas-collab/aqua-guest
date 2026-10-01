@@ -1,6 +1,7 @@
 import { format, parse } from 'date-fns';
 import { es } from 'date-fns/locale';
 import type { PaymentMethod, RentalShift, WasherRental } from '@/types';
+import type { SelectOption } from '@/types/ui';
 import {
   BUSINESS_HOURS,
   PaymentMethodLabels,
@@ -14,16 +15,11 @@ export interface MachineItem {
   isUnavailable: boolean;
 }
 
-export interface ShiftOption {
-  value: RentalShift;
-  label: string;
+export interface ShiftOption extends SelectOption<RentalShift> {
   priceText: string;
 }
 
-export interface PaymentMethodOption {
-  value: PaymentMethod;
-  label: string;
-}
+export type PaymentMethodOption = SelectOption<PaymentMethod>;
 
 export const DELIVERY_FEE_OPTIONS = [0, 1, 2, 3, 4, 5];
 

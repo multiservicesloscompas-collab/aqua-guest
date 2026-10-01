@@ -58,6 +58,12 @@ export default defineConfig(() => ({
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
+      '@aqua-guest/domain': fileURLToPath(
+        new URL('../../libs/domain/src/index.ts', import.meta.url)
+      ),
+      '@aqua-guest/domain/': fileURLToPath(
+        new URL('../../libs/domain/src/', import.meta.url)
+      ),
     },
   },
   build: {

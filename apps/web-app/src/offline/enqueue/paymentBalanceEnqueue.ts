@@ -3,19 +3,16 @@ import { useSyncStore } from '@/store/useSyncStore';
 import { hasAmountUpdates } from '@/store/paymentBalanceDraft';
 import { generateTempId } from './tempId';
 import { enqueueEntityDelete } from './commonEnqueue';
-
-type PaymentBalanceCreateInput = Omit<
-  PaymentBalanceTransaction,
-  'id' | 'createdAt' | 'updatedAt'
->;
-type PaymentBalanceUpdateInput = Partial<
-  Omit<PaymentBalanceTransaction, 'id' | 'createdAt' | 'updatedAt'>
->;
+import type {
+  PaymentBalanceOperationType,
+  PaymentBalanceTransactionDraft,
+  PaymentBalanceTransactionUpdate,
+} from '@aqua-guest/domain';
 
 const buildEntityBusinessKey = (id: string) => `payment-balance:${id}`;
 
 type NormalizedPaymentBalanceAmounts = {
-  operationType: 'equilibrio' | 'avance';
+  operationType: PaymentBalanceOperationType;
   amount: number;
   amountBs: number;
   amountUsd?: number;
@@ -28,7 +25,7 @@ type NormalizedPaymentBalanceAmounts = {
 };
 
 const normalizePaymentBalanceAmounts = (
-  transaction: PaymentBalanceCreateInput | PaymentBalanceTransaction
+  transaction: PaymentBalanceTransactionDraft | PaymentBalanceTransaction
 ): NormalizedPaymentBalanceAmounts => {
   const amount = transaction.amount;
   const amountBs = transaction.amountBs ?? amount;
@@ -58,7 +55,7 @@ const normalizePaymentBalanceAmounts = (
 };
 
 export const enqueueOfflinePaymentBalanceCreate = (
-  transaction: PaymentBalanceCreateInput,
+  transaction: PaymentBalanceTransactionDraft,
   timestamps: { createdAt: string; updatedAt: string },
   actionSource = 'paymentBalance/addPaymentBalanceTransaction'
 ): PaymentBalanceTransaction => {
@@ -100,7 +97,7 @@ export const enqueueOfflinePaymentBalanceCreate = (
 
 export const enqueueOfflinePaymentBalanceUpdate = (
   id: string,
-  updates: PaymentBalanceUpdateInput,
+  updates: PaymentBalanceTransactionUpdate,
   updatedAt: string,
   actionSource = 'paymentBalance/updatePaymentBalanceTransaction',
   existingTransaction?: PaymentBalanceTransaction

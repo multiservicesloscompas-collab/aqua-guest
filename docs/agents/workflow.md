@@ -18,6 +18,7 @@ Approval of one action never extends to the next one. Prefer leaving changes unc
 ## Environments
 
 - Development and e2e use only the local Supabase stack (`127.0.0.1`, `npm run supabase:start`). The e2e support code aborts if the URL is not local. Never bypass that guard.
+- e2e runs its own dev server on `http://localhost:4300` (`DEFAULT_E2E_BASE_URL` in `apps/web-app-e2e/src/support/env.ts`), never the 4200 one from `npm run local`, which may be watching another branch and reloads the page mid-test (symptom: `element was detached from the DOM`). Do not edit `apps/web-app` or `vite.config.mts` while an e2e run is in progress.
 - Every e2e test starts from an empty database plus a fixed baseline (`apps/web-app-e2e/src/support/reset`). `npm run e2e:reset`, `npm run e2e:purge` and `npm run e2e:reset:dry` do the same from the command line.
 - Cross-module e2e scenarios are data (`apps/web-app-e2e/src/support/scenarios`); their expected dashboard figures come from `support/ledger`, which must never copy the app's formulas. Prepaid orders and rental extensions are intentionally out of scope.
 - Every e2e test is written with `documented({intent, steps, expects})` (Spanish text, exact figures) and asserts toasts through `expectToast`, never a bare `getByText`. `npm run e2e:live -- --check` enforces the ficha.

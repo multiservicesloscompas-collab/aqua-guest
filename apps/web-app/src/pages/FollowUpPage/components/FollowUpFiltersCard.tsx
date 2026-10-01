@@ -2,7 +2,7 @@ import { CircleDollarSign } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
-type FollowUpFilter = 'in-progress' | 'unpaid';
+export type FollowUpFilter = 'in-progress' | 'unpaid';
 
 interface FollowUpFiltersCardProps {
   paymentFilter: FollowUpFilter | 'all';

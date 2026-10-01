@@ -1,17 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTipStore } from '@/store/useTipStore';
-import type { PaymentMethod, WasherRental } from '@/types';
+import type { WasherRental } from '@/types';
+import type { HydrateTipCaptureInput } from './useTipCaptureState';
 import {
   createTipHydrationController,
   findTipByRentalOrigin,
 } from './editRentalTipHydration.controller';
 
 interface TipCaptureApi {
-  hydrateTipCapture: (input: {
-    amountBs: number;
-    paymentMethod: PaymentMethod;
-    notes?: string;
-  }) => void;
+  hydrateTipCapture: (input: HydrateTipCaptureInput) => void;
   resetTipCapture: () => void;
 }
 

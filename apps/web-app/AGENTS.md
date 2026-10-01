@@ -24,47 +24,47 @@ Today, the main business workflows live here while the product is still evolving
 
 ## Source Map
 
-| Area | Location | Purpose |
-| :--- | :------- | :------ |
-| Pages | `src/pages` | Route-level screens and page composition |
-| Base UI | `src/components/ui` | Reusable UI primitives and design-system style building blocks |
-| Domain UI | `src/components` | Business-facing components grouped by feature |
-| Hooks | `src/hooks` | Reusable React behavior and view-model helpers |
-| Services | `src/services` | Business logic, formatters, and Supabase-facing workflows kept out of presentational components |
-| Stores | `src/store` | Zustand feature stores, store actions, hydration helpers, and orchestration |
-| Utilities | `src/lib` | Shared utilities such as Supabase client and persistence helpers |
-| Types | `src/types` | Shared TypeScript contracts |
+| Area      | Location            | Purpose                                                                                         |
+| :-------- | :------------------ | :---------------------------------------------------------------------------------------------- |
+| Pages     | `src/pages`         | Route-level screens and page composition                                                        |
+| Base UI   | `src/components/ui` | Reusable UI primitives and design-system style building blocks                                  |
+| Domain UI | `src/components`    | Business-facing components grouped by feature                                                   |
+| Hooks     | `src/hooks`         | Reusable React behavior and view-model helpers                                                  |
+| Services  | `src/services`      | Business logic, formatters, and Supabase-facing workflows kept out of presentational components |
+| Stores    | `src/store`         | Zustand feature stores, store actions, hydration helpers, and orchestration                     |
+| Utilities | `src/lib`           | Shared utilities such as Supabase client and persistence helpers                                |
+| Types     | `src/types`         | Facade over `@aqua-guest/domain` entities plus UI labels and app-only contracts                 |
 
 ## Domain Context Map
 
 Load only the domain docs needed for the current task.
 
-| Domain | Load This | Keywords |
-| :----- | :-------- | :------- |
-| Dashboard and global metrics | `apps/web-app/docs/domain-dashboard.md` | KPI, metrics, charts, totals, net profit, dashboard cards |
-| Water sales | `apps/web-app/docs/domain-water-sales.md` | liters, bottle sales, cart, checkout, water sale editing |
-| Washer rentals | `apps/web-app/docs/domain-rentals.md` | shifts, pickup, delivery, extensions, rental editing |
-| Customers | `apps/web-app/docs/domain-customers.md` | customer lookup, autocomplete, directory |
-| Finance and configuration | `apps/web-app/docs/domain-finance-config.md` | exchange rate, expenses, payment balance, config |
-| Prepaid orders | `apps/web-app/docs/domain-prepaid.md` | prepaid, pending, delivered |
-| Transactions and payment summaries | `apps/web-app/docs/domain-transactions.md` | transaction timeline, payment method detail, ledger |
-| Cross-module financial dependencies | `apps/web-app/docs/business-logic-dependencies.md` | ripple effects, dashboard impact, mixed payments, tips |
-| Mixed payment persistence contract | `apps/web-app/docs/pago-mixto-db-contract.md` | sale splits, rental splits, persistence shape |
+| Domain                              | Load This                                          | Keywords                                                  |
+| :---------------------------------- | :------------------------------------------------- | :-------------------------------------------------------- |
+| Dashboard and global metrics        | `apps/web-app/docs/domain-dashboard.md`            | KPI, metrics, charts, totals, net profit, dashboard cards |
+| Water sales                         | `apps/web-app/docs/domain-water-sales.md`          | liters, bottle sales, cart, checkout, water sale editing  |
+| Washer rentals                      | `apps/web-app/docs/domain-rentals.md`              | shifts, pickup, delivery, extensions, rental editing      |
+| Customers                           | `apps/web-app/docs/domain-customers.md`            | customer lookup, autocomplete, directory                  |
+| Finance and configuration           | `apps/web-app/docs/domain-finance-config.md`       | exchange rate, expenses, payment balance, config          |
+| Prepaid orders                      | `apps/web-app/docs/domain-prepaid.md`              | prepaid, pending, delivered                               |
+| Transactions and payment summaries  | `apps/web-app/docs/domain-transactions.md`         | transaction timeline, payment method detail, ledger       |
+| Cross-module financial dependencies | `apps/web-app/docs/business-logic-dependencies.md` | ripple effects, dashboard impact, mixed payments, tips    |
+| Mixed payment persistence contract  | `apps/web-app/docs/pago-mixto-db-contract.md`      | sale splits, rental splits, persistence shape             |
 
 ## Shared Routing
 
 Load shared docs from the repository root only when the task needs them.
 
-| Topic | Load This | When to Load |
-| :---- | :-------- | :----------- |
-| Frontend structure and state ownership | `docs/agents/frontend-web-app.md` | React architecture, store boundaries, React Query vs Zustand, UI layering |
-| Commercial business rules | `docs/agents/commercial-rules.md` | Any change that can affect totals, payments, tips, expenses, or dashboard calculations |
-| Supabase rules | `docs/agents/supabase.md` | Query changes, schema work, persistence, RLS, synchronization |
-| Database schema reference | `docs/agents/database.md` | Inspecting tables, columns, relationships, or constraints before changing queries or the database |
-| Offline queue and sync | `docs/agents/offline-sync.md` | Anything that enqueues mutations, changes `src/offline/*`, `SyncManager`, feature flags, or offline behavior of a store |
-| Bug, refactor, migration, release, and test-triage workflow | `docs/agents/workflow.md` | Fixing a bug, refactoring, touching migrations, preparing a release, or investigating failing tests |
-| Shared architecture | `docs/agents/architecture.md` | Refactors, module extraction, cross-cutting patterns, folder moves |
-| AGENTS and agent docs | `docs/agents/agents-guidelines.md` | Before editing `AGENTS.md` or `docs/agents/*` |
+| Topic                                                       | Load This                          | When to Load                                                                                                            |
+| :---------------------------------------------------------- | :--------------------------------- | :---------------------------------------------------------------------------------------------------------------------- |
+| Frontend structure and state ownership                      | `docs/agents/frontend-web-app.md`  | React architecture, store boundaries, React Query vs Zustand, UI layering                                               |
+| Commercial business rules                                   | `docs/agents/commercial-rules.md`  | Any change that can affect totals, payments, tips, expenses, or dashboard calculations                                  |
+| Supabase rules                                              | `docs/agents/supabase.md`          | Query changes, schema work, persistence, RLS, synchronization                                                           |
+| Database schema reference                                   | `docs/agents/database.md`          | Inspecting tables, columns, relationships, or constraints before changing queries or the database                       |
+| Offline queue and sync                                      | `docs/agents/offline-sync.md`      | Anything that enqueues mutations, changes `src/offline/*`, `SyncManager`, feature flags, or offline behavior of a store |
+| Bug, refactor, migration, release, and test-triage workflow | `docs/agents/workflow.md`          | Fixing a bug, refactoring, touching migrations, preparing a release, or investigating failing tests                     |
+| Shared architecture                                         | `docs/agents/architecture.md`      | Refactors, module extraction, cross-cutting patterns, folder moves                                                      |
+| AGENTS and agent docs                                       | `docs/agents/agents-guidelines.md` | Before editing `AGENTS.md` or `docs/agents/*`                                                                           |
 
 ## Working Rules
 

@@ -1,23 +1,22 @@
 import supabase from '@/lib/supabaseClient';
-import type { WasherRental } from '@/types';
-import type { TipCaptureInput } from '@/types/tips';
-import { preparePaymentWritePayload } from '@/services/payments/paymentSplitWritePath';
 import {
   enqueueOfflineRentalPaymentSplitsReplace,
   enqueueOfflineRentalUpdate,
 } from '@/offline/enqueue/rentalsEnqueue';
+import { preparePaymentWritePayload } from '@/services/payments/paymentSplitWritePath';
 import { rentalsDataService } from '@/services/RentalsDataService';
 import {
   calculateFinalRentalTotals,
   mergeTipIntoPaymentSplits,
 } from '@/services/transactions/transactionTotals';
-import { replaceRentalSplits } from './useRentalStore.supabase';
+import type { TipCaptureInput } from '@/types/tips';
+import type { RentalUpdateRow } from '@/services/rentals/rentalSchemaContract';
+import type { CustomerUpdate, WasherRentalUpdate } from '@aqua-guest/domain';
 import {
-  type CustomerUpdate,
   type RentalState,
-  type RentalUpdate,
   buildRentalWriteContext,
 } from './useRentalStore.core';
+import { replaceRentalSplits } from './useRentalStore.supabase';
 
 type SetFn = (
   partial: Partial<RentalState> | ((state: RentalState) => Partial<RentalState>)
@@ -26,18 +25,18 @@ type GetFn = () => RentalState;
 
 export async function updateRentalAction(
   id: string,
-  updates: Partial<WasherRental>,
+  updates: WasherRentalUpdate,
   tipInput: TipCaptureInput | null | undefined,
   set: SetFn,
   get: GetFn
 ): Promise<void> {
   try {
-    const payload: RentalUpdate = {};
+    const payload: RentalUpdateRow = {};
     const nowIso = new Date().toISOString();
     const currentRental = get().rentals.find((r) => r.id === id);
     if (!currentRental) throw new Error('Alquiler no encontrado');
 
-    const effectiveUpdates: Partial<WasherRental> = { ...updates };
+    const effectiveUpdates: WasherRentalUpdate = { ...updates };
 
     if (tipInput && tipInput.amountBs > 0) {
       const exchangeRate =
@@ -45,7 +44,6 @@ export async function updateRentalAction(
           (split) => split.exchangeRateUsed
         )?.exchangeRateUsed ?? 1;
 
-      // Ensure we have the correct principal amount to add the tip to
       const principalUsd = updates.totalUsd ?? currentRental.totalUsd;
 
       const finalTotals = calculateFinalRentalTotals({
@@ -56,7 +54,6 @@ export async function updateRentalAction(
 
       effectiveUpdates.totalUsd = finalTotals.totalUsd;
 
-      // Merge tip into payment splits
       effectiveUpdates.paymentSplits = mergeTipIntoPaymentSplits({
         paymentSplits: updates.paymentSplits ?? currentRental.paymentSplits,
         fallbackMethod:

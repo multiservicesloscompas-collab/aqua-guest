@@ -150,7 +150,8 @@ export function SalesList({ sales, paymentFilter = 'todos' }: SalesListProps) {
               0
             );
             const tipAmountBs =
-              linkedTip?.amountBs ?? deriveSaleTipAmountBs(sale.totalBs, subtotalBs);
+              linkedTip?.amountBs ??
+              deriveSaleTipAmountBs(sale.totalBs, subtotalBs);
 
             return (
               <div

@@ -14,10 +14,11 @@ import { useMachineStore } from '@/store/useMachineStore';
 import { useRentalStore } from '@/store/useRentalStore';
 import { WasherRental } from '@/types';
 
-import { FollowUpFiltersCard } from './FollowUpPage/components/FollowUpFiltersCard';
+import {
+  FollowUpFiltersCard,
+  type FollowUpFilter,
+} from './FollowUpPage/components/FollowUpFiltersCard';
 import { FollowUpPrioritizedList } from './FollowUpPage/components/FollowUpPrioritizedList';
-
-type FollowUpFilter = 'in-progress' | 'unpaid';
 
 type IndexedRental = {
   rental: WasherRental;

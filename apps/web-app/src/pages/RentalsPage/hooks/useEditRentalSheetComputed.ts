@@ -6,15 +6,19 @@ import { buildDualPaymentSplits } from '@/services/payments/paymentSplitWritePat
 import { calculateFinalRentalTotals } from '@/services/transactions/transactionTotals';
 import { getUnavailableMachineIds } from './editRentalSheetViewModel.helpers';
 import type { WasherRental } from '@/types';
-import type { PaymentSplit } from '@/types/paymentSplits';
+import type {
+  PaymentMethod,
+  PaymentSplit,
+  RentalShift,
+} from '@aqua-guest/domain';
 
 interface Params {
   rental: WasherRental | null;
-  shift: 'medio' | 'completo' | 'doble';
-  paymentMethod: 'pago_movil' | 'efectivo' | 'punto_venta' | 'divisa';
+  shift: RentalShift;
+  paymentMethod: PaymentMethod;
   deliveryFee: number;
   deliveryTime: string;
-  split2Method: 'pago_movil' | 'efectivo' | 'punto_venta' | 'divisa';
+  split2Method: PaymentMethod;
   split1Amount: string;
   hasMixedPaymentEnabled: boolean;
   tipAmountBs: number;

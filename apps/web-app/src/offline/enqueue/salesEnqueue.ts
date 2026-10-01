@@ -1,8 +1,12 @@
 import { PAYMENT_SPLIT_SCHEMA } from '@/services/payments/paymentSplitSchemaContract';
 import { salePaymentSplitAdapter } from '@/services/payments/paymentSplitSupabaseAdapters';
 import { useSyncStore } from '@/store/useSyncStore';
-import type { PaymentMethod, Sale } from '@/types';
-import type { PaymentSplit } from '@/types/paymentSplits';
+import type { Sale } from '@/types';
+import type {
+  PaymentSplit,
+  TipOriginReference,
+  TipUpsertInput,
+} from '@aqua-guest/domain';
 import { generateTempId } from './tempId';
 
 interface EnqueueOfflineSaleInput {
@@ -188,14 +192,9 @@ export const enqueueOfflineSaleTipDelete = (
   });
 };
 
-interface EnqueueOfflineSaleTipUpsertInput {
+interface EnqueueOfflineSaleTipUpsertInput
+  extends Omit<TipUpsertInput, keyof TipOriginReference> {
   saleId: string;
-  tipDate: string;
-  amountBs: number;
-  amountUsd?: number;
-  exchangeRateUsed?: number;
-  capturePaymentMethod: PaymentMethod;
-  notes?: string;
   dependencyKeys?: string[];
   actionSource?: string;
 }
