@@ -242,7 +242,20 @@ export function selectionArgs(selected) {
   return { paths: [...new Set(args)], grep: titles.join('|') };
 }
 
+// "B3", "B3b", "FIN-05": a bug id selects the tests tagged with that exact id,
+// so "B3" does not also pick "[B3b]".
+const BUG_ID = /^(?:fin-\d+|[bc]\d+[a-z]?)$/i;
+
 export function testsMatching(tests, text) {
+  if (BUG_ID.test(text.trim())) {
+    const tag = new RegExp(
+      `\\[${escapeRegExp(text.trim())}(?:\\]|\\s|-control)`,
+      'i'
+    );
+    return tests.filter(
+      (test) => tag.test(test.fullTitle) || tag.test(displayName(test))
+    );
+  }
   const needle = text.toLowerCase();
   return tests.filter(
     (test) =>

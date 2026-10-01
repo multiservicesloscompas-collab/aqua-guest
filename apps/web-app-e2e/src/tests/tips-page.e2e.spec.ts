@@ -1,8 +1,13 @@
 import { captureDashboardSnapshot } from '../support/drivers/dashboardDriver';
 import { openTipsModule } from '../support/drivers/expenseDriver';
+import {
+  createWasherRental,
+  deleteRental,
+} from '../support/drivers/rentalDriver';
 import { createWaterSale } from '../support/drivers/waterSaleDriver';
 import { documented, expect, test } from '../support/fixtures';
 import { parseUniversalMoney } from '../support/money';
+import { getSupabaseClient } from '../support/supabaseClient';
 import { bootstrapAtDashboard } from '../support/waterSalesTipsMatrix/uiHelpers';
 
 test(
@@ -64,5 +69,77 @@ test(
     expect(dashboard.transactionsCount).toBe(6);
     expect(dashboard.methodTotals.efectivo).toBe(2400);
     expect(dashboard.methodTotals.pago_movil).toBe(600);
+  }
+);
+
+test(
+  'a rental deleted while offline takes its tip off the Tips page',
+  documented({
+    titulo:
+      '[B6 corregido] Borrar un alquiler sin conexión quita su propina de Propinas',
+    area: 'Propinas',
+    intent:
+      'Comprobar que, al eliminar sin internet un alquiler con propina, la propina deja de mostrarse igual que cuando hay conexión.',
+    steps: [
+      'Registra un alquiler pagado con propina de Bs 100 y abre Propinas (la propina aparece).',
+      'Corta la conexión y elimina el alquiler.',
+      'Vuelve a abrir Propinas todavía sin conexión.',
+      'Restablece la conexión y espera a que se sincronice.',
+    ],
+    expects: [
+      'Sin conexión, la propina del alquiler eliminado ya no aparece.',
+      'Al volver la conexión, el alquiler, sus pagos y su propina ya no existen en la base.',
+    ],
+    data: 'Alquiler medio turno pagado en efectivo; propina de Bs 100.',
+  }),
+  async ({ page, context }) => {
+    // Arrange
+    await bootstrapAtDashboard(page);
+    await createWasherRental(page, {
+      shift: 'medio',
+      totalUsd: 0,
+      isPaid: true,
+      splits: [{ method: 'efectivo', amountBs: 0 }],
+      tip: { amountBs: 100, method: 'efectivo', paid: false },
+      customerName: `Cliente B6 ${Date.now()}`,
+    });
+    const { data } = await getSupabaseClient()
+      .from('tips')
+      .select('id,origin_id')
+      .eq('origin_type', 'rental')
+      .single();
+    await openTipsModule(page);
+    await expect(page.getByTestId(`tip-card-${data?.id}`)).toBeVisible();
+
+    // Act
+    await context.setOffline(true);
+    await deleteRental(page, data?.origin_id as string);
+    await openTipsModule(page);
+
+    // Assert
+    await expect(page.getByTestId(`tip-card-${data?.id}`)).toHaveCount(0);
+
+    // Act (reconnect)
+    await context.setOffline(false);
+
+    // Assert (database)
+    const rentalId = data?.origin_id as string;
+    const countRows = async (table: string, column: string) => {
+      const { count } = await getSupabaseClient()
+        .from(table)
+        .select('id', { count: 'exact', head: true })
+        .eq(column, rentalId);
+      return count;
+    };
+    await expect
+      .poll(
+        async () => ({
+          rentals: await countRows('washer_rentals', 'id'),
+          splits: await countRows('rental_payment_splits', 'rental_id'),
+          tips: await countRows('tips', 'origin_id'),
+        }),
+        { timeout: 30_000, intervals: [1_000, 2_000] }
+      )
+      .toEqual({ rentals: 0, splits: 0, tips: 0 });
   }
 );

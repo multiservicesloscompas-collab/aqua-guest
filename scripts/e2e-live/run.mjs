@@ -22,6 +22,7 @@ import {
   playwright,
   readDbCounts,
   red,
+  wasInterrupted,
   yellow,
 } from './support.mjs';
 
@@ -146,6 +147,15 @@ export async function execute({
   let code = 0;
   for (const run of runs) {
     const result = await playwright(run.args, run.env);
+    if (wasInterrupted()) {
+      console.log(
+        yellow(
+          '\nInterrumpido. La base local quedó como la dejó el test (usa la opción 3 del menú o npm run e2e:reset).'
+        )
+      );
+      prompter?.close();
+      process.exit(130);
+    }
     if (run.project === 'bugs') {
       console.log(
         yellow(

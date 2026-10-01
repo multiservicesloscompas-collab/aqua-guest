@@ -18,6 +18,7 @@ AquaGuest talks to Supabase directly from repository code.
 - Keep persistence contracts explicit. If a table shape or join contract changes, update the related documentation.
 - Use task-appropriate error handling around Supabase calls and keep failure paths visible to the UI.
 - When changing mixed-payment persistence, also load `apps/web-app/docs/pago-mixto-db-contract.md`.
+- `useAppStore.loadFromSupabase` is the global sync (app start, first `Index` mount, pull-to-refresh, every 5+ minutes on route change). It **replaces** sales, tips and expenses in their stores when it finishes and then stamps `useAppStore.coreLoadedAt`. A view that loads a date range with its own loaders must reload that range when `coreLoadedAt` changes (`useDashboardData`, `usePaymentBalancePageViewModel` do), otherwise the global sync can wipe what it loaded (FIN-12).
 
 ## Query And Schema Changes
 

@@ -3,75 +3,13 @@ import { bugDoc } from '../../support/bugs/ficha';
 import { seedPendingTip, seedSales } from '../../support/bugs/dbSeed';
 import { todayVe } from '../../support/bugs/dates';
 import { useCleanDomain } from '../../support/bugs/setup';
-import {
-  createWasherRental,
-  deleteRental,
-} from '../../support/drivers/rentalDriver';
-import { createWaterSale } from '../../support/drivers/waterSaleDriver';
 import { openTipsModule } from '../../support/drivers/expenseDriver';
-import { waitForSaleByMarker } from '../../support/dbPolling';
 import { getSupabaseClient } from '../../support/supabaseClient';
-import { listSaleSplitsBySaleIds } from '../../support/supabaseClient';
 import { bootstrapAtDashboard } from '../../support/waterSalesTipsMatrix/uiHelpers';
-import { createRunMarker } from '../../support/runMarker';
 
 useCleanDomain();
 
 test.describe('Propinas (rojos)', () => {
-  test(
-    '[B3] editing a sale with a tip and saving unchanged keeps its splits',
-    bugDoc({
-      id: 'B3',
-      titulo:
-        'Editar y guardar sin cambios una venta con propina no mueve los métodos',
-      intent:
-        'Comprobar que abrir la edición de una venta con propina en otro método y guardar sin tocar nada deja intactos sus pagos.',
-      steps: [
-        'Registra una venta de Bs 1000 pagada en efectivo con propina de Bs 200 capturada en pago móvil.',
-        'Lee cómo quedó repartido el pago en la base.',
-        'Abre la edición de la venta y pulsa «Guardar Cambios» sin cambiar nada.',
-        'Vuelve a leer el reparto.',
-      ],
-      expects: [
-        'Antes y después el reparto es el mismo: efectivo 1000 y pago móvil 200.',
-      ],
-      actual:
-        'el formulario toma la propina (200 en pago móvil) como pago secundario y el guardado la suma otra vez, dejando efectivo 800 y pago móvil 400',
-    }),
-    async ({ page }) => {
-      // Arrange
-      const marker = createRunMarker();
-      await bootstrapAtDashboard(page);
-      await createWaterSale(page, {
-        basePriceBs: 1000,
-        splits: [{ method: 'efectivo', amountBs: 1000 }],
-        tip: { amountBs: 200, method: 'pago_movil', paid: false },
-        noteMarker: marker.notesValue,
-      });
-      const sale = await waitForSaleByMarker(marker.notesValue);
-      const snapshot = async () =>
-        (await listSaleSplitsBySaleIds([sale.id]))
-          .map(({ paymentMethod, amountBs }) => ({ paymentMethod, amountBs }))
-          .sort((a, b) => a.paymentMethod.localeCompare(b.paymentMethod));
-      const before = await snapshot();
-
-      // Act
-      await page.getByTestId(`sale-edit-trigger-${sale.id}`).click();
-      const sheet = page.getByRole('dialog');
-      await expect(sheet.getByText(/Editar Venta/)).toBeVisible();
-      await page.waitForTimeout(1_500); // let the tip hydrate into the form
-      await sheet.getByRole('button', { name: 'Guardar Cambios' }).click();
-      await expect(sheet).toBeHidden({ timeout: 15_000 });
-
-      // Assert
-      expect(before).toEqual([
-        { paymentMethod: 'efectivo', amountBs: 1000 },
-        { paymentMethod: 'pago_movil', amountBs: 200 },
-      ]);
-      await expect.poll(snapshot, { timeout: 5_000 }).toEqual(before);
-    }
-  );
-
   test(
     '[B1] a tip deleted elsewhere disappears from the Tips page',
     bugDoc({
@@ -111,121 +49,6 @@ test.describe('Propinas (rojos)', () => {
 
       // Assert
       await expect(page.getByTestId(`tip-pay-button-${tipId}`)).toHaveCount(0);
-    }
-  );
-
-  test(
-    '[B6] a rental deleted while offline takes its tip off the Tips page',
-    bugDoc({
-      id: 'B6',
-      titulo: 'Borrar un alquiler sin conexión quita su propina de Propinas',
-      intent:
-        'Comprobar que, al eliminar sin internet un alquiler con propina, la propina deja de mostrarse igual que cuando hay conexión.',
-      steps: [
-        'Registra un alquiler pagado con propina de Bs 100 y abre Propinas (la propina aparece).',
-        'Corta la conexión y elimina el alquiler.',
-        'Vuelve a abrir Propinas todavía sin conexión.',
-      ],
-      expects: ['La propina del alquiler eliminado ya no aparece.'],
-      actual:
-        'la rama sin conexión encola el borrado de la propina pero no la quita de la tienda en memoria',
-    }),
-    async ({ page, context }) => {
-      // Arrange
-      await bootstrapAtDashboard(page);
-      await createWasherRental(page, {
-        shift: 'medio',
-        totalUsd: 0,
-        isPaid: true,
-        splits: [{ method: 'efectivo', amountBs: 0 }],
-        tip: { amountBs: 100, method: 'efectivo', paid: false },
-        customerName: `Cliente B6 ${Date.now()}`,
-      });
-      const { data } = await getSupabaseClient()
-        .from('tips')
-        .select('id,origin_id')
-        .eq('origin_type', 'rental')
-        .single();
-      await openTipsModule(page);
-      await expect(page.getByTestId(`tip-card-${data?.id}`)).toBeVisible();
-
-      // Act
-      await context.setOffline(true);
-      await deleteRental(page, data?.origin_id as string);
-      await openTipsModule(page);
-
-      // Assert
-      await expect(page.getByTestId(`tip-card-${data?.id}`)).toHaveCount(0);
-    }
-  );
-
-  test(
-    '[B3b] editing a rental with a tip and saving unchanged keeps its splits',
-    bugDoc({
-      id: 'B3b',
-      titulo:
-        'Editar y guardar sin cambios un alquiler con propina no mueve los métodos',
-      intent:
-        'Comprobar que abrir la edición de un alquiler con propina en otro método y guardar sin tocar nada deja intactos sus pagos.',
-      steps: [
-        'Registra un alquiler pagado en efectivo con propina de Bs 200 capturada en pago móvil.',
-        'Lee cómo quedó repartido el pago en la base.',
-        'Abre la edición del alquiler y pulsa guardar sin cambiar nada.',
-        'Vuelve a leer el reparto.',
-      ],
-      expects: ['Antes y después el reparto de pagos es el mismo.'],
-      actual:
-        'el formulario toma la propina como pago secundario y el guardado la suma otra vez, moviendo dinero entre efectivo y pago móvil',
-    }),
-    async ({ page }) => {
-      // Arrange
-      await bootstrapAtDashboard(page);
-      await createWasherRental(page, {
-        shift: 'medio',
-        totalUsd: 0,
-        isPaid: true,
-        splits: [{ method: 'efectivo', amountBs: 0 }],
-        tip: { amountBs: 200, method: 'pago_movil', paid: false },
-        customerName: `Cliente B3b ${Date.now()}`,
-      });
-      const { data: tip } = await getSupabaseClient()
-        .from('tips')
-        .select('origin_id')
-        .eq('origin_type', 'rental')
-        .single();
-      const rentalId = tip?.origin_id as string;
-      const snapshot = async () => {
-        const { data } = await getSupabaseClient()
-          .from('rental_payment_splits')
-          .select('payment_method,amount_bs')
-          .eq('rental_id', rentalId);
-        return (data ?? [])
-          .map((row) => ({
-            paymentMethod: row.payment_method as string,
-            amountBs: Number(row.amount_bs),
-          }))
-          .sort((a, b) => a.paymentMethod.localeCompare(b.paymentMethod));
-      };
-      const before = await snapshot();
-
-      // Act
-      await page.getByTestId(`rental-edit-${rentalId}`).click();
-      const sheet = page.getByRole('dialog');
-      await expect(sheet).toBeVisible();
-      await page.waitForTimeout(1_500); // let the tip hydrate into the form
-      await sheet.getByTestId('rental-confirm-button').click();
-      await expect(sheet).toBeHidden({ timeout: 15_000 });
-
-      // Assert
-      expect(before.map((row) => row.paymentMethod)).toEqual([
-        'efectivo',
-        'pago_movil',
-      ]);
-      expect(before.find((row) => row.paymentMethod === 'pago_movil')).toEqual({
-        paymentMethod: 'pago_movil',
-        amountBs: 200,
-      });
-      await expect.poll(snapshot, { timeout: 5_000 }).toEqual(before);
     }
   );
 });

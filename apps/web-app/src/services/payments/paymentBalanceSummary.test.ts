@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { calculatePaymentBalanceSummary } from './paymentBalanceSummary';
+import { calculateDashboardMetrics } from '@/services/DashboardMetricsService';
 import type {
+  Expense,
   PaymentBalanceTransaction,
   PrepaidOrder,
   Sale,
+  TipPayout,
   WasherRental,
 } from '@/types';
 
@@ -242,5 +245,163 @@ describe('calculatePaymentBalanceSummary', () => {
         finalTotal: -100,
       },
     ]);
+  });
+});
+
+describe('calculatePaymentBalanceSummary outflows (FIN-05)', () => {
+  const DATE = '2026-03-07';
+
+  const sale = (amountBs: number, method: Sale['paymentMethod']): Sale => ({
+    id: `sale-${method}-${amountBs}`,
+    dailyNumber: 1,
+    date: DATE,
+    items: [],
+    paymentMethod: method,
+    paymentSplits: [
+      { method, amountBs, amountUsd: amountBs / 50, exchangeRateUsed: 50 },
+    ],
+    totalBs: amountBs,
+    totalUsd: amountBs / 50,
+    exchangeRate: 50,
+    createdAt: `${DATE}T08:00:00.000Z`,
+    updatedAt: `${DATE}T08:00:00.000Z`,
+  });
+
+  const expense = (overrides: Partial<Expense>): Expense => ({
+    id: 'expense-1',
+    date: DATE,
+    description: 'Gasto',
+    amount: 30,
+    category: 'otros',
+    paymentMethod: 'efectivo',
+    createdAt: `${DATE}T09:00:00.000Z`,
+    ...overrides,
+  });
+
+  const payout = (overrides: Partial<TipPayout>): TipPayout => ({
+    id: 'tip-1',
+    originType: 'sale',
+    originId: 'sale-1',
+    tipDate: DATE,
+    amountBs: 20,
+    paidAt: `${DATE}T12:00:00.000Z`,
+    paymentMethod: 'efectivo',
+    ...overrides,
+  });
+
+  const summarize = (
+    extra: Partial<Parameters<typeof calculatePaymentBalanceSummary>[0]>
+  ) =>
+    calculatePaymentBalanceSummary({
+      date: DATE,
+      exchangeRate: 50,
+      sales: [sale(100, 'efectivo')],
+      prepaidOrders: EMPTY_PREPAID,
+      rentals: [],
+      paymentBalanceTransactions: [],
+      ...extra,
+    });
+
+  const byMethod = (
+    summary: ReturnType<typeof calculatePaymentBalanceSummary>,
+    method: string
+  ) => summary.find((row) => row.method === method);
+
+  it('subtracts the expenses of the day from the method they were paid with', () => {
+    // Arrange / Act
+    const summary = summarize({ expenses: [expense({ amount: 30 })] });
+
+    // Assert
+    expect(byMethod(summary, 'efectivo')?.originalTotal).toBe(70);
+    expect(byMethod(summary, 'efectivo')?.finalTotal).toBe(70);
+  });
+
+  it('subtracts a mixed expense per method', () => {
+    const summary = summarize({
+      sales: [sale(100, 'efectivo'), sale(80, 'pago_movil')],
+      expenses: [
+        expense({
+          amount: 50,
+          paymentSplits: [
+            { method: 'efectivo', amountBs: 30, amountUsd: 0.6 },
+            { method: 'pago_movil', amountBs: 20, amountUsd: 0.4 },
+          ],
+        }),
+      ],
+    });
+
+    expect(byMethod(summary, 'efectivo')?.finalTotal).toBe(70);
+    expect(byMethod(summary, 'pago_movil')?.finalTotal).toBe(60);
+  });
+
+  it('subtracts paid tip payouts from the method they were paid with', () => {
+    const summary = summarize({
+      tipPayouts: [payout({ amountBs: 20, paymentMethod: 'efectivo' })],
+    });
+
+    expect(byMethod(summary, 'efectivo')?.finalTotal).toBe(80);
+  });
+
+  it('ignores expenses and tip payouts of other days', () => {
+    const summary = summarize({
+      expenses: [expense({ date: '2026-03-06', amount: 30 })],
+      tipPayouts: [
+        payout({
+          tipDate: '2026-03-06',
+          paidAt: '2026-03-06T12:00:00.000Z',
+        }),
+      ],
+    });
+
+    expect(byMethod(summary, 'efectivo')?.finalTotal).toBe(100);
+  });
+
+  it('keeps applying transfers on top of the net of outflows', () => {
+    const transfer: PaymentBalanceTransaction = {
+      id: 'tx-1',
+      date: DATE,
+      operationType: 'equilibrio',
+      amount: 40,
+      amountBs: 40,
+      amountUsd: 0.8,
+      amountOutBs: 40,
+      amountInBs: 40,
+      fromMethod: 'efectivo',
+      toMethod: 'pago_movil',
+      createdAt: `${DATE}T10:00:00.000Z`,
+      updatedAt: `${DATE}T10:00:00.000Z`,
+    } as PaymentBalanceTransaction;
+
+    const summary = summarize({
+      expenses: [expense({ amount: 30 })],
+      paymentBalanceTransactions: [transfer],
+    });
+
+    expect(byMethod(summary, 'efectivo')?.originalTotal).toBe(70);
+    expect(byMethod(summary, 'efectivo')?.adjustments).toBe(-40);
+    expect(byMethod(summary, 'efectivo')?.finalTotal).toBe(30);
+    expect(byMethod(summary, 'pago_movil')?.finalTotal).toBe(40);
+  });
+
+  it('matches the dashboard per-method totals for the same data', () => {
+    const sales = [sale(100, 'efectivo'), sale(80, 'pago_movil')];
+    const expenses = [expense({ amount: 30 })];
+    const tipPayouts = [payout({ amountBs: 20, paymentMethod: 'pago_movil' })];
+
+    const summary = summarize({ sales, expenses, tipPayouts });
+    const dashboard = calculateDashboardMetrics({
+      selectedDate: DATE,
+      exchangeRate: 50,
+      sales,
+      rentals: [],
+      expenses,
+      prepaidOrders: EMPTY_PREPAID,
+      paymentBalanceTransactions: [],
+      tipPayouts,
+    }).day.methodTotalsBs;
+
+    for (const row of summary) {
+      expect(row.finalTotal).toBe(dashboard[row.method]);
+    }
   });
 });

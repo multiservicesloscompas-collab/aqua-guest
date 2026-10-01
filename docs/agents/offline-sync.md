@@ -41,8 +41,8 @@ Any change to queue semantics must work in both processors, or explicitly state 
 
 `src/offline/coverageMatrix.ts` declares, per table, whether it is `offline-mutation-enabled` or `read-sync-only`, its reconcile requirement, and its dependency group. `read-sync-only` tables are only refreshed on reconnect.
 
-- Mutation-enabled: customers, sales, sale_payment_splits, washer_rentals, rental_payment_splits, prepaid_orders, expenses, expense_payment_splits, exchange_rates, liter_pricing, washing_machines, payment_balance_transactions.
-- Read-sync-only: companies, user_profiles, products.
+- Mutation-enabled: customers, products (price update only, `enqueueOfflineProductPriceUpdate`), sales, sale_payment_splits, washer_rentals, rental_payment_splits, prepaid_orders, expenses, expense_payment_splits, exchange_rates, liter_pricing, washing_machines, payment_balance_transactions.
+- Read-sync-only: companies, user_profiles.
 - `tips` is enqueued (`rentalsEnqueue.ts`, `salesEnqueue.ts`) but is not listed in the matrix. Add it there if you touch tip queueing.
 
 ## Rules For Changes

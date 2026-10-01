@@ -19,20 +19,6 @@ export const BUG_KNOWLEDGE = {
     where:
       'pages/RentalsPage/hooks/useEditRentalFormState.ts:39-60 · EditRentalSheet.tsx',
   },
-  B3: {
-    cause:
-      'Los pagos guardados ya incluyen la propina, pero el formulario los hidrata sin restarla y al guardar la tienda la suma otra vez.',
-    fix: 'Pasar tipAmountBs y tipPaymentMethod a la hidratación, restar la propina del pago que coincide antes de armar el formulario y rehidratar cuando la propina termine de cargar. No cambiar el contrato de la tienda.',
-    where:
-      'services/payments/paymentSplitFormHydration.ts:35-70 · components/ventas/useEditSaleSheetViewModel.ts · mergeTipIntoPaymentSplits (transactionTotals.ts:101)',
-  },
-  B3b: {
-    cause:
-      'Igual que B3 pero en alquileres: los pagos guardados ya incluyen la propina, el formulario de edición los hidrata sin restarla y al guardar la tienda la suma otra vez.',
-    fix: 'Aplicar la misma hidratación con propina de B3 a alquileres (resolveRentalSplitState y useEditRentalTipHydration) y rehidratar al cargar la propina. Depende de B2 para que el formulario no se reinicie.',
-    where:
-      'pages/RentalsPage/hooks/editRentalSheetViewModel.helpers.ts:49-58 · useEditRentalTipHydration.ts · store/useRentalStore.actions.update.ts:42-66',
-  },
   B4: {
     cause:
       'Los ayudantes de atribución solo confían en los pagos guardados cuando el pago es mixto (2+ métodos distintos); con un solo pago recalculan totalUsd × tasa de hoy.',
@@ -40,25 +26,12 @@ export const BUG_KNOWLEDGE = {
     where:
       'services/payments/paymentSplitValidity.ts:13 · paymentSplitAttribution.ts:61-98',
   },
-  B6: {
-    cause:
-      'La rama sin conexión de deleteRental encola el borrado de la propina pero no la quita de la tienda en memoria; la rama con conexión sí llama removeTipByOrigin.',
-    fix: "Llamar useTipStore.getState().removeTipByOrigin('rental', id) también en la rama sin conexión (y revisar si deleteSale tiene la misma asimetría).",
-    where: 'store/useRentalStore.actions.ts:164-187',
-  },
   B7: {
     cause:
       "La edición decide el precio del turno Completo con paymentMethod === 'efectivo' y la creación usa 'divisa'; la regla está duplicada y al revés. Es solo de visualización: el monto que se cobra es correcto.",
     fix: 'Que ambos mapShiftOptions llamen a calculateRentalPrice(key, paymentMethod, 0) y borrar la condición duplicada.',
     where:
       'pages/RentalsPage/hooks/editRentalSheetViewModel.helpers.ts:112 · rentalSheetViewModel.helpers.ts:78 · utils/rentalPricing.ts:9',
-  },
-  B8: {
-    cause:
-      'setProductPrice sale temprano cuando no hay conexión y no encola nada; además products es de solo lectura en la matriz offline.',
-    fix: 'Encolar un UPDATE offline de products (ver docs/agents/offline-sync.md, hay que habilitar mutaciones en coverageMatrix) y mostrar error si la fila del producto no existe. Confirmar antes con datos de producción.',
-    where:
-      'store/useConfigStore.ts:222 setProductPrice · offline/coverageMatrix.ts · pages/WaterPricingConfigPage.tsx:70',
   },
   B9: {
     cause:
@@ -100,24 +73,12 @@ export const BUG_KNOWLEDGE = {
     where:
       'pages/TransactionsSummaryPage/services/buildTransactionsSummaryItems.ts:262 · TransactionsSummaryPage.tsx:68',
   },
-  'FIN-03': {
-    cause:
-      'El resumen se calcula en un useMemo sin las dependencias de estado, así que no se recalcula al registrar una transferencia.',
-    fix: 'Agregar al useMemo las dependencias reales (transferencias, ventas, alquileres, egresos) o derivar el resumen sin memo.',
-    where: 'usePaymentBalancePageViewModel.ts:56',
-  },
   'FIN-04': {
     cause:
       'Equilibrio agrupa el alquiler por `date || datePaid` (fecha del servicio) mientras el dashboard usa datePaid (fecha de pago).',
     fix: 'Usar datePaid en Equilibrio, como DashboardMetricsService.',
     where:
       'paymentBalanceSummary.ts:56-59 · DashboardMetricsService.ts:113 (referencia)',
-  },
-  'FIN-05': {
-    cause:
-      'El resumen de Equilibrio no resta egresos ni pagos de propina, que sí descuenta la tarjeta de Efectivo del dashboard.',
-    fix: 'Restar egresos y pagos de propina por método en el resumen, reutilizando el cálculo que ya usa la tarjeta.',
-    where: 'paymentBalanceSummary.ts:17-24',
   },
   'FIN-06': {
     cause:
@@ -132,23 +93,11 @@ export const BUG_KNOWLEDGE = {
     fix: 'Filtrar los egresos por el rango de fechas del período antes de sumarlos.',
     where: 'pages/EgresosMetricsPage/index.tsx:14-19',
   },
-  'FIN-10': {
-    cause: 'El formulario solo valida que el monto no esté vacío (!amount).',
-    fix: 'Rechazar montos menores o iguales a 0 (y no numéricos) antes de guardar, mostrando el error.',
-    where: 'pages/ExpensesPage.tsx:118-121',
-  },
   'FIN-11': {
     cause:
       'La lógica del formulario de equilibrio no valida el saldo disponible ni que la tasa sea mayor a 0 (con tasa 0 el cálculo da Infinity).',
     fix: 'Bloquear la transferencia si el monto supera el saldo del método de origen o si la tasa no es positiva.',
     where: 'paymentBalanceFormLogic.ts:55-79 (líneas 93 y 97 para la tasa)',
-  },
-  'FIN-12': {
-    cause:
-      'useDashboardData carga las ventas de todo el mes pero no los egresos; la tienda de egresos solo tiene los días ya visitados en Egresos.',
-    fix: 'Cargar los egresos del mes completo en los mismos cargadores de rango del dashboard (relacionado con C4 y C6 del audit).',
-    where:
-      'useDashboardData.ts (cargadores por rango) · caché de la tienda de egresos',
   },
 } as const satisfies Record<string, BugKnowledge>;
 

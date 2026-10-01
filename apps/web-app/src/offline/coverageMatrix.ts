@@ -35,8 +35,8 @@ export const OFFLINE_COVERAGE_MATRIX: OfflineTableCoveragePolicy[] = [
   {
     table: 'products',
     domain: 'water-sales/catalog',
-    mutationContract: 'read-sync-only',
-    queueReconcileRequirement: 'refresh-on-reconnect',
+    mutationContract: 'offline-mutation-enabled',
+    queueReconcileRequirement: 'queue-create-update-delete',
     dependencyGroup: 'product-root',
   },
   {

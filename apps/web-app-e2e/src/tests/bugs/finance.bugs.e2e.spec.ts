@@ -2,14 +2,12 @@ import { expect, test, type Page } from '@playwright/test';
 import { bugDoc } from '../../support/bugs/ficha';
 import { getSupabaseClient } from '../../support/supabaseClient';
 import {
+  balanceAmount,
   createBalanceTransfer,
   openPaymentBalancePage,
 } from '../../support/drivers/balanceDriver';
 import { captureDashboardSnapshot } from '../../support/drivers/dashboardDriver';
-import {
-  createExpense,
-  openExpensesModule,
-} from '../../support/drivers/expenseDriver';
+import { openExpensesModule } from '../../support/drivers/expenseDriver';
 import { createWaterSale } from '../../support/drivers/waterSaleDriver';
 import { parseUniversalMoney } from '../../support/money';
 import {
@@ -48,27 +46,6 @@ async function transactionsTotal(
     .first()
     .innerText();
   return parseUniversalMoney(text);
-}
-
-async function balanceAmount(
-  page: Page,
-  label: string,
-  field: 'Original' | 'final'
-): Promise<number> {
-  const row = page
-    .locator('div.rounded-xl.border', {
-      has: page.getByText(label, { exact: true }),
-    })
-    .first();
-  await expect(row).toBeVisible();
-  if (field === 'Original') {
-    return parseUniversalMoney(
-      await row.locator('p', { hasText: 'Original:' }).first().innerText()
-    );
-  }
-  return parseUniversalMoney(
-    await row.locator('p.font-bold').first().innerText()
-  );
 }
 
 async function seedPaidRentalWithSplit(opts: {
@@ -200,47 +177,6 @@ test.describe('FIN · consistencia financiera (rojos)', () => {
   );
 
   test(
-    '[FIN-03] el resumen de Equilibrio se actualiza tras registrar una transferencia',
-    bugDoc({
-      id: 'FIN-03',
-      titulo: 'El resumen de Equilibrio se actualiza tras una transferencia',
-      intent:
-        'Comprobar que el total final de Efectivo en Equilibrio baja apenas se registra una transferencia.',
-      steps: [
-        'Registra una venta de Bs 100 en efectivo.',
-        'Abre Equilibrio y lee el total final de Efectivo.',
-        'Transfiere Bs 50 de efectivo a pago móvil.',
-      ],
-      expects: ['El total final de Efectivo pasa de Bs 100 a Bs 50.'],
-      actual: 'el resumen no se recalcula y sigue en Bs 100',
-    }),
-    async ({ page }) => {
-      await gotoDashboard(page);
-      await createWaterSale(page, {
-        basePriceBs: 100,
-        splits: [{ method: 'efectivo', amountBs: 100 }],
-        noteMarker: 'E2E-BUG-FIN03',
-      });
-      await openPaymentBalancePage(page);
-      const before = await balanceAmount(page, 'Efectivo', 'final');
-
-      await createBalanceTransfer(page, {
-        operationType: 'equilibrio',
-        fromMethod: 'efectivo',
-        toMethod: 'pago_movil',
-        amountOutBs: 50,
-        amountInBs: 50,
-      });
-
-      await expect
-        .poll(() => balanceAmount(page, 'Efectivo', 'final'), {
-          timeout: 5_000,
-        })
-        .toBeCloseTo(before - 50, 1);
-    }
-  );
-
-  test(
     '[FIN-04] un alquiler pagado mañana no aparece hoy en Equilibrio',
     bugDoc({
       id: 'FIN-04',
@@ -268,43 +204,6 @@ test.describe('FIN · consistencia financiera (rojos)', () => {
       const original = await balanceAmount(page, 'Efectivo', 'Original');
 
       expect(original).toBe(0);
-    }
-  );
-
-  test(
-    '[FIN-05] el total final de Equilibrio descuenta egresos igual que el Dashboard',
-    bugDoc({
-      id: 'FIN-05',
-      titulo:
-        'El total final de Equilibrio descuenta egresos como el dashboard',
-      intent:
-        'Comprobar que Equilibrio y la tarjeta de Efectivo del dashboard dan el mismo saldo.',
-      steps: [
-        'Registra una venta de Bs 100 en efectivo y un egreso de Bs 30 en efectivo.',
-        'Lee la tarjeta de Efectivo del dashboard y el total final de Equilibrio.',
-      ],
-      expects: ['Equilibrio muestra Bs 70, igual que la tarjeta de Efectivo.'],
-      actual: 'Equilibrio ignora egresos y pagos de propina y muestra Bs 100',
-    }),
-    async ({ page }) => {
-      await gotoDashboard(page);
-      await createWaterSale(page, {
-        basePriceBs: 100,
-        splits: [{ method: 'efectivo', amountBs: 100 }],
-        noteMarker: 'E2E-BUG-FIN05',
-      });
-      await createExpense(page, {
-        description: 'E2E-BUG gasto',
-        amountBs: 30,
-        category: 'otros',
-        splits: [{ method: 'efectivo', amountBs: 30 }],
-      });
-      const snapshot = await captureDashboardSnapshot(page);
-
-      await openPaymentBalancePage(page);
-      const balanceFinal = await balanceAmount(page, 'Efectivo', 'final');
-
-      expect(balanceFinal).toBeCloseTo(snapshot.methodTotals.efectivo, 1);
     }
   );
 
@@ -371,40 +270,6 @@ test.describe('FIN · egresos y validaciones (rojos)', () => {
   );
 
   test(
-    '[FIN-10] un gasto con monto 0 no se registra',
-    bugDoc({
-      id: 'FIN-10',
-      titulo: 'Un egreso de monto 0 no se registra',
-      intent:
-        'Comprobar que el formulario no permite guardar un egreso de Bs 0.',
-      steps: [
-        'Abre Egresos, escribe monto 0 y una descripción.',
-        'Intenta guardar.',
-      ],
-      expects: ['No se crea ningún egreso.'],
-      actual: 'solo se valida que el campo no esté vacío y se crea 1 egreso',
-    }),
-    async ({ page }) => {
-      await gotoDashboard(page);
-      await page.getByLabel('Abrir más opciones').click();
-      await page.getByLabel('Ir a Egresos').click();
-      await page.getByTestId('expenses-add-fab').click();
-      await page.locator('input[type="number"]').first().fill('0');
-      await page.getByPlaceholder('Ej: Compra de insumos').fill('E2E-BUG cero');
-
-      const submit = page.getByTestId('expense-submit-button');
-      if (await submit.isEnabled()) await submit.click();
-      await page.waitForTimeout(1_500);
-
-      const { count } = await getSupabaseClient()
-        .from('expenses')
-        .select('id', { count: 'exact', head: true })
-        .eq('description', 'E2E-BUG cero');
-      expect(count).toBe(0);
-    }
-  );
-
-  test(
     '[FIN-11] una transferencia mayor al saldo disponible se bloquea',
     bugDoc({
       id: 'FIN-11',
@@ -436,42 +301,6 @@ test.describe('FIN · egresos y validaciones (rojos)', () => {
         .from('payment_balance_transactions')
         .select('id', { count: 'exact', head: true });
       expect(count).toBe(0);
-    }
-  );
-
-  test(
-    '[FIN-12] Neto Mes includes expenses of earlier days of the month',
-    bugDoc({
-      id: 'FIN-12',
-      titulo: 'El neto del mes descuenta los egresos de días anteriores',
-      intent:
-        'Comprobar que, al abrir la app, «Neto Mes» resta los egresos de todo el mes y no solo los de los días ya visitados.',
-      steps: [
-        'Siembra una venta de Bs 2000 y un egreso de Bs 500 de ayer (mismo mes).',
-        'Abre el dashboard de hoy sin visitar antes ningún otro día.',
-      ],
-      expects: ['Acumulado Mes muestra Bs 2000 y Neto Mes muestra Bs 1500.'],
-      actual:
-        'el dashboard carga las ventas de todo el mes pero no los egresos, así que Neto Mes muestra Bs 2000 hasta que se visita ese día en Egresos',
-    }),
-    async ({ page }) => {
-      // Arrange
-      const today = todayVe();
-      test.skip(today.endsWith('-01'), 'Yesterday falls in the previous month');
-      const yesterday = addDays(today, -1);
-      await seedSales([
-        { date: yesterday, dailyNumber: 1, totalBs: 2000, exchangeRate: 1000 },
-      ]);
-      await seedExpense({ date: yesterday, amount: 500 });
-
-      // Act
-      await gotoDashboard(page);
-      await page.waitForTimeout(2_000);
-      const snapshot = await captureDashboardSnapshot(page);
-
-      // Assert
-      expect(snapshot.mtdIncomeBs).toBe(2000);
-      expect(snapshot.mtdNetBs).toBe(1500);
     }
   );
 });

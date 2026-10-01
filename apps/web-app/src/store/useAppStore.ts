@@ -25,6 +25,12 @@ import { useTipStore } from './useTipStore';
 interface AppState {
   // Estado UI
   selectedDate: string;
+  /**
+   * Timestamp of the last finished global sync. `loadFromSupabase` replaces
+   * sales, tips and expenses, so views that loaded a date range earlier reload
+   * it when this changes (FIN-12). Not persisted.
+   */
+  coreLoadedAt: number;
 
   // Utilidades
   setSelectedDate: (date: string) => void;
@@ -37,6 +43,7 @@ export const useAppStore = create<AppState>()(
   persist(
     (set) => ({
       selectedDate: today,
+      coreLoadedAt: 0,
 
       setSelectedDate: (date) => set({ selectedDate: date }),
 
@@ -118,11 +125,14 @@ export const useAppStore = create<AppState>()(
             .setPaymentBalanceData(paymentBalanceTransactions);
         } catch (err) {
           console.error('Error loading from Supabase', err);
+        } finally {
+          set({ coreLoadedAt: Date.now() });
         }
       },
     }),
     {
       name: 'aquagest-core-storage',
+      partialize: (state) => ({ selectedDate: state.selectedDate }),
       onRehydrateStorage: () => (state) => {
         if (state) {
           state.selectedDate = getVenezuelaDate();

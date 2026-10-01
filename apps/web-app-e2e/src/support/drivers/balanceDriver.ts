@@ -1,4 +1,5 @@
 import { expect, type Page } from '@playwright/test';
+import { parseUniversalMoney } from '../money';
 import { openDashboardFromBottomNav } from '../uiNavigation';
 import type {
   BalanceTransferInput,
@@ -91,4 +92,26 @@ export async function deleteBalanceTransfer(page: Page): Promise<void> {
   await trash.first().click();
 
   await expect(trash).toHaveCount(0, { timeout: 10_000 });
+}
+
+/** Reads the Original or final amount of a method in the Equilibrio summary. */
+export async function balanceAmount(
+  page: Page,
+  label: string,
+  field: 'Original' | 'final'
+): Promise<number> {
+  const row = page
+    .locator('div.rounded-xl.border', {
+      has: page.getByText(label, { exact: true }),
+    })
+    .first();
+  await expect(row).toBeVisible();
+  if (field === 'Original') {
+    return parseUniversalMoney(
+      await row.locator('p', { hasText: 'Original:' }).first().innerText()
+    );
+  }
+  return parseUniversalMoney(
+    await row.locator('p.font-bold').first().innerText()
+  );
 }

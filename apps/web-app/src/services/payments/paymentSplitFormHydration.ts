@@ -1,11 +1,17 @@
 import type { PaymentMethod } from '@/types';
 import type { PaymentSplit } from '@aqua-guest/domain';
+import { removeTipFromPaymentSplits } from '@/services/transactions/transactionTotals';
 import { hasValidMixedPaymentSplits } from './paymentSplitValidity';
 
 interface ResolveSplitFormHydrationInput {
   paymentMethod: PaymentMethod;
   paymentSplits?: readonly PaymentSplit[];
   totalBs: number;
+  /**
+   * Tip already stored inside `paymentSplits` (on its capture method). Edit
+   * forms work with principal-only splits, so it is taken out before hydrating.
+   */
+  tip?: { amountBs: number; paymentMethod: PaymentMethod };
 }
 
 export interface SplitFormHydrationState {
@@ -35,7 +41,18 @@ function toAmountInput(amountBs: number): string {
 export function resolveSplitFormHydrationState(
   input: ResolveSplitFormHydrationInput
 ): SplitFormHydrationState {
-  const { paymentMethod, paymentSplits } = input;
+  const { tip } = input;
+  const paymentSplits = tip
+    ? removeTipFromPaymentSplits({
+        paymentSplits: input.paymentSplits,
+        tipAmountBs: tip.amountBs,
+        tipPaymentMethod: tip.paymentMethod,
+      })
+    : input.paymentSplits;
+  const paymentMethod =
+    tip && paymentSplits?.length === 1
+      ? paymentSplits[0].method
+      : input.paymentMethod;
 
   if (hasValidMixedPaymentSplits(paymentSplits)) {
     const sortedSplits = sortSplitsByPriority(paymentSplits);

@@ -23,6 +23,7 @@ import {
   applyOfflineExchangeRateHistory,
   enqueueOfflineExchangeRateUpsert,
   enqueueOfflineLiterPricingReplace,
+  enqueueOfflineProductPriceUpdate,
 } from '@/offline/enqueue/configEnqueue';
 
 interface ConfigState {
@@ -223,6 +224,7 @@ export const useConfigStore = create<ConfigState>()(
         set({ products: updatedProducts });
 
         if (!window.navigator.onLine) {
+          enqueueOfflineProductPriceUpdate({ productId, price });
           return;
         }
 

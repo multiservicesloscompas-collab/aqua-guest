@@ -156,3 +156,49 @@ export function mergeTipIntoPaymentSplits(
     },
   ];
 }
+
+interface RemoveTipFromPaymentSplitsInput {
+  paymentSplits: readonly PaymentSplit[] | undefined;
+  tipAmountBs: number;
+  tipPaymentMethod: PaymentMethod;
+}
+
+const MIN_SPLIT_AMOUNT_BS = 0.01;
+
+/**
+ * Inverse of `mergeTipIntoPaymentSplits`: stored splits include the tip on its
+ * capture method, this returns the principal-only splits (what the customer
+ * owes without the tip), which is what edit forms and update actions work with.
+ */
+export function removeTipFromPaymentSplits(
+  input: RemoveTipFromPaymentSplitsInput
+): PaymentSplit[] {
+  const safeTipBs = toSafePositiveAmount(input.tipAmountBs);
+  const splits = (input.paymentSplits ?? []).map((split) => ({ ...split }));
+
+  if (!(safeTipBs > 0)) {
+    return splits;
+  }
+
+  return splits.flatMap((split) => {
+    if (split.method !== input.tipPaymentMethod) {
+      return [split];
+    }
+
+    const remainingBs = split.amountBs - safeTipBs;
+    if (remainingBs <= MIN_SPLIT_AMOUNT_BS) {
+      return [];
+    }
+
+    return [
+      {
+        ...split,
+        amountBs: remainingBs,
+        amountUsd:
+          split.amountUsd !== undefined && split.amountBs > 0
+            ? (split.amountUsd * remainingBs) / split.amountBs
+            : split.amountUsd,
+      },
+    ];
+  });
+}

@@ -81,4 +81,28 @@ describe('useConfigStore offline queueing', () => {
     );
     expect(queue.some((item) => item.type === 'DELETE')).toBe(true);
   });
+
+  it('queues the product price update without calling supabase when offline (B8)', async () => {
+    // Arrange
+    useConfigStore.setState({
+      products: [
+        {
+          id: 'product-1',
+          name: 'Lavado profundo',
+          defaultPrice: 1800,
+        },
+      ] as ReturnType<typeof useConfigStore.getState>['products'],
+    });
+
+    // Act
+    await useConfigStore.getState().setProductPrice('product-1', 2500);
+
+    // Assert
+    const queue = useSyncStore.getState().queue;
+    expect(queue).toHaveLength(1);
+    expect(queue[0].type).toBe('UPDATE');
+    expect(queue[0].table).toBe('products');
+    expect(queue[0].payload).toEqual({ id: 'product-1', default_price: 2500 });
+    expect(useConfigStore.getState().products[0].defaultPrice).toBe(2500);
+  });
 });

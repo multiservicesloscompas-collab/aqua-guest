@@ -27,6 +27,7 @@ import {
   PaymentMethodLabels,
 } from '@/types';
 import { MixedPaymentCard } from '@/components/payments/MixedPaymentCard';
+import { isValidExpenseAmount } from '@/services/expenses/expenseAmount';
 import { cn } from '@/lib/utils';
 
 interface ExpenseSheetFormProps {
@@ -217,7 +218,7 @@ export function ExpenseSheetForm({
       {/* Botón de Submit */}
       <Button
         onClick={onSubmit}
-        disabled={!description || !amount || isSaving}
+        disabled={!description || !isValidExpenseAmount(amount) || isSaving}
         data-testid="expense-submit-button"
         className="w-full h-14 text-base font-bold bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-xl mt-4"
       >

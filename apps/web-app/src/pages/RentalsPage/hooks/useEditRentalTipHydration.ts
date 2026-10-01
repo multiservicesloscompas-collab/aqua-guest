@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTipStore } from '@/store/useTipStore';
 import type { WasherRental } from '@/types';
+import type { Tip } from '@/types/tips';
 import type { HydrateTipCaptureInput } from './useTipCaptureState';
 import {
   createTipHydrationController,
@@ -16,12 +17,15 @@ interface UseEditRentalTipHydrationParams {
   open: boolean;
   rental: WasherRental | null;
   tipCapture: TipCaptureApi;
+  /** Called with the persisted tip each time it is hydrated into the form. */
+  onTipHydrated?: (tip: Tip) => void;
 }
 
 export function useEditRentalTipHydration({
   open,
   rental,
   tipCapture,
+  onTipHydrated,
 }: UseEditRentalTipHydrationParams) {
   const { tips, loadTipsByDateRange } = useTipStore();
   const [controller] = useState(() => createTipHydrationController());
@@ -47,6 +51,7 @@ export function useEditRentalTipHydration({
         paymentMethod: cachedTip.capturePaymentMethod,
         notes: cachedTip.notes,
       });
+      onTipHydrated?.(cachedTip);
       return;
     }
 
@@ -74,6 +79,7 @@ export function useEditRentalTipHydration({
             paymentMethod: linkedTip.capturePaymentMethod,
             notes: linkedTip.notes,
           });
+          onTipHydrated?.(linkedTip);
           return;
         }
 
@@ -91,6 +97,7 @@ export function useEditRentalTipHydration({
     controller,
     hydrateTipCapture,
     loadTipsByDateRange,
+    onTipHydrated,
     open,
     rental,
     resetTipCapture,

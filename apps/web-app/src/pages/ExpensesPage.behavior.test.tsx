@@ -150,6 +150,9 @@ vi.mock('./ExpensesPage/components/ExpensesSheet', () => ({
       <button type="button" onClick={() => onAmountChange('-100')}>
         set-amount-invalid
       </button>
+      <button type="button" onClick={() => onAmountChange('0')}>
+        set-amount-zero
+      </button>
       <button type="button" onClick={() => onPaymentMethodChange('efectivo')}>
         set-primary-cash
       </button>
@@ -213,6 +216,24 @@ describe('ExpensesPage mixed payment submit behavior', () => {
       expect(mocks.toastError).toHaveBeenCalledWith(
         expect.stringContaining('Debe registrar al menos un método de pago.')
       );
+    });
+    expect(mocks.addExpense).not.toHaveBeenCalled();
+    expect(mocks.updateExpense).not.toHaveBeenCalled();
+  });
+
+  it('blocks saving an expense with amount 0 (FIN-10)', async () => {
+    // Arrange
+    const user = userEvent.setup();
+    render(<ExpensesPage autoOpenAdd={true} />);
+
+    // Act
+    await user.click(screen.getByRole('button', { name: 'set-description' }));
+    await user.click(screen.getByRole('button', { name: 'set-amount-zero' }));
+    await user.click(screen.getByRole('button', { name: 'submit-sheet' }));
+
+    // Assert
+    await waitFor(() => {
+      expect(mocks.toastError).toHaveBeenCalledWith('Monto inválido');
     });
     expect(mocks.addExpense).not.toHaveBeenCalled();
     expect(mocks.updateExpense).not.toHaveBeenCalled();

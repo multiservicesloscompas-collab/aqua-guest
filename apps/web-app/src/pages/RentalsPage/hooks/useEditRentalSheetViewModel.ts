@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { useCustomerStore } from '@/store/useCustomerStore';
 import { useRentalStore } from '@/store/useRentalStore';
@@ -7,6 +7,7 @@ import { useConfigStore } from '@/store/useConfigStore';
 import { getVenezuelaDate } from '@/services/DateService';
 import { generateTimeSlots } from '@/utils/rentalSchedule';
 import { RentalStatus, RentalStatusLabels, WasherRental } from '@/types';
+import type { Tip } from '@/types/tips';
 import { useEditRentalFormState } from './useEditRentalFormState';
 import {
   getEditRentalValidationError,
@@ -19,6 +20,7 @@ import {
   getPaidDateLabel,
   mapMachineItems,
   mapShiftOptions,
+  resolveRentalSplitState,
 } from './editRentalSheetViewModel.helpers';
 import { useEditRentalSheetComputed } from './useEditRentalSheetComputed';
 import { useEditRentalTipHydration } from './useEditRentalTipHydration';
@@ -57,6 +59,7 @@ export function useEditRentalSheetViewModel({
     selectedCustomerId,
     setSelectedCustomerId,
     paymentMethod,
+    setPaymentMethod,
     split2Method,
     setSplit2Method,
     split1Amount,
@@ -74,10 +77,34 @@ export function useEditRentalSheetViewModel({
 
   const [isLoading, setIsLoading] = useState(false);
 
+  // Stored splits include the tip; the form edits the principal only (B3b).
+  const hydrateSplitsWithoutTip = useCallback(
+    (tip: Tip) => {
+      if (!rental) return;
+      const splitState = resolveRentalSplitState(rental, exchangeRate, {
+        amountBs: tip.amountBs,
+        paymentMethod: tip.capturePaymentMethod,
+      });
+      setPaymentMethod(splitState.paymentMethod || 'efectivo');
+      setSplit1Amount(splitState.split1Amount);
+      setSplit2Method(splitState.split2Method);
+      setIsMixedPayment(splitState.isMixedPayment);
+    },
+    [
+      exchangeRate,
+      rental,
+      setIsMixedPayment,
+      setPaymentMethod,
+      setSplit1Amount,
+      setSplit2Method,
+    ]
+  );
+
   useEditRentalTipHydration({
     open,
     rental,
     tipCapture,
+    onTipHydrated: hydrateSplitsWithoutTip,
   });
 
   const timeSlots = useMemo(() => generateTimeSlots(), []);
@@ -168,14 +195,14 @@ export function useEditRentalSheetViewModel({
     setIsLoading(true);
     try {
       const tipInput = tipCapture.buildTipInput();
-      
+
       // We pass the Principal Splits and Subtotal to submitEditRental.
       // The store (updateRentalAction) will handle merging the tip.
       await submitEditRental({
         rentalId: rental.id,
         paymentSplits: paymentSplits, // Principal splits
-        totalBs: subtotalBs,          // Subtotal Bs (principal)
-        totalUsd: subtotalUsd,        // Subtotal Usd (principal)
+        totalBs: subtotalBs, // Subtotal Bs (principal)
+        totalUsd: subtotalUsd, // Subtotal Usd (principal)
         updates: {
           machineId,
           shift,
@@ -183,7 +210,7 @@ export function useEditRentalSheetViewModel({
           pickupTime: pickupInfo.pickupTime,
           pickupDate: pickupInfo.pickupDate,
           deliveryFee,
-          totalUsd: subtotalUsd,      // Principal Usd
+          totalUsd: subtotalUsd, // Principal Usd
           paymentMethod,
           paymentSplits: paymentSplits,
           selectedCustomerId,
