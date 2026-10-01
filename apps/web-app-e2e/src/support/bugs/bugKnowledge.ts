@@ -19,13 +19,6 @@ export const BUG_KNOWLEDGE = {
     where:
       'pages/RentalsPage/hooks/useEditRentalFormState.ts:39-60 · EditRentalSheet.tsx',
   },
-  B3: {
-    cause:
-      'Los pagos guardados ya incluyen la propina, pero el formulario los hidrata sin restarla y al guardar la tienda la suma otra vez.',
-    fix: 'Pasar tipAmountBs y tipPaymentMethod a la hidratación, restar la propina del pago que coincide antes de armar el formulario y rehidratar cuando la propina termine de cargar. No cambiar el contrato de la tienda.',
-    where:
-      'services/payments/paymentSplitFormHydration.ts:35-70 · components/ventas/useEditSaleSheetViewModel.ts · mergeTipIntoPaymentSplits (transactionTotals.ts:101)',
-  },
   B3b: {
     cause:
       'Igual que B3 pero en alquileres: los pagos guardados ya incluyen la propina, el formulario de edición los hidrata sin restarla y al guardar la tienda la suma otra vez.',

@@ -69,4 +69,56 @@ describe('resolveSplitFormHydrationState', () => {
     expect(salesState.split2Method).toBe('divisa');
     expect(salesState.isMixedPayment).toBe(true);
   });
+
+  it('hydrates a sale paid in efectivo with a pago movil tip as non-mixed efectivo (B3)', () => {
+    // Arrange: stored splits include the tip on its capture method
+    const input = {
+      paymentMethod: 'efectivo' as PaymentMethod,
+      paymentSplits: [
+        { method: 'efectivo' as const, amountBs: 1000, amountUsd: 20 },
+        { method: 'pago_movil' as const, amountBs: 200, amountUsd: 4 },
+      ],
+      totalBs: 1200,
+      tip: { amountBs: 200, paymentMethod: 'pago_movil' as PaymentMethod },
+    };
+
+    // Act
+    const state = resolveSplitFormHydrationState(input);
+
+    // Assert
+    expect(state.isMixedPayment).toBe(false);
+    expect(state.paymentMethod).toBe('efectivo');
+    expect(state.split1Amount).toBe('');
+  });
+
+  it('keeps a mixed principal mixed after removing the tip (B3)', () => {
+    const state = resolveSplitFormHydrationState({
+      paymentMethod: 'efectivo',
+      paymentSplits: [
+        { method: 'efectivo', amountBs: 700, amountUsd: 14 },
+        { method: 'pago_movil', amountBs: 500, amountUsd: 10 },
+      ],
+      totalBs: 1200,
+      tip: { amountBs: 200, paymentMethod: 'pago_movil' },
+    });
+
+    expect(state.isMixedPayment).toBe(true);
+    expect(state.paymentMethod).toBe('efectivo');
+    expect(state.split1Amount).toBe('300');
+    expect(state.split2Method).toBe('pago_movil');
+  });
+
+  it('does not change the result when no tip is given', () => {
+    const state = resolveSplitFormHydrationState({
+      paymentMethod: 'efectivo',
+      paymentSplits: [
+        { method: 'efectivo', amountBs: 1000, amountUsd: 20 },
+        { method: 'pago_movil', amountBs: 200, amountUsd: 4 },
+      ],
+      totalBs: 1200,
+    });
+
+    expect(state.isMixedPayment).toBe(true);
+    expect(state.split1Amount).toBe('200');
+  });
 });

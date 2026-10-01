@@ -98,6 +98,23 @@ export function useEditSaleSheetViewModel({
       setTipPaymentMethod(tipHydration.paymentMethod);
       setTipNotes(tipHydration.notes);
       setSubtotalBs(Math.max(0, sale.totalBs - hydratedTipAmountBs).toString());
+
+      if (tipHydration.enabled) {
+        // Stored splits include the tip; the form edits the principal only.
+        const splitState = resolveSplitFormHydrationState({
+          paymentMethod: sale.paymentMethod,
+          paymentSplits: sale.paymentSplits,
+          totalBs: sale.totalBs,
+          tip: {
+            amountBs: hydratedTipAmountBs,
+            paymentMethod: tipHydration.paymentMethod,
+          },
+        });
+        setIsMixedPayment(splitState.isMixedPayment);
+        setPaymentMethod(splitState.paymentMethod);
+        setSplit1Amount(splitState.split1Amount);
+        setSplit2Method(splitState.split2Method);
+      }
     };
 
     const cachedTip = tips.find(

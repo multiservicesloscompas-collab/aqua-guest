@@ -5,6 +5,7 @@ import {
   deriveRentalTipAmountBs,
   deriveSaleTipAmountBs,
   mergeTipIntoPaymentSplits,
+  removeTipFromPaymentSplits,
 } from './transactionTotals';
 
 describe('transactionTotals invariants', () => {
@@ -94,5 +95,95 @@ describe('transactionTotals invariants', () => {
         exchangeRateUsed: 50,
       },
     ]);
+  });
+});
+
+describe('removeTipFromPaymentSplits (inverse of mergeTipIntoPaymentSplits)', () => {
+  it('drops the split that only held the tip', () => {
+    // Arrange
+    const splits = [
+      { method: 'efectivo' as const, amountBs: 1000, amountUsd: 20 },
+      { method: 'pago_movil' as const, amountBs: 200, amountUsd: 4 },
+    ];
+
+    // Act
+    const result = removeTipFromPaymentSplits({
+      paymentSplits: splits,
+      tipAmountBs: 200,
+      tipPaymentMethod: 'pago_movil',
+    });
+
+    // Assert
+    expect(result).toEqual([
+      { method: 'efectivo', amountBs: 1000, amountUsd: 20 },
+    ]);
+  });
+
+  it('reduces the split when the tip shares the payment method', () => {
+    const result = removeTipFromPaymentSplits({
+      paymentSplits: [
+        { method: 'efectivo', amountBs: 700, amountUsd: 14 },
+        { method: 'pago_movil', amountBs: 500, amountUsd: 10 },
+      ],
+      tipAmountBs: 200,
+      tipPaymentMethod: 'pago_movil',
+    });
+
+    expect(result).toEqual([
+      { method: 'efectivo', amountBs: 700, amountUsd: 14 },
+      { method: 'pago_movil', amountBs: 300, amountUsd: 6 },
+    ]);
+  });
+
+  it('is the exact inverse of mergeTipIntoPaymentSplits', () => {
+    const principal = [
+      { method: 'efectivo' as const, amountBs: 700, amountUsd: 14 },
+      { method: 'pago_movil' as const, amountBs: 300, amountUsd: 6 },
+    ];
+    const merged = mergeTipIntoPaymentSplits({
+      paymentSplits: principal,
+      fallbackMethod: 'efectivo',
+      tipAmountBs: 200,
+      tipPaymentMethod: 'pago_movil',
+      exchangeRate: 50,
+      principalBs: 1000,
+    });
+
+    const result = removeTipFromPaymentSplits({
+      paymentSplits: merged,
+      tipAmountBs: 200,
+      tipPaymentMethod: 'pago_movil',
+    });
+
+    expect(
+      result.map(({ method, amountBs }) => ({ method, amountBs }))
+    ).toEqual([
+      { method: 'efectivo', amountBs: 700 },
+      { method: 'pago_movil', amountBs: 300 },
+    ]);
+  });
+
+  it('never leaves a negative amount when the tip is larger than the split', () => {
+    const result = removeTipFromPaymentSplits({
+      paymentSplits: [{ method: 'efectivo', amountBs: 100, amountUsd: 2 }],
+      tipAmountBs: 150,
+      tipPaymentMethod: 'efectivo',
+    });
+
+    expect(result).toEqual([]);
+  });
+
+  it('leaves the splits untouched when the tip method is not present', () => {
+    const splits = [
+      { method: 'efectivo' as const, amountBs: 100, amountUsd: 2 },
+    ];
+
+    const result = removeTipFromPaymentSplits({
+      paymentSplits: splits,
+      tipAmountBs: 50,
+      tipPaymentMethod: 'pago_movil',
+    });
+
+    expect(result).toEqual(splits);
   });
 });
