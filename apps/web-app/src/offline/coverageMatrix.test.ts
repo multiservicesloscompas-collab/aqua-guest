@@ -33,6 +33,7 @@ describe('offline/coverageMatrix', () => {
   it('exposes offline mutation table list', () => {
     expect(OFFLINE_MUTATION_TABLES).toContain('sales');
     expect(OFFLINE_MUTATION_TABLES).not.toContain('companies');
-    expect(OFFLINE_MUTATION_TABLES).not.toContain('products');
+    // B8: product price changes made offline are queued, so products is mutable.
+    expect(OFFLINE_MUTATION_TABLES).toContain('products');
   });
 });

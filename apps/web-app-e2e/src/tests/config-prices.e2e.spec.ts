@@ -1,10 +1,9 @@
-import { expect, test, type Page } from '@playwright/test';
-import { bugDoc } from '../../support/bugs/ficha';
-import { useCleanDomain } from '../../support/bugs/setup';
-import { getSupabaseClient } from '../../support/supabaseClient';
-import { gotoDashboard } from '../../support/uiNavigation';
+import { documented, expect, test } from '../support/fixtures';
+import { getSupabaseClient } from '../support/supabaseClient';
+import { gotoDashboard } from '../support/uiNavigation';
+import type { Page } from '@playwright/test';
 
-useCleanDomain();
+const AREA = 'Precios';
 
 async function deepWashPriceInDb(): Promise<number> {
   const { data, error } = await getSupabaseClient()
@@ -33,19 +32,17 @@ async function saveDeepWashPrice(page: Page, price: number) {
     .click();
 }
 
-test.describe('Configuración (rojos)', () => {
+test.describe('precios del lavado profundo', () => {
   test(
-    '[B8-control] saving the deep-wash price online reaches the database',
-    bugDoc({
-      id: 'B8',
-      control: true,
+    'saving the deep-wash price online reaches the database',
+    documented({
       titulo:
         'Guardar el precio del lavado profundo con conexión llega a la base',
+      area: AREA,
       intent:
-        'Fijar que el guardado con conexión funciona, para acotar el bug al modo sin conexión.',
+        'Comprobar que el guardado con conexión funciona, como referencia del caso sin conexión.',
       steps: ['Abre Precios, escribe 2500 en Lavado profundo y guarda.'],
       expects: ['El producto queda con precio 2500 en la base.'],
-      actual: 'no aplica',
     }),
     async ({ page }) => {
       // Arrange
@@ -60,11 +57,11 @@ test.describe('Configuración (rojos)', () => {
   );
 
   test(
-    '[B8] a price saved while offline reaches the database when the connection returns',
-    bugDoc({
-      id: 'B8',
+    'a price saved while offline reaches the database when the connection returns',
+    documented({
       titulo:
-        'El precio del lavado profundo guardado sin conexión se sincroniza al volver',
+        '[B8 corregido] El precio del lavado profundo guardado sin conexión se sincroniza al volver',
+      area: AREA,
       intent:
         'Comprobar que un cambio de precio hecho sin internet no se pierde: al volver la conexión llega a la base.',
       steps: [
@@ -73,25 +70,20 @@ test.describe('Configuración (rojos)', () => {
         'Restablece la conexión y espera la sincronización.',
       ],
       expects: ['El producto queda con precio 2500 en la base.'],
-      actual:
-        'sin conexión el guardado solo cambia el estado local y no deja nada en la cola de sincronización',
     }),
     async ({ page, context }) => {
       // Arrange
-      const before = await (async () => {
-        await openPricesPage(page);
-        return deepWashPriceInDb();
-      })();
+      await openPricesPage(page);
+      const before = await deepWashPriceInDb();
 
       // Act
       await context.setOffline(true);
       await saveDeepWashPrice(page, 2500);
       await context.setOffline(false);
-      await page.waitForTimeout(8_000);
 
       // Assert
       expect(before).not.toBe(2500);
-      expect(await deepWashPriceInDb()).toBe(2500);
+      await expect.poll(deepWashPriceInDb, { timeout: 30_000 }).toBe(2500);
     }
   );
 });

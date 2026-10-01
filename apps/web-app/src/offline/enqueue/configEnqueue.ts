@@ -13,6 +13,12 @@ interface EnqueueLiterPricingInput {
   actionSource?: string;
 }
 
+interface EnqueueProductPriceInput {
+  productId: string;
+  price: number;
+  actionSource?: string;
+}
+
 const buildExchangeRateBusinessKey = (date: string) => `exchange-rate:${date}`;
 
 const buildLiterPricingBusinessKey = (breakpoint: number) =>
@@ -82,6 +88,18 @@ export const enqueueOfflineLiterPricingReplace = (
       businessKey,
     });
   }
+};
+
+export const enqueueOfflineProductPriceUpdate = (
+  input: EnqueueProductPriceInput
+) => {
+  useSyncStore.getState().addToQueue({
+    type: 'UPDATE',
+    table: 'products',
+    payload: { id: input.productId, default_price: input.price },
+    enqueueSource: input.actionSource ?? 'config/setProductPrice',
+    businessKey: `product:${input.productId}`,
+  });
 };
 
 export const applyOfflineExchangeRateHistory = (

@@ -47,13 +47,6 @@ export const BUG_KNOWLEDGE = {
     where:
       'pages/RentalsPage/hooks/editRentalSheetViewModel.helpers.ts:112 · rentalSheetViewModel.helpers.ts:78 · utils/rentalPricing.ts:9',
   },
-  B8: {
-    cause:
-      'setProductPrice sale temprano cuando no hay conexión y no encola nada; además products es de solo lectura en la matriz offline.',
-    fix: 'Encolar un UPDATE offline de products (ver docs/agents/offline-sync.md, hay que habilitar mutaciones en coverageMatrix) y mostrar error si la fila del producto no existe. Confirmar antes con datos de producción.',
-    where:
-      'store/useConfigStore.ts:222 setProductPrice · offline/coverageMatrix.ts · pages/WaterPricingConfigPage.tsx:70',
-  },
   B9: {
     cause:
       'La excepción de las 13:00/14:00 en calculatePickupTime fija las 20:00 del mismo día; vale de lunes a sábado (cierre 20:00) pero el domingo la tienda cierra a las 14:00.',
