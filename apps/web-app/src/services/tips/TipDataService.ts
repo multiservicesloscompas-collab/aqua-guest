@@ -7,14 +7,8 @@ import type {
   TipSinglePayoutRequest,
   TipUpsertInput,
 } from '@/types/tips';
-import {
-  TIP_SCHEMA_CONTRACT,
-  type TipRow,
-} from './tipSchemaContract';
-import {
-  toTipDomain,
-  toTipUpsertRow,
-} from './tipSupabaseAdapters';
+import { TIP_SCHEMA_CONTRACT, type TipRow } from './tipSchemaContract';
+import { toTipDomain, toTipUpsertRow } from './tipSupabaseAdapters';
 
 type InFlightPayout = Promise<TipPayoutSummary>;
 
@@ -129,7 +123,9 @@ export class TipsDataService {
       })
       .eq(TIP_SCHEMA_CONTRACT.columns.id, tipId)
       .eq(TIP_SCHEMA_CONTRACT.columns.status, 'pending')
-      .select(`${TIP_SCHEMA_CONTRACT.columns.tipDate}, ${TIP_SCHEMA_CONTRACT.columns.amountBs}`);
+      .select(
+        `${TIP_SCHEMA_CONTRACT.columns.tipDate}, ${TIP_SCHEMA_CONTRACT.columns.amountBs}`
+      );
 
     if (error) {
       throw error;
@@ -240,7 +236,6 @@ export class TipsDataService {
         originId: tip.originId,
       }));
   }
-
 
   private ensureOriginLink(originType: string, originId: string) {
     if (!originType || !originId.trim()) {

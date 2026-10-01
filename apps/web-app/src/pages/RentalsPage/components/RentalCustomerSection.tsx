@@ -52,13 +52,15 @@ export function RentalCustomerSection({
               <UserPlus className="w-6 h-6" />
             </div>
             <div className="flex flex-col items-start min-w-0">
-              <span className="text-[16px] font-bold text-foreground">Cliente</span>
+              <span className="text-[16px] font-bold text-foreground">
+                Cliente
+              </span>
               <span className="text-[13px] font-medium text-muted-foreground truncate">
                 Agregar o buscar cliente
               </span>
             </div>
           </div>
-          
+
           <div className="px-4 py-1.5 rounded-full text-[13px] font-bold whitespace-nowrap bg-primary/10 text-primary transition-colors">
             Agregar
           </div>
@@ -91,7 +93,9 @@ export function RentalCustomerSection({
               </div>
               <div className="flex items-center gap-1.5 text-[13px] text-muted-foreground w-full">
                 <MapPin className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-                <span className="truncate leading-tight max-w-[95%]">{displayAddress}</span>
+                <span className="truncate leading-tight max-w-[95%]">
+                  {displayAddress}
+                </span>
               </div>
             </div>
           </div>

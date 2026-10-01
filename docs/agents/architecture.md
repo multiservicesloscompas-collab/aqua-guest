@@ -9,13 +9,13 @@ Keep AquaGuest flexible while it is still being built, without letting the front
 
 ## Current Topology
 
-| Area | Current Role |
-| :--- | :----------- |
-| `apps/web-app` | Main product surface and current home of most business workflows |
-| `apps/web-app/docs` | Domain-specific documentation for real product behavior |
-| `docs/agents` | Cross-cutting rules for architecture, business ripple effects, frontend patterns, and Supabase |
-| `libs/domain` | Canonical entity types (`@aqua-guest/domain`), one folder per context under `src/<context>` |
-| `libs/*` | Future destination for other mature shared services and stable packages |
+| Area                | Current Role                                                                                   |
+| :------------------ | :--------------------------------------------------------------------------------------------- |
+| `apps/web-app`      | Main product surface and current home of most business workflows                               |
+| `apps/web-app/docs` | Domain-specific documentation for real product behavior                                        |
+| `docs/agents`       | Cross-cutting rules for architecture, business ripple effects, frontend patterns, and Supabase |
+| `libs/domain`       | Canonical entity types (`@aqua-guest/domain`), one folder per context under `src/<context>`    |
+| `libs/*`            | Future destination for other mature shared services and stable packages                        |
 
 ## Architectural Rules
 

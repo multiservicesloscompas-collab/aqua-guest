@@ -84,7 +84,6 @@ function getRequiredEnv(name: string, aliases: string[] = []): string {
 
 const LOCAL_HOSTS = new Set(['127.0.0.1', 'localhost']);
 
-
 function assertLocalSupabaseUrl(url: string): void {
   const host = new URL(url).hostname;
   if (!LOCAL_HOSTS.has(host)) {

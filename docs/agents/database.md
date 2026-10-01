@@ -13,14 +13,14 @@ This file is the repository-side reference for what currently lives in the AquaG
 
 ## Schema Overview
 
-| Schema | Owner | What Lives There |
-| :----- | :---- | :---------------- |
-| `public` | AquaGuest app domain | Product tables used by the app |
-| `auth` | Supabase-managed | Authentication users, sessions, identities, MFA, OAuth, SSO |
-| `storage` | Supabase-managed | File bucket and object metadata for Supabase Storage |
-| `realtime` | Supabase-managed | Realtime subscriptions and replication support tables |
-| `vault` | Supabase-managed extension | Encrypted secrets stored through Supabase Vault |
-| `supabase_migrations` | Supabase-managed | Migration bookkeeping |
+| Schema                | Owner                      | What Lives There                                            |
+| :-------------------- | :------------------------- | :---------------------------------------------------------- |
+| `public`              | AquaGuest app domain       | Product tables used by the app                              |
+| `auth`                | Supabase-managed           | Authentication users, sessions, identities, MFA, OAuth, SSO |
+| `storage`             | Supabase-managed           | File bucket and object metadata for Supabase Storage        |
+| `realtime`            | Supabase-managed           | Realtime subscriptions and replication support tables       |
+| `vault`               | Supabase-managed extension | Encrypted secrets stored through Supabase Vault             |
+| `supabase_migrations` | Supabase-managed           | Migration bookkeeping                                       |
 
 ## Working Rule
 
@@ -31,6 +31,7 @@ This file is the repository-side reference for what currently lives in the AquaG
 ## Public Tables
 
 ### `customers`
+
 Customer registry used by washer rentals.
 
 - PK: `id uuid`
@@ -40,6 +41,7 @@ Customer registry used by washer rentals.
   - Referenced by `washer_rentals.customer_id`
 
 ### `sales`
+
 Water-sale header records.
 
 - PK: `id uuid`
@@ -51,6 +53,7 @@ Water-sale header records.
   - Can be referenced by `tips` when `tips.origin_type = 'sale'`
 
 ### `washer_rentals`
+
 Washer-rental transactions.
 
 - PK: `id uuid`
@@ -65,6 +68,7 @@ Washer-rental transactions.
   - Can be referenced by `tips` when `tips.origin_type = 'rental'`
 
 ### `expenses`
+
 Expense header records.
 
 - PK: `id uuid`
@@ -74,6 +78,7 @@ Expense header records.
   - Parent of `expense_payment_splits.expense_id`
 
 ### `washing_machines`
+
 Washer catalog.
 
 - PK: `id int4`
@@ -84,6 +89,7 @@ Washer catalog.
   - No FK from `washer_rentals.machine_id` is enforced today
 
 ### `products`
+
 Saleable product catalog for water sales.
 
 - PK: `id uuid`
@@ -91,6 +97,7 @@ Saleable product catalog for water sales.
 - Lifecycle fields: `created_at`, `updated_at`, `deleted_at`
 
 ### `prepaid_orders`
+
 Prepaid water-order records.
 
 - PK: `id uuid`
@@ -98,6 +105,7 @@ Prepaid water-order records.
 - Lifecycle fields: `created_at`, `updated_at`, `deleted_at`
 
 ### `liter_pricing`
+
 Pricing breakpoints by liters.
 
 - PK: `id uuid`
@@ -105,6 +113,7 @@ Pricing breakpoints by liters.
 - Lifecycle fields: `created_at`, `updated_at`, `deleted_at`
 
 ### `exchange_rates`
+
 Exchange-rate history.
 
 - PK: `id uuid`
@@ -114,6 +123,7 @@ Exchange-rate history.
 - Lifecycle fields: `created_at`, `updated_at`, `deleted_at`
 
 ### `payment_balance_transactions`
+
 Payment-balance transfers and adjustments across payment methods.
 
 - PK: `id uuid`
@@ -124,6 +134,7 @@ Payment-balance transfers and adjustments across payment methods.
 > The `*_usd` balance columns are written by `src/offline/enqueue/paymentBalanceEnqueue.ts` and are not part of the original schema dump; they were added by a manual migration. Verify they exist in production before relying on them.
 
 ### `sale_payment_splits`
+
 Mixed-payment detail rows for water sales.
 
 - PK: `id uuid`
@@ -133,6 +144,7 @@ Mixed-payment detail rows for water sales.
 - Lifecycle fields: `created_at`, `updated_at`
 
 ### `rental_payment_splits`
+
 Mixed-payment detail rows for washer rentals.
 
 - PK: `id uuid`
@@ -142,6 +154,7 @@ Mixed-payment detail rows for washer rentals.
 - Lifecycle fields: `created_at`, `updated_at`
 
 ### `expense_payment_splits`
+
 Mixed-payment detail rows for expenses.
 
 - PK: `id uuid`
@@ -151,6 +164,7 @@ Mixed-payment detail rows for expenses.
 - Lifecycle fields: `created_at`, `updated_at`
 
 ### `tips`
+
 Tip records captured from sales or rentals, with payout tracking.
 
 - PK: `id uuid`
@@ -163,6 +177,7 @@ Tip records captured from sales or rentals, with payout tracking.
   - This is a polymorphic reference implemented in app logic, not with DB FKs
 
 ### `tip_payout_idempotency`
+
 Idempotency bookkeeping for tip payout flows.
 
 - PK: `id uuid`
@@ -201,18 +216,18 @@ Shared payment-method set used across split and tip tables:
 
 Current constrained value sets in `public`:
 
-| Table.Column | Allowed Values |
-| :----------- | :------------- |
-| `sale_payment_splits.payment_method` | `efectivo`, `pago_movil`, `punto_venta`, `divisa` |
-| `rental_payment_splits.payment_method` | `efectivo`, `pago_movil`, `punto_venta`, `divisa` |
-| `expense_payment_splits.payment_method` | `efectivo`, `pago_movil`, `punto_venta`, `divisa` |
-| `tips.capture_payment_method` | `efectivo`, `pago_movil`, `punto_venta`, `divisa` |
-| `tips.paid_payment_method` | `efectivo`, `pago_movil`, `punto_venta`, `divisa` or `NULL` |
-| `tips.origin_type` | `sale`, `rental` |
-| `tips.status` | `pending`, `paid` |
-| `tip_payout_idempotency.scope` | `single`, `day` |
-| `tip_payout_idempotency.payment_method` | `efectivo`, `pago_movil`, `punto_venta`, `divisa` |
-| `washer_rentals.agenda_template_send_state` | `not_sent`, `sending`, `sent` |
+| Table.Column                                | Allowed Values                                              |
+| :------------------------------------------ | :---------------------------------------------------------- |
+| `sale_payment_splits.payment_method`        | `efectivo`, `pago_movil`, `punto_venta`, `divisa`           |
+| `rental_payment_splits.payment_method`      | `efectivo`, `pago_movil`, `punto_venta`, `divisa`           |
+| `expense_payment_splits.payment_method`     | `efectivo`, `pago_movil`, `punto_venta`, `divisa`           |
+| `tips.capture_payment_method`               | `efectivo`, `pago_movil`, `punto_venta`, `divisa`           |
+| `tips.paid_payment_method`                  | `efectivo`, `pago_movil`, `punto_venta`, `divisa` or `NULL` |
+| `tips.origin_type`                          | `sale`, `rental`                                            |
+| `tips.status`                               | `pending`, `paid`                                           |
+| `tip_payout_idempotency.scope`              | `single`, `day`                                             |
+| `tip_payout_idempotency.payment_method`     | `efectivo`, `pago_movil`, `punto_venta`, `divisa`           |
+| `washer_rentals.agenda_template_send_state` | `not_sent`, `sending`, `sent`                               |
 
 Current numeric guards in `public`:
 
@@ -277,8 +292,7 @@ What it is: migration bookkeeping schema.
 
 ### Unverified tables referenced by code
 
-> [!WARNING]
-> `companies` and `user_profiles` are queried by `src/components/layout/SyncManager.tsx` and listed as `read-sync-only` in `src/offline/coverageMatrix.ts`, but they are not documented here and are absent from the local schema baseline. Confirm in the production database whether they exist (and their columns) before depending on them or documenting them.
+> [!WARNING] > `companies` and `user_profiles` are queried by `src/components/layout/SyncManager.tsx` and listed as `read-sync-only` in `src/offline/coverageMatrix.ts`, but they are not documented here and are absent from the local schema baseline. Confirm in the production database whether they exist (and their columns) before depending on them or documenting them.
 
 ## Practical Guidance
 

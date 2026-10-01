@@ -116,36 +116,55 @@ export function LavadorasMetricsPage(_props: LavadorasMetricsPageProps = {}) {
     // Determinar día/mes más fuerte (solo para semana/mes)
     let busiestPeriod = '';
     if (viewMode !== 'dia' && filteredRentals.length > 0) {
-      const periods = filteredRentals.reduce<Record<string, number>>((acc, r) => {
-        const periodKey = viewMode === 'semana' ? r.date : r.date.substring(0, 7);
-        acc[periodKey] = (acc[periodKey] ?? 0) + 1;
-        return acc;
-      }, {});
-      
+      const periods = filteredRentals.reduce<Record<string, number>>(
+        (acc, r) => {
+          const periodKey =
+            viewMode === 'semana' ? r.date : r.date.substring(0, 7);
+          acc[periodKey] = (acc[periodKey] ?? 0) + 1;
+          return acc;
+        },
+        {}
+      );
+
       const strongest = Object.entries(periods).sort((a, b) => b[1] - a[1])[0];
       if (strongest) {
-        const periodDate = parseISO(viewMode === 'semana' ? strongest[0] : `${strongest[0]}-01`);
-        busiestPeriod = format(periodDate, viewMode === 'semana' ? 'EEEE' : 'MMMM', { locale: es });
+        const periodDate = parseISO(
+          viewMode === 'semana' ? strongest[0] : `${strongest[0]}-01`
+        );
+        busiestPeriod = format(
+          periodDate,
+          viewMode === 'semana' ? 'EEEE' : 'MMMM',
+          { locale: es }
+        );
       }
     }
 
-    return { totalRentals, totalUsd, totalBs, byShift, machineUsage, busiestPeriod };
+    return {
+      totalRentals,
+      totalUsd,
+      totalBs,
+      byShift,
+      machineUsage,
+      busiestPeriod,
+    };
   }, [filteredRentals, config.exchangeRate, washingMachines, viewMode]);
 
   return (
     <div className="flex flex-col min-h-screen pb-24 bg-background">
       <main className="flex-1 px-4 py-6 space-y-6 max-w-lg mx-auto w-full">
         <header className="space-y-4">
-          <h1 className="text-xl font-bold text-foreground">Métricas de Alquiler</h1>
-          
+          <h1 className="text-xl font-bold text-foreground">
+            Métricas de Alquiler
+          </h1>
+
           <DateSelector
             selectedDate={selectedDate}
             onDateChange={setSelectedDate}
             loading={loading}
           />
 
-          <Tabs 
-            value={viewMode} 
+          <Tabs
+            value={viewMode}
             onValueChange={(v) => setViewMode(v as ViewMode)}
             className="w-full"
           >
@@ -174,7 +193,9 @@ export function LavadorasMetricsPage(_props: LavadorasMetricsPageProps = {}) {
           <div className="col-span-2">
             <KpiCard
               title="Total Bolívares"
-              value={`Bs ${metrics.totalBs.toLocaleString('es-VE', { minimumFractionDigits: 2 })}`}
+              value={`Bs ${metrics.totalBs.toLocaleString('es-VE', {
+                minimumFractionDigits: 2,
+              })}`}
               icon={<TrendingUp className="w-5 h-5 text-warning" />}
               variant="warning"
             />
@@ -182,7 +203,9 @@ export function LavadorasMetricsPage(_props: LavadorasMetricsPageProps = {}) {
           {metrics.busiestPeriod && (
             <div className="col-span-2">
               <KpiCard
-                title={viewMode === 'semana' ? "Día más fuerte" : "Mes más fuerte"}
+                title={
+                  viewMode === 'semana' ? 'Día más fuerte' : 'Mes más fuerte'
+                }
                 value={metrics.busiestPeriod}
                 icon={<Activity className="w-5 h-5 text-primary" />}
                 variant="primary"
@@ -199,11 +222,15 @@ export function LavadorasMetricsPage(_props: LavadorasMetricsPageProps = {}) {
               <MachineIcon className="w-5 h-5 text-blue-500" />
             </div>
             <div>
-              <h2 className="font-bold text-foreground leading-tight">Lavadoras Utilizadas</h2>
-              <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">Uso detallado por equipo</p>
+              <h2 className="font-bold text-foreground leading-tight">
+                Lavadoras Utilizadas
+              </h2>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">
+                Uso detallado por equipo
+              </p>
             </div>
           </div>
-          
+
           <div className="grid gap-3">
             {Object.values(metrics.machineUsage).map((item, idx) => (
               <div
@@ -238,8 +265,12 @@ export function LavadorasMetricsPage(_props: LavadorasMetricsPageProps = {}) {
               <Activity className="w-5 h-5 text-indigo-500" />
             </div>
             <div>
-              <h2 className="font-bold text-foreground leading-tight">Distribución por Turno</h2>
-              <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">Preferencias del cliente</p>
+              <h2 className="font-bold text-foreground leading-tight">
+                Distribución por Turno
+              </h2>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">
+                Preferencias del cliente
+              </p>
             </div>
           </div>
           <div className="space-y-1">
@@ -249,7 +280,11 @@ export function LavadorasMetricsPage(_props: LavadorasMetricsPageProps = {}) {
                 className="flex items-center justify-between py-3.5 px-2 border-b border-border/30 last:border-0 hover:bg-muted/10 rounded-lg transition-colors"
               >
                 <span className="text-sm capitalize font-semibold text-muted-foreground">
-                  {shift === 'medio' ? 'Medio Turno' : shift === 'completo' ? 'Turno Completo' : 'Turno Doble'}
+                  {shift === 'medio'
+                    ? 'Medio Turno'
+                    : shift === 'completo'
+                    ? 'Turno Completo'
+                    : 'Turno Doble'}
                 </span>
                 <span className="text-sm font-black text-foreground">
                   {count}

@@ -13,9 +13,14 @@ export interface SeedSaleInput {
   method?: Method;
 }
 
-function unwrap<T>(res: { data: T | null; error: { message: string } | null }, what: string): T {
+function unwrap<T>(
+  res: { data: T | null; error: { message: string } | null },
+  what: string
+): T {
   if (res.error || res.data === null) {
-    throw new Error(`Seed failed (${what}): ${res.error?.message ?? 'no data'}`);
+    throw new Error(
+      `Seed failed (${what}): ${res.error?.message ?? 'no data'}`
+    );
   }
   return res.data;
 }
@@ -44,7 +49,10 @@ export async function seedSales(rows: SeedSaleInput[]): Promise<string[]> {
   }));
   const ids: string[] = [];
   for (let i = 0; i < payload.length; i += 100) {
-    const res = await supabase.from('sales').insert(payload.slice(i, i + 100)).select('id');
+    const res = await supabase
+      .from('sales')
+      .insert(payload.slice(i, i + 100))
+      .select('id');
     ids.push(...unwrap(res, 'sales').map((r: { id: string }) => r.id));
   }
   return ids;
@@ -58,7 +66,11 @@ export async function seedCustomer(input: {
   const supabase = getSupabaseClient();
   const res = await supabase
     .from('customers')
-    .insert({ name: input.name, phone: input.phone ?? null, address: input.address ?? null })
+    .insert({
+      name: input.name,
+      phone: input.phone ?? null,
+      address: input.address ?? null,
+    })
     .select('id')
     .single();
   return unwrap(res, 'customer').id as string;
@@ -158,7 +170,10 @@ export async function seedPendingTip(input: {
   return unwrap(res, 'tip').id as string;
 }
 
-export async function setExchangeRate(date: string, rate: number): Promise<void> {
+export async function setExchangeRate(
+  date: string,
+  rate: number
+): Promise<void> {
   const supabase = getSupabaseClient();
   const { error } = await supabase
     .from('exchange_rates')
@@ -169,5 +184,9 @@ export async function setExchangeRate(date: string, rate: number): Promise<void>
 export async function cleanupBugData(): Promise<void> {
   const supabase = getSupabaseClient();
   await supabase.from('customers').delete().ilike('name', `${BUG_MARKER}%`);
-  await supabase.from('exchange_rates').delete().not('id', 'is', null).lte('rate', 0);
+  await supabase
+    .from('exchange_rates')
+    .delete()
+    .not('id', 'is', null)
+    .lte('rate', 0);
 }

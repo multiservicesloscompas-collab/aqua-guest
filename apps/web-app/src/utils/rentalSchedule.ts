@@ -26,7 +26,6 @@ function getBusinessHoursWindow(date: Date): {
   };
 }
 
-
 export function clampToBusinessHours(dateTime: Date): Date {
   const { openTime, closeTime } = getBusinessHoursWindow(dateTime);
 
@@ -42,7 +41,6 @@ export function clampToBusinessHours(dateTime: Date): Date {
   ) {
     return openTime;
   }
-
 
   let nextDay = addDays(new Date(dateTime), 1);
   while (!BUSINESS_HOURS.workDays.includes(getDay(nextDay))) {
