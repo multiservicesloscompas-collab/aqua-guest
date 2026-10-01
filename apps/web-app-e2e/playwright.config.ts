@@ -1,8 +1,9 @@
 import path from 'node:path';
 import { defineConfig, devices } from '@playwright/test';
+import { DEFAULT_E2E_BASE_URL } from './src/support/env';
 
-const LOCAL_BASE_URL = 'http://localhost:4200';
-const baseURL = process.env.E2E_BASE_URL ?? LOCAL_BASE_URL;
+const baseURL = process.env.E2E_BASE_URL ?? DEFAULT_E2E_BASE_URL;
+const serverPort = new URL(baseURL).port || '80';
 const configDir = __dirname;
 
 const IPHONE_14_DEFAULTS = devices['iPhone 14'];
@@ -37,7 +38,7 @@ export default defineConfig({
     video: 'retain-on-failure',
   },
   webServer: {
-    command: 'npx nx serve web-app --host=localhost --port=4200',
+    command: `npx nx serve web-app --host=localhost --port=${serverPort}`,
     url: baseURL,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
