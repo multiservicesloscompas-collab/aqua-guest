@@ -1,9 +1,8 @@
-import type { Sale } from '@/types';
-import type { PaymentMethod } from '@/types';
-import type { PaymentSplit } from '@/types/paymentSplits';
 import { PAYMENT_SPLIT_SCHEMA } from '@/services/payments/paymentSplitSchemaContract';
 import { salePaymentSplitAdapter } from '@/services/payments/paymentSplitSupabaseAdapters';
 import { useSyncStore } from '@/store/useSyncStore';
+import type { PaymentMethod, Sale } from '@/types';
+import type { PaymentSplit } from '@/types/paymentSplits';
 import { generateTempId } from './tempId';
 
 interface EnqueueOfflineSaleInput {
@@ -33,6 +32,9 @@ interface EnqueueOfflineSaleDeleteInput {
   actionSource?: string;
 }
 
+export const buildSaleCreateBusinessKey = (date: string, dailyNumber: number) =>
+  `sale:${date}:${dailyNumber}`;
+
 export const enqueueOfflineSale = (input: EnqueueOfflineSaleInput): Sale => {
   const tempId = generateTempId();
 
@@ -41,7 +43,7 @@ export const enqueueOfflineSale = (input: EnqueueOfflineSaleInput): Sale => {
     table: 'sales',
     payload: { ...input.newSalePayload, tempId },
     enqueueSource: input.actionSource ?? 'water-sales/completeSale',
-    businessKey: `sale:${input.date}:${input.dailyNumber}`,
+    businessKey: buildSaleCreateBusinessKey(input.date, input.dailyNumber),
   });
 
   if (input.paymentSplits?.length) {
@@ -58,7 +60,9 @@ export const enqueueOfflineSale = (input: EnqueueOfflineSaleInput): Sale => {
       },
       enqueueSource: input.actionSource ?? 'water-sales/completeSale',
       businessKey: `sale-splits:${tempId}`,
-      dependencyKeys: [`sale:${input.date}:${input.dailyNumber}`],
+      dependencyKeys: [
+        buildSaleCreateBusinessKey(input.date, input.dailyNumber),
+      ],
     });
   }
 
@@ -192,6 +196,7 @@ interface EnqueueOfflineSaleTipUpsertInput {
   exchangeRateUsed?: number;
   capturePaymentMethod: PaymentMethod;
   notes?: string;
+  dependencyKeys?: string[];
   actionSource?: string;
 }
 
@@ -216,8 +221,8 @@ export const enqueueOfflineSaleTipUpsert = (
     },
     enqueueSource: input.actionSource ?? 'water-sales/updateSale',
     businessKey,
-    dependencyKeys: input.saleId.startsWith('temp-')
-      ? [`sale:${input.saleId}`]
-      : undefined,
+    dependencyKeys:
+      input.dependencyKeys ??
+      (input.saleId.startsWith('temp-') ? [`sale:${input.saleId}`] : undefined),
   });
 };

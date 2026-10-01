@@ -27,6 +27,7 @@ import {
 import { useConfigStore } from './useConfigStore';
 import { useTipStore } from './useTipStore';
 import {
+  buildRentalBusinessKey,
   enqueueOfflineRentalTipDelete,
   enqueueOfflineRentalTipUpsert,
 } from '@/offline/enqueue/rentalsEnqueue';
@@ -73,6 +74,21 @@ export const useRentalStore = create<RentalState>()(
           const amountUsd = createCurrencyConverter(exchangeRateUsed).toUsd(
             tipInput.amountBs
           );
+
+          if (!window.navigator.onLine) {
+            enqueueOfflineRentalTipUpsert({
+              rentalId: createdRental.id,
+              tipDate: createdRental.date,
+              amountBs: tipInput.amountBs,
+              amountUsd,
+              exchangeRateUsed,
+              capturePaymentMethod: tipInput.capturePaymentMethod,
+              notes: tipInput.notes,
+              dependencyKeys: [buildRentalBusinessKey(createdRental)],
+            });
+            return createdRental;
+          }
+
           const tip = await tipsDataService.upsertTipForOrigin({
             originType: 'rental',
             originId: createdRental.id,

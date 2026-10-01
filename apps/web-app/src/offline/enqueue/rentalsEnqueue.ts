@@ -1,15 +1,15 @@
-import type { WasherRental } from '@/types';
-import type { PaymentMethod } from '@/types';
-import type { PaymentSplit } from '@/types/paymentSplits';
 import { PAYMENT_SPLIT_SCHEMA } from '@/services/payments/paymentSplitSchemaContract';
 import { rentalPaymentSplitAdapter } from '@/services/payments/paymentSplitSupabaseAdapters';
 import { useSyncStore } from '@/store/useSyncStore';
+import type { PaymentMethod, WasherRental } from '@/types';
+import type { PaymentSplit } from '@/types/paymentSplits';
 import { generateTempId } from './tempId';
 
 interface EnqueueOfflineRentalInput {
   payload: Record<string, unknown>;
   rental: Omit<WasherRental, 'id' | 'createdAt' | 'updatedAt'>;
   paymentSplits?: PaymentSplit[];
+  dependencyKeys?: string[];
   actionSource?: string;
 }
 
@@ -24,7 +24,7 @@ interface EnqueueOfflineRentalDeleteInput {
   actionSource?: string;
 }
 
-const buildRentalBusinessKey = (
+export const buildRentalBusinessKey = (
   rental: Omit<WasherRental, 'id' | 'createdAt' | 'updatedAt'>
 ) =>
   `rental:${rental.date}:${rental.customerId ?? 'unknown'}:${
@@ -43,6 +43,7 @@ export const enqueueOfflineRental = (
     payload: { ...input.payload, tempId },
     enqueueSource: input.actionSource ?? 'rentals/addRental',
     businessKey: rentalBusinessKey,
+    dependencyKeys: input.dependencyKeys,
   });
 
   if (input.paymentSplits?.length) {
@@ -188,6 +189,7 @@ interface EnqueueOfflineRentalTipUpsertInput {
   exchangeRateUsed?: number;
   capturePaymentMethod: PaymentMethod;
   notes?: string;
+  dependencyKeys?: string[];
   actionSource?: string;
 }
 
@@ -212,8 +214,10 @@ export const enqueueOfflineRentalTipUpsert = (
     },
     enqueueSource: input.actionSource ?? 'rentals/updateRental',
     businessKey,
-    dependencyKeys: input.rentalId.startsWith('temp-')
-      ? [`rental:${input.rentalId}`]
-      : undefined,
+    dependencyKeys:
+      input.dependencyKeys ??
+      (input.rentalId.startsWith('temp-')
+        ? [`rental:${input.rentalId}`]
+        : undefined),
   });
 };

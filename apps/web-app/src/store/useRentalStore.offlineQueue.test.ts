@@ -18,6 +18,8 @@ const rentalSplitsInsertMock = vi.fn();
 const tipsDeleteEqMock = vi.fn();
 const tipsDeleteScopeEqMock = vi.fn();
 const tipsDeleteMock = vi.fn(() => ({ eq: tipsDeleteEqMock }));
+const tipsUpsertMock = vi.fn();
+const tipsInsertMock = vi.fn();
 
 vi.mock('@/services/RentalsDataService', () => ({
   rentalsDataService: {
@@ -52,6 +54,8 @@ vi.mock('@/lib/supabaseClient', () => {
     if (table === 'tips') {
       return {
         delete: tipsDeleteMock,
+        upsert: tipsUpsertMock,
+        insert: tipsInsertMock,
       };
     }
 
@@ -78,6 +82,8 @@ describe('useRentalStore offline queueing', () => {
     tipsDeleteEqMock.mockReset();
     tipsDeleteScopeEqMock.mockReset();
     tipsDeleteMock.mockReset();
+    tipsUpsertMock.mockReset();
+    tipsInsertMock.mockReset();
 
     tipsDeleteEqMock.mockImplementation(() => ({ eq: tipsDeleteScopeEqMock }));
     tipsDeleteScopeEqMock.mockResolvedValue({ error: null });
@@ -339,5 +345,84 @@ describe('useRentalStore offline queueing', () => {
     ]);
     expect(queue.map((q) => q.type)).toEqual(['DELETE', 'DELETE', 'DELETE']);
     expect(useRentalStore.getState().rentals).toHaveLength(0);
+  });
+
+  it('queues a new customer and a rental that depends on it when offline (B12)', async () => {
+    // Act
+    const rental = await useRentalStore.getState().addRental({
+      date: '2026-03-09',
+      customerName: 'Cliente Nuevo',
+      customerPhone: '0414-1111111',
+      customerAddress: 'Calle 1',
+      machineId: 'machine-1',
+      shift: 'medio',
+      deliveryTime: '09:00',
+      pickupTime: '13:00',
+      pickupDate: '2026-03-09',
+      deliveryFee: 0,
+      totalUsd: 2,
+      paymentMethod: 'efectivo',
+      status: 'agendado',
+      isPaid: false,
+    });
+
+    // Assert (the supabase mock throws on any call to `customers`)
+    const queue = useSyncStore.getState().queue;
+    const customerAction = queue.find((entry) => entry.table === 'customers');
+    const rentalAction = queue.find(
+      (entry) => entry.table === 'washer_rentals'
+    );
+    const customerTempId = customerAction?.payload.tempId as string;
+    expect(customerTempId).toMatch(/^temp-/);
+    expect(rentalAction?.payload.customer_id).toBe(customerTempId);
+    expect(rentalAction?.dependencies.dependsOn).toEqual([
+      `customer:${customerTempId}`,
+    ]);
+    expect(rental.customerId).toBe(customerTempId);
+    expect(useRentalStore.getState().rentals).toHaveLength(1);
+  });
+
+  it('queues the tip of a new rental instead of calling supabase when offline (B13)', async () => {
+    // Act
+    const rental = await useRentalStore.getState().addRental(
+      {
+        date: '2026-03-09',
+        customerId: 'customer-1',
+        customerName: 'Cliente Uno',
+        customerPhone: '0414-0000000',
+        customerAddress: 'Dirección',
+        machineId: 'machine-1',
+        shift: 'medio',
+        deliveryTime: '09:00',
+        pickupTime: '13:00',
+        pickupDate: '2026-03-09',
+        deliveryFee: 0,
+        totalUsd: 2,
+        paymentMethod: 'efectivo',
+        status: 'agendado',
+        isPaid: true,
+        datePaid: '2026-03-09',
+      },
+      { amountBs: 100, capturePaymentMethod: 'efectivo' }
+    );
+
+    // Assert
+    expect(tipsUpsertMock).not.toHaveBeenCalled();
+    expect(tipsInsertMock).not.toHaveBeenCalled();
+    const queue = useSyncStore.getState().queue;
+    const rentalAction = queue.find(
+      (entry) => entry.table === 'washer_rentals'
+    );
+    const tipAction = queue.find((entry) => entry.table === 'tips');
+    expect(tipAction?.type).toBe('INSERT');
+    expect(tipAction?.payload).toMatchObject({
+      origin_type: 'rental',
+      origin_id: rental.id,
+      amount_bs: 100,
+      __op: 'upsert_on_origin',
+    });
+    expect(tipAction?.dependencies.dependsOn).toEqual([
+      rentalAction?.idempotency.businessKey,
+    ]);
   });
 });

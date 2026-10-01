@@ -7,6 +7,10 @@ import {
   enqueueOfflineRentalPaymentSplitsDelete,
   enqueueOfflineRentalTipDelete,
 } from '@/offline/enqueue/rentalsEnqueue';
+import {
+  buildCustomerBusinessKey,
+  enqueueOfflineCustomerCreate,
+} from '@/offline/enqueue/customersEnqueue';
 import { useCustomerStore } from './useCustomerStore';
 import {
   type RentalState,
@@ -52,6 +56,16 @@ export async function addRentalAction(
       );
       if (existingCustomer) {
         customerId = existingCustomer.id;
+      } else if (!window.navigator.onLine) {
+        const offlineCustomer = enqueueOfflineCustomerCreate({
+          name: rental.customerName,
+          phone: rental.customerPhone,
+          address: rental.customerAddress,
+        });
+        customerId = offlineCustomer.id;
+        useCustomerStore.setState((state) => ({
+          customers: [...state.customers, offlineCustomer],
+        }));
       } else {
         const { data: cdata, error: cerr } = await supabase
           .from('customers')
@@ -126,6 +140,9 @@ export async function addRentalAction(
         payload,
         rental: { ...rental, customerId, totalUsd: finalTotals.totalUsd },
         paymentSplits: splitWrite.paymentSplits,
+        dependencyKeys: customerId.startsWith('temp-')
+          ? [buildCustomerBusinessKey(customerId)]
+          : undefined,
       });
       set((state) => ({ rentals: [...state.rentals, offlineRental] }));
       return offlineRental;

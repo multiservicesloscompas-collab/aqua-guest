@@ -6,7 +6,8 @@ import { enqueueEntityDelete } from './commonEnqueue';
 type CustomerCreateInput = Omit<Customer, 'id'>;
 type CustomerUpdateInput = Partial<Omit<Customer, 'id'>>;
 
-const buildEntityBusinessKey = (id: string) => `customer:${id}`;
+export const buildCustomerBusinessKey = (id: string) => `customer:${id}`;
+const buildEntityBusinessKey = buildCustomerBusinessKey;
 
 export const enqueueOfflineCustomerCreate = (
   customer: CustomerCreateInput,
