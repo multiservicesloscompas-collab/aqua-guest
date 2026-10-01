@@ -25,6 +25,7 @@ import {
 import { useConfigStore } from './useConfigStore';
 import { useTipStore } from './useTipStore';
 import {
+  buildSaleCreateBusinessKey,
   enqueueOfflineSaleTipDelete,
   enqueueOfflineSaleTipUpsert,
 } from '@/offline/enqueue/salesEnqueue';
@@ -108,6 +109,23 @@ export const useWaterSalesStore = create<WaterSalesState>()(
           const amountUsd = createCurrencyConverter(exchangeRateUsed).toUsd(
             tipInput.amountBs
           );
+          if (!window.navigator.onLine) {
+            enqueueOfflineSaleTipUpsert({
+              saleId: sale.id,
+              tipDate: sale.date,
+              amountBs: tipInput.amountBs,
+              amountUsd,
+              exchangeRateUsed,
+              capturePaymentMethod: tipInput.capturePaymentMethod,
+              notes: tipInput.notes,
+              dependencyKeys: [
+                buildSaleCreateBusinessKey(sale.date, sale.dailyNumber),
+              ],
+              actionSource: 'water-sales/completeSale',
+            });
+            return sale;
+          }
+
           const tip = await tipsDataService.upsertTipForOrigin({
             originType: 'sale',
             originId: sale.id,

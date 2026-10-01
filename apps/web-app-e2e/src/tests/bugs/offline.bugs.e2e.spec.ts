@@ -1,92 +1,11 @@
-import { expect, test, type BrowserContext, type Page } from '@playwright/test';
+import { expect, test } from '@playwright/test';
+import { registerSaleOffline } from '../../support/offlineSale';
 import { bugDoc } from '../../support/bugs/ficha';
 import { useCleanDomain } from '../../support/bugs/setup';
-import { createWaterSale } from '../../support/drivers/waterSaleDriver';
-import { createRunMarker } from '../../support/runMarker';
-import {
-  findLatestSaleByMarker,
-  getSupabaseClient,
-  listSaleSplitsBySaleIds,
-} from '../../support/supabaseClient';
-import { bootstrapAtDashboard } from '../../support/waterSalesTipsMatrix/uiHelpers';
 
 useCleanDomain();
 
-async function registerSaleOffline(
-  page: Page,
-  context: BrowserContext,
-  options: { globalOrchestrator: boolean; tip: boolean }
-): Promise<{ saleId?: string; splitCount: number; tipOriginIds: string[] }> {
-  if (options.globalOrchestrator) {
-    await context.addInitScript(
-      "window.localStorage.setItem('offline.flag.global_orchestrator', 'true')"
-    );
-  }
-  const marker = createRunMarker();
-  await bootstrapAtDashboard(page);
-  await context.setOffline(true);
-  await createWaterSale(
-    page,
-    {
-      basePriceBs: 1000,
-      splits: [{ method: 'efectivo', amountBs: 1000 }],
-      tip: options.tip
-        ? { amountBs: 100, method: 'efectivo', paid: false }
-        : undefined,
-      noteMarker: marker.notesValue,
-    },
-    { waitForToast: false }
-  );
-  await page.waitForTimeout(1_000);
-  await context.setOffline(false);
-  await expect
-    .poll(async () => (await findLatestSaleByMarker(marker.notesValue))?.id, {
-      timeout: 40_000,
-    })
-    .toBeTruthy();
-  await page.waitForTimeout(15_000);
-  const sale = await findLatestSaleByMarker(marker.notesValue);
-  const splits = sale ? await listSaleSplitsBySaleIds([sale.id]) : [];
-  const { data: tips } = await getSupabaseClient()
-    .from('tips')
-    .select('origin_id');
-  return {
-    saleId: sale?.id,
-    splitCount: splits.length,
-    tipOriginIds: (tips ?? []).map((tip) => tip.origin_id as string),
-  };
-}
-
 test.describe('Sin conexión (rojos)', () => {
-  test(
-    '[B11] a sale with a tip registered offline creates its tip when the connection returns',
-    bugDoc({
-      id: 'B11',
-      titulo:
-        'Una venta con propina hecha sin conexión crea su propina al volver la conexión',
-      intent:
-        'Comprobar que la propina de una venta registrada sin internet llega a la base (y a Propinas) cuando vuelve la conexión.',
-      steps: [
-        'Abre el dashboard, corta la conexión y registra una venta de Bs 1000 con propina de Bs 100.',
-        'Restablece la conexión y espera la sincronización (la venta llega).',
-      ],
-      expects: ['Existe una propina cuyo origin_id es el id de la venta real.'],
-      actual:
-        'la rama sin conexión solo encola la venta y sus pagos (que ya incluyen la propina); la propina nunca se encola, así que la venta queda con el dinero de la propina y sin propina que pagar',
-    }),
-    async ({ page, context }) => {
-      // Act
-      const result = await registerSaleOffline(page, context, {
-        globalOrchestrator: false,
-        tip: true,
-      });
-
-      // Assert
-      expect(result.saleId, 'la venta llegó a la base').toBeTruthy();
-      expect(result.tipOriginIds).toEqual([result.saleId]);
-    }
-  );
-
   test(
     '[C1-control] with the legacy processor, a sale registered offline syncs with its payments',
     bugDoc({

@@ -83,13 +83,6 @@ export const BUG_KNOWLEDGE = {
     fix: 'Inicializar el formulario una vez y aplicar la propina sin reiniciar los campos que el usuario ya tocó; corregir junto con B3 porque ambos viven en la misma hidratación.',
     where: 'components/ventas/useEditSaleSheetViewModel.ts (líneas ~88-138)',
   },
-  B11: {
-    cause:
-      'La rama sin conexión de completeSaleAction encola la venta y sus pagos (que ya incluyen la propina) y devuelve la venta, pero nunca encola la creación de la propina. La propina solo se crea en la rama con conexión.',
-    fix: 'Encolar también el INSERT de la propina en la rama offline (dependiente de la venta temporal y con su origin_id remapeado al id real al sincronizar) y agregarla a la tienda de propinas en memoria. Ver docs/agents/offline-sync.md.',
-    where:
-      'store/useWaterSalesStore.actions.ts:44-130 (rama !navigator.onLine) · offline/enqueue/salesEnqueue.ts enqueueOfflineSale',
-  },
   C1: {
     cause:
       'Los ayudantes de encolado escriben claves de negocio (sale:temp-x) en dependsOn, pero el orquestador global solo compara contra ids de acción en completedIds; además el origin_id temporal de la propina solo se remapea para pagos (C2). Latente: la bandera está apagada por defecto y corre el procesador legado.',

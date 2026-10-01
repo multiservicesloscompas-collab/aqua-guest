@@ -33,6 +33,9 @@ interface EnqueueOfflineSaleDeleteInput {
   actionSource?: string;
 }
 
+export const buildSaleCreateBusinessKey = (date: string, dailyNumber: number) =>
+  `sale:${date}:${dailyNumber}`;
+
 export const enqueueOfflineSale = (input: EnqueueOfflineSaleInput): Sale => {
   const tempId = generateTempId();
 
@@ -41,7 +44,7 @@ export const enqueueOfflineSale = (input: EnqueueOfflineSaleInput): Sale => {
     table: 'sales',
     payload: { ...input.newSalePayload, tempId },
     enqueueSource: input.actionSource ?? 'water-sales/completeSale',
-    businessKey: `sale:${input.date}:${input.dailyNumber}`,
+    businessKey: buildSaleCreateBusinessKey(input.date, input.dailyNumber),
   });
 
   if (input.paymentSplits?.length) {
@@ -58,7 +61,9 @@ export const enqueueOfflineSale = (input: EnqueueOfflineSaleInput): Sale => {
       },
       enqueueSource: input.actionSource ?? 'water-sales/completeSale',
       businessKey: `sale-splits:${tempId}`,
-      dependencyKeys: [`sale:${input.date}:${input.dailyNumber}`],
+      dependencyKeys: [
+        buildSaleCreateBusinessKey(input.date, input.dailyNumber),
+      ],
     });
   }
 
@@ -192,6 +197,8 @@ interface EnqueueOfflineSaleTipUpsertInput {
   exchangeRateUsed?: number;
   capturePaymentMethod: PaymentMethod;
   notes?: string;
+  /** Business keys of queued actions the tip needs first (e.g. its new sale). */
+  dependencyKeys?: string[];
   actionSource?: string;
 }
 
@@ -216,8 +223,8 @@ export const enqueueOfflineSaleTipUpsert = (
     },
     enqueueSource: input.actionSource ?? 'water-sales/updateSale',
     businessKey,
-    dependencyKeys: input.saleId.startsWith('temp-')
-      ? [`sale:${input.saleId}`]
-      : undefined,
+    dependencyKeys:
+      input.dependencyKeys ??
+      (input.saleId.startsWith('temp-') ? [`sale:${input.saleId}`] : undefined),
   });
 };

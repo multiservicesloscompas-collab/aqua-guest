@@ -4,6 +4,7 @@ import { createWasherRental } from '../support/drivers/rentalDriver';
 import { createWaterSale } from '../support/drivers/waterSaleDriver';
 import { waitForSaleByMarker } from '../support/dbPolling';
 import { createRunMarker } from '../support/runMarker';
+import { registerSaleOffline } from '../support/offlineSale';
 import { gotoDashboard } from '../support/uiNavigation';
 import { getSupabaseClient } from '../support/supabaseClient';
 import { bootstrapAtDashboard } from '../support/waterSalesTipsMatrix/uiHelpers';
@@ -288,6 +289,33 @@ test.describe('offline sync (legacy processor)', () => {
           Number(tip.amount_bs),
         ])
       ).toEqual([['rental', rentals?.[0].id, 100]]);
+    }
+  );
+
+  test(
+    '[B11 corregido] a sale with a tip registered offline creates its tip when the connection returns',
+    documented({
+      titulo:
+        '[B11 corregido] Una venta con propina hecha sin conexión crea su propina al volver la conexión',
+      area: AREA,
+      intent:
+        'Comprobar que la propina de una venta registrada sin internet llega a la base (y a Propinas) cuando vuelve la conexión.',
+      steps: [
+        'Abre el dashboard, corta la conexión y registra una venta de Bs 1000 con propina de Bs 100.',
+        'Restablece la conexión y espera la sincronización (la venta llega).',
+      ],
+      expects: ['Existe una propina cuyo origin_id es el id de la venta real.'],
+    }),
+    async ({ page, context }) => {
+      // Act
+      const result = await registerSaleOffline(page, context, {
+        globalOrchestrator: false,
+        tip: true,
+      });
+
+      // Assert
+      expect(result.saleId, 'la venta llegó a la base').toBeTruthy();
+      expect(result.tipOriginIds).toEqual([result.saleId]);
     }
   );
 });

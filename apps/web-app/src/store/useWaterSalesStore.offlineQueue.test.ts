@@ -13,6 +13,8 @@ const saleSplitsInsertMock = vi.fn();
 const tipsDeleteEqMock = vi.fn();
 const tipsDeleteScopeEqMock = vi.fn();
 const tipsDeleteMock = vi.fn(() => ({ eq: tipsDeleteEqMock }));
+const tipsUpsertMock = vi.fn();
+const tipsInsertMock = vi.fn();
 
 vi.mock('@/services/SalesDataService', () => ({
   salesDataService: {
@@ -39,6 +41,8 @@ vi.mock('@/lib/supabaseClient', () => {
     if (table === 'tips') {
       return {
         delete: tipsDeleteMock,
+        upsert: tipsUpsertMock,
+        insert: tipsInsertMock,
       };
     }
 
@@ -64,6 +68,8 @@ describe('useWaterSalesStore offline queueing', () => {
     tipsDeleteEqMock.mockReset();
     tipsDeleteScopeEqMock.mockReset();
     tipsDeleteMock.mockReset();
+    tipsUpsertMock.mockReset();
+    tipsInsertMock.mockReset();
 
     tipsDeleteEqMock.mockImplementation(() => ({ eq: tipsDeleteScopeEqMock }));
     tipsDeleteScopeEqMock.mockResolvedValue({ error: null });
@@ -205,5 +211,46 @@ describe('useWaterSalesStore offline queueing', () => {
     ]);
     expect(queue.map((q) => q.type)).toEqual(['DELETE', 'DELETE', 'DELETE']);
     expect(useWaterSalesStore.getState().sales).toHaveLength(0);
+  });
+
+  it('queues the tip of a new sale instead of calling supabase when offline (B11)', async () => {
+    // Arrange
+    useWaterSalesStore.setState({
+      cart: [
+        {
+          id: 'item-1',
+          productId: 'product-1',
+          productName: 'Garrafón',
+          quantity: 1,
+          unitPrice: 1000,
+          subtotal: 1000,
+        },
+      ],
+    });
+
+    // Act
+    const sale = await useWaterSalesStore
+      .getState()
+      .completeSale('efectivo', '2026-03-09', undefined, undefined, {
+        amountBs: 100,
+        capturePaymentMethod: 'efectivo',
+      });
+
+    // Assert
+    expect(tipsUpsertMock).not.toHaveBeenCalled();
+    expect(tipsInsertMock).not.toHaveBeenCalled();
+    const queue = useSyncStore.getState().queue;
+    const saleAction = queue.find((entry) => entry.table === 'sales');
+    const tipAction = queue.find((entry) => entry.table === 'tips');
+    expect(tipAction?.type).toBe('INSERT');
+    expect(tipAction?.payload).toMatchObject({
+      origin_type: 'sale',
+      origin_id: sale.id,
+      amount_bs: 100,
+      __op: 'upsert_on_origin',
+    });
+    expect(tipAction?.dependencies.dependsOn).toEqual([
+      saleAction?.idempotency.businessKey,
+    ]);
   });
 });
