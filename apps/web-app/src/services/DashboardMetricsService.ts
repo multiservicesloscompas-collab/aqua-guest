@@ -13,10 +13,13 @@ import {
   createEmptyMethodTotals,
 } from '@/services/payments/paymentSplitReadModel';
 import { resolvePaymentBalanceTransferLegs } from '@/services/payments/paymentBalanceTransferSemantics';
-import { hasValidMixedPaymentSplits } from '@/services/payments/paymentSplitValidity';
 import type { PaymentMethodTotals } from '@aqua-guest/domain';
 import type { FinancialActivitySnapshot } from '@/services/transactions/financialActivity';
-import { normalizeToVenezuelaDate } from '@/services/DateService';
+import {
+  computeExpenseTotalsByMethod,
+  dedupeTipPayouts,
+  resolveTipPayoutDate,
+} from '@/services/payments/methodOutflows';
 
 export interface DateRange {
   start: string;
@@ -63,25 +66,6 @@ const PAYMENT_METHODS: PaymentMethod[] = [
 
 function emptyMethodTotals(): PaymentMethodTotals {
   return createEmptyMethodTotals();
-}
-
-function computeExpenseTotalsByMethod(
-  expenses: readonly Expense[]
-): PaymentMethodTotals {
-  const totals = createEmptyMethodTotals();
-
-  for (const expense of expenses) {
-    if (hasValidMixedPaymentSplits(expense.paymentSplits)) {
-      for (const split of expense.paymentSplits) {
-        totals[split.method] += Number(split.amountBs || 0);
-      }
-      continue;
-    }
-
-    totals[expense.paymentMethod] += Number(expense.amount || 0);
-  }
-
-  return totals;
 }
 
 function computeScope(
@@ -233,18 +217,4 @@ export function calculateDashboardMetrics(
   );
 
   return { day, mtd };
-}
-
-function resolveTipPayoutDate(payout: TipPayout): string {
-  return normalizeToVenezuelaDate(payout.paidAt || payout.tipDate);
-}
-
-function dedupeTipPayouts(payouts: readonly TipPayout[]): TipPayout[] {
-  const uniqueById = new Map<string, TipPayout>();
-  for (const payout of payouts) {
-    if (!uniqueById.has(payout.id)) {
-      uniqueById.set(payout.id, payout);
-    }
-  }
-  return Array.from(uniqueById.values());
 }
