@@ -22,7 +22,7 @@ Approval of one action never extends to the next one. Prefer leaving changes unc
 - Cross-module e2e scenarios are data (`apps/web-app-e2e/src/support/scenarios`); their expected dashboard figures come from `support/ledger`, which must never copy the app's formulas. Prepaid orders and rental extensions are intentionally out of scope.
 - Every e2e test is written with `documented({intent, steps, expects})` (Spanish text, exact figures) and asserts toasts through `expectToast`, never a bare `getByText`. `npm run e2e:live -- --check` enforces the ficha.
 - `supabase/` is versioned. The first two migrations mirror the production baseline (`initial_schema` + USD balance columns) and are not proof of the real production schema.
-- Production migrations are applied by the user with `npm run db:migrate`. Never assume they were applied: `npm run db:migrations:status` lists them, and the app warns on startup when some are pending (`docs/agents/supabase.md`, Migrations).
+- Production migrations are applied by the user with `npm run db:migrate`. Never assume they were applied: `npm run db:migrations:status` lists them (`docs/agents/supabase.md`, Migrations).
 
 ## Bug Fix Flow (one bug at a time)
 

@@ -50,10 +50,10 @@ AquaGuest talks to Supabase directly from repository code.
 - `supabase/` is versioned (`config.toml`, `migrations/`, `seed.sql`). Never commit `supabase/.temp`, `.branches` or `.env*` (already ignored by `supabase/.gitignore`).
 - One file per change: `supabase/migrations/<YYYYMMDDHHMMSS>_<name>.sql`, additive first, with the rollback SQL as a comment at the top (`docs/agents/workflow.md`, Database Changes).
 - The registry is Supabase's own `supabase_migrations.schema_migrations`. `npm run local` runs `supabase migration up` before serving, so local databases never fall behind.
-- On startup the app compares the versions found in `supabase/migrations` at build time (`__EXPECTED_MIGRATIONS__`, injected in `apps/web-app/vite.config.mts`) with the database (`public.applied_migration_versions()`), and shows a 15 second warning toast once per session when some are pending (`useMigrationToast`, called by the Dashboard). The browser never applies migrations; the user runs `npm run db:migrate`.
+- The app does not check or apply migrations; the user runs `npm run db:migrate`. There is no startup warning for pending migrations on purpose: it needed a database function exposed to `anon` and was removed.
 - Step-by-step guide for the user (local and production, with credentials): `supabase/README.md`.
-- One-time production setup: `npx supabase login`, `npx supabase link --project-ref <ref>`, then `npx supabase migration repair --status applied 20260101000000 20260717120000` for the two migrations that were applied by hand before the registry existed.
-- Before merging a PR that adds a migration, apply it to production first (expand first), so the deployed app never shows the banner.
+- One-time production setup: `npx supabase login`, `npx supabase link --project-ref <ref>`, then `npx supabase migration repair --status applied 20260101000000 20260717120000` for the two migrations that were applied by hand before the registry existed. The production registry was aligned this way on 2026-09-30 (its 10 older versions, which have no local file, were removed from the registry).
+- Before merging a PR that adds a migration, apply it to production first (expand first), so the deployed code never runs against a missing column or table.
 
 ## Documentation Sync
 

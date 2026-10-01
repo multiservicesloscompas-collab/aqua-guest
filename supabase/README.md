@@ -12,11 +12,8 @@ Ese registro es lo que dice qué migración está aplicada y cuál no.
 
 ## Cómo te enteras de que falta una migración
 
-Al entrar al Dashboard, la app compara las migraciones que trae el código (las de `supabase/migrations`
-al construir la app) con las que tiene la base. Si faltan, aparece un aviso amarillo de 15 segundos:
-«Base de datos desactualizada. Falta 1 migración. Ejecuta npm run db:migrate para aplicarla.».
-Sale una vez por sesión y no bloquea nada. La app **solo avisa**: no puede aplicar migraciones, porque
-para eso necesitaría la contraseña de la base dentro del navegador.
+La app **no avisa** ni aplica migraciones. Antes de desplegar, mira qué falta con
+`npm run db:migrations:status`.
 
 ## Local (sin credenciales)
 
@@ -35,7 +32,7 @@ Requisitos: Docker corriendo y `npm install` hecho.
    - Crea `supabase/migrations/<fecha-hora>_nombre_corto_del_cambio.sql` con la fecha y hora actuales.
 2. Escribe el SQL. Reglas del proyecto:
    - Primero cambios **aditivos** (columnas o tablas nuevas con valor por defecto).
-   - Pon el **SQL de reversión como comentario** al inicio del archivo (mira `20261001000000_applied_migrations_rpc.sql`).
+   - Pon el **SQL de reversión como comentario** al inicio del archivo (mira `20260717120000_add_missing_usd_balance_columns.sql`).
    - No uses `FOR ALL TO public USING (true)` en tablas nuevas sin decidirlo.
 3. `npm run local` (o `npx supabase migration up`) para aplicarla en local y probarla.
 4. Commitea el archivo junto con el código que lo necesita.
@@ -55,7 +52,11 @@ Requisitos: Docker corriendo y `npm install` hecho.
    - Te pide la **contraseña de la base de datos** (la que definiste al crear el proyecto; si no la
      recuerdas, restablécela en _Project Settings → Database_). También puedes darla con la variable
      `SUPABASE_DB_PASSWORD`. Nunca la subas al repositorio.
-3. Marca como aplicadas las dos migraciones que producción ya tiene (se hicieron a mano antes de que
+3. Producción traía un registro antiguo de 10 versiones que no existen como archivo aquí
+   (`20251219193549` … `20260327034518`). Hay que retirarlas del registro con
+   `npx supabase migration repair --status reverted <versiones>` o `db push` se negará a continuar.
+   Esto ya se hizo el 2026-09-30; solo hace falta si se recrea el proyecto.
+4. Marca como aplicadas las dos migraciones que producción ya tiene (se hicieron a mano antes de que
    existiera el registro):
 
    ```bash
@@ -65,22 +66,18 @@ Requisitos: Docker corriendo y `npm install` hecho.
    **No te saltes este paso:** `20260101000000` es la base de la base _local_ y no debe ejecutarse en
    producción (el esquema real es distinto y fallaría o cambiaría políticas de seguridad).
 
-4. Comprueba que producción tenga las columnas `amount_out_usd`, `amount_in_usd` y `difference_usd`
+5. Comprueba que producción tenga las columnas `amount_out_usd`, `amount_in_usd` y `difference_usd`
    en `payment_balance_transactions` (si no las tiene, la segunda migración habría que aplicarla de verdad).
-5. `npm run db:migrations:status` debe mostrar las dos primeras con valor en `Local` y en `Remote`.
+6. `npm run db:migrations:status` debe mostrar las dos primeras con valor en `Local` y en `Remote`.
 
 ### Cada vez que hay una migración nueva
 
-1. **Antes de desplegar el código** que la necesita (así la app desplegada no avisa de migración pendiente):
+1. **Antes de desplegar el código** que la necesita (así la app desplegada no corre contra una columna o tabla que aún no existe):
 2. Mira qué se aplicaría, sin cambiar nada: `npx supabase db push --dry-run`
 3. Aplícala: `npm run db:migrate`
    - Te lista las migraciones pendientes y pide confirmación. Aplica solo las que faltan y las registra.
 4. Verifica: `npm run db:migrations:status` (todas con valor en `Local` y `Remote`).
 5. Ahora sí, haz el merge a `main` para que Vercel despliegue.
-
-La primera vez que se despliegue este sistema, `20261001000000_applied_migrations_rpc.sql` es la
-pendiente: crea la función de solo lectura que la app usa para verificar. Hasta aplicarla, producción
-mostrará el aviso de 1 migración pendiente.
 
 ### Si una migración sale mal
 

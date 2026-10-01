@@ -21,7 +21,6 @@ import { QuickActionsCards } from './components/QuickActionsCards';
 import { PaymentMethodSummary } from './components/PaymentMethodSummary';
 import { useDashboardData } from './hooks/useDashboardData';
 import { useDashboardViewModel } from './hooks/useDashboardViewModel';
-import { useMigrationToast } from './hooks/useMigrationToast';
 import {
   TABLET_PRIMARY_COLUMN_CLASS,
   TABLET_SECONDARY_COLUMN_CLASS,
@@ -37,7 +36,6 @@ export function DashboardPage({
   onNavigate,
   onPaymentMethodClick,
 }: DashboardPageProps = {}) {
-  useMigrationToast();
   const { isTabletViewport, viewportMode } = useViewportMode();
   const isTabletLandscape = viewportMode === 'tablet-landscape';
   const { selectedDate, setSelectedDate } = useAppStore();
