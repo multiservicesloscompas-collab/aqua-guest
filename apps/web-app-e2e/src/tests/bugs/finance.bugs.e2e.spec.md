@@ -1,7 +1,7 @@
 # Finance consistency bugs (red on purpose)
 
 Ported from the audit draft in commit `9a024e2` and re-verified against this branch: every test fails on its business assertion.
-FIN-01 is bug B5 in `docs/audit/production-bugs.md`; the others are new findings listed as FIN-xx there.
+FIN-01 is bug B5 in `docs/audit/production-bugs.md` and is **fixed** (its spec now passes as a regression guard); the others are new findings listed as FIN-xx there.
 
 | ID          | What the app does                                                                      | What it should do                                       |
 | :---------- | :------------------------------------------------------------------------------------- | :------------------------------------------------------ |

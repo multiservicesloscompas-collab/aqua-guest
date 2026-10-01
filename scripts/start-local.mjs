@@ -21,7 +21,9 @@ function getLocalSupabaseConfig() {
       const studioUrl = parsed.STUDIO_URL || DEFAULT_STUDIO_URL;
 
       if (!anonKey) {
-        throw new Error('No se pudo obtener la clave anónima desde Supabase status.');
+        throw new Error(
+          'No se pudo obtener la clave anónima desde Supabase status.'
+        );
       }
 
       return { url, anonKey, studioUrl };
@@ -34,7 +36,9 @@ function getLocalSupabaseConfig() {
   }
 
   const fallbackUrl =
-    process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || DEFAULT_LOCAL_URL;
+    process.env.VITE_SUPABASE_URL ||
+    process.env.SUPABASE_URL ||
+    DEFAULT_LOCAL_URL;
   const fallbackAnonKey =
     process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
 
@@ -60,6 +64,16 @@ async function startLocal() {
   } catch (err) {
     console.error(
       '❌ Failed to start Supabase. Please ensure Docker is running.'
+    );
+    process.exit(err.status ?? 1);
+  }
+
+  try {
+    console.log('🗄️  [AquaGuest] Applying pending local migrations...');
+    execSync('npx supabase migration up', { stdio: 'inherit' });
+  } catch (err) {
+    console.error(
+      '❌ Failed to apply local migrations. Fix the migration and run "npm run local" again.'
     );
     process.exit(err.status ?? 1);
   }

@@ -147,8 +147,12 @@ function computeScope(
   );
 
   const waterBs = filteredSales.reduce((sum, s) => sum + s.totalBs, 0);
-  const rentalBs = filteredRentals.reduce(
-    (sum, r) => sum + r.totalUsd * exchangeRate,
+  const rentalsTotals = filteredRentals.reduce(
+    (acc, rental) => allocateRentalToMethodTotalsBs(rental, exchangeRate, acc),
+    createEmptyMethodTotals()
+  );
+  const rentalBs = PAYMENT_METHODS.reduce(
+    (sum, method) => sum + rentalsTotals[method],
     0
   );
   const prepaidBs = filteredPrepaid.reduce((sum, p) => sum + p.amountBs, 0);
@@ -172,10 +176,6 @@ function computeScope(
   const methodTotalsBs = emptyMethodTotals();
   const salesTotals = filteredSales.reduce(
     (acc, sale) => allocateSaleToMethodTotalsBs(sale, acc),
-    createEmptyMethodTotals()
-  );
-  const rentalsTotals = filteredRentals.reduce(
-    (acc, rental) => allocateRentalToMethodTotalsBs(rental, exchangeRate, acc),
     createEmptyMethodTotals()
   );
   const expenseTotalsByMethod = computeExpenseTotalsByMethod(filteredExpenses);
