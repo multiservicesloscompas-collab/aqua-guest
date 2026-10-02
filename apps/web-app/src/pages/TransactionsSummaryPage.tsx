@@ -6,6 +6,7 @@ import { AppPageContainer } from '@/components/layout/AppPageContainer';
 import { Header } from '@/components/layout/Header';
 import { TabletSplitLayout } from '@/components/layout/TabletSplitLayout';
 import { useViewportMode } from '@/hooks/responsive/useViewportMode';
+import { useDayFinancialData } from '@/hooks/useDayFinancialData';
 import { useAppStore } from '@/store/useAppStore';
 import { useConfigStore } from '@/store/useConfigStore';
 import { useExpenseStore } from '@/store/useExpenseStore';
@@ -36,12 +37,19 @@ export function TransactionsSummaryPage({
   const { isTabletViewport } = useViewportMode();
   const { selectedDate, setSelectedDate } = useAppStore();
   const { prepaidOrders } = usePrepaidStore();
-  const { sales } = useWaterSalesStore();
-  const { expenses } = useExpenseStore();
+  const { sales, loadSalesByDateRange } = useWaterSalesStore();
+  const { expenses, loadExpensesByDate } = useExpenseStore();
   const { paymentBalanceTransactions } = usePaymentBalanceStore();
   const { config } = useConfigStore();
-  const { rentals } = useRentalStore();
-  const { tipPayouts } = useTipStore();
+  const { rentals, loadRentalsByDateRange } = useRentalStore();
+  const { tipPayouts, loadPaidTipsByDateRange } = useTipStore();
+
+  useDayFinancialData(selectedDate, {
+    loadSalesByDateRange,
+    loadRentalsByDateRange,
+    loadExpensesByDate,
+    loadPaidTipsByDateRange,
+  });
 
   const transactions = useMemo(() => {
     return buildTransactionsSummaryItems({

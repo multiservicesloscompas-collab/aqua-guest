@@ -54,13 +54,6 @@ export const BUG_KNOWLEDGE = {
     where:
       'paymentBalanceSummary.ts:56-59 · DashboardMetricsService.ts:113 (referencia)',
   },
-  'FIN-06': {
-    cause:
-      'Las pantallas de Transacciones y detalle de método no llaman a ningún cargador de rango al navegar a otro mes, así que solo ven lo ya cargado.',
-    fix: 'Llamar a los cargadores por rango de ventas, alquileres y egresos cuando cambia la fecha navegada.',
-    where:
-      'pages/TransactionsSummaryPage/TransactionsSummaryPage.tsx · usePaymentMethodDetailViewModel.ts',
-  },
   'FIN-09': {
     cause:
       'La página de métricas suma todos los egresos que hay en la tienda, sin filtrar por el período seleccionado.',

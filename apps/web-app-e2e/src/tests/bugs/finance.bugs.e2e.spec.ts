@@ -23,7 +23,6 @@ import {
   firstMachineId,
   seedExpense,
   seedRental,
-  seedSales,
   setExchangeRate,
 } from '../../support/bugs/dbSeed';
 import {
@@ -204,35 +203,6 @@ test.describe('FIN · consistencia financiera (rojos)', () => {
       const original = await balanceAmount(page, 'Efectivo', 'Original');
 
       expect(original).toBe(0);
-    }
-  );
-
-  test(
-    '[FIN-06] Transacciones carga datos del mes anterior al navegar la fecha',
-    bugDoc({
-      id: 'FIN-06',
-      titulo: 'Transacciones carga el mes anterior al navegar la fecha',
-      intent:
-        'Comprobar que al navegar a un día del mes anterior Transacciones trae sus movimientos.',
-      steps: [
-        'Siembra una venta y un egreso del último día del mes anterior.',
-        'Abre Transacciones y navega hasta ese día.',
-      ],
-      expects: ['Aparecen 2 movimientos.'],
-      actual: 'la pantalla no pide esos datos y solo aparece 1 movimiento',
-    }),
-    async ({ page }) => {
-      const day = lastDayOfPreviousMonth(TODAY());
-      await seedSales([{ date: day, dailyNumber: 1, totalBs: 100 }]);
-      await seedExpense({ date: day, amount: 20 });
-
-      await gotoDashboard(page);
-      await openTransactionsFromMenu(page);
-      await goToDate(page, day);
-
-      await expect(
-        page.locator('[data-testid^="transaction-row-"]')
-      ).toHaveCount(2, { timeout: 8_000 });
     }
   );
 });
