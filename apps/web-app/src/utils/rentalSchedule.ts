@@ -83,8 +83,14 @@ export function calculatePickupTime(
     deliveryTime === '13:00' || deliveryTime === '14:00';
   const sameDay =
     format(pickupDateTime, 'yyyy-MM-dd') === format(deliveryDate, 'yyyy-MM-dd');
+  const closesLate = getDay(pickupDateTime) !== 0;
 
-  if (isExceptionDelivery && sameDay && isAfter(pickupDateTime, closeTime)) {
+  if (
+    isExceptionDelivery &&
+    sameDay &&
+    closesLate &&
+    isAfter(pickupDateTime, closeTime)
+  ) {
     pickupDateTime = setMinutes(setHours(deliveryDate, 20), 0);
   } else {
     pickupDateTime = clampToBusinessHours(pickupDateTime);
