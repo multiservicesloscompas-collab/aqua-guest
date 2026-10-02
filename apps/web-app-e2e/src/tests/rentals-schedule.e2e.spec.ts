@@ -21,11 +21,13 @@ interface ScheduleCase {
   shift: 'medio' | 'completo' | 'doble';
   label: RegExp;
   pickup: string;
+  /** Bug tag shown in the title, e.g. 'B9 corregido'. */
+  bug?: string;
 }
 
 // Business hours 09:00-20:00 (Sunday closes 14:00). A pickup after closing moves
-// to the next working day at 09:00. The Sunday 13:00/14:00 case is bug B9 and
-// lives in tests/bugs.
+// to the next working day at 09:00. The 13:00/14:00 exception (same-day pickup at
+// 20:00) applies Monday to Saturday only; on Sunday it follows the general rule (B9).
 const CASES: ScheduleCase[] = [
   {
     day: 'lunes',
@@ -107,6 +109,33 @@ const CASES: ScheduleCase[] = [
     label: /^lunes \d+ de \w+ a las 09:00$/,
     pickup: 'el lunes a las 09:00 (después del cierre del domingo)',
   },
+  {
+    day: 'domingo',
+    weekday: 0,
+    time: '13:00',
+    shift: 'medio',
+    label: /^lunes \d+ de \w+ a las 09:00$/,
+    pickup: 'el lunes a las 09:00 (después del cierre del domingo)',
+    bug: 'B9 corregido',
+  },
+  {
+    day: 'domingo',
+    weekday: 0,
+    time: '14:00',
+    shift: 'medio',
+    label: /^lunes \d+ de \w+ a las 09:00$/,
+    pickup: 'el lunes a las 09:00 (después del cierre del domingo)',
+    bug: 'B9 corregido',
+  },
+  {
+    day: 'sábado',
+    weekday: 6,
+    time: '13:00',
+    shift: 'medio',
+    label: /^Hoy a las 20:00$/,
+    pickup: 'el mismo día a las 20:00 (excepción de las 13:00)',
+    bug: 'B9-control',
+  },
 ];
 
 const SHIFT_NAME = {
@@ -120,9 +149,9 @@ test.describe('rental pickup schedule', () => {
     test(
       `${c.day} ${c.time} ${c.shift} pickup`,
       documented({
-        titulo: `Entrega el ${c.day} a las ${c.time} con ${
-          SHIFT_NAME[c.shift]
-        }: retiro ${c.pickup}`,
+        titulo: `${c.bug ? `[${c.bug}] ` : ''}Entrega el ${c.day} a las ${
+          c.time
+        } con ${SHIFT_NAME[c.shift]}: retiro ${c.pickup}`,
         area: 'Alquileres: horario de retiro',
         intent: `Comprobar la hora de retiro que calcula la hoja de nuevo alquiler para ${
           c.day

@@ -103,14 +103,28 @@ describe('calculatePickupTime', () => {
       expect(result.pickupDate).toBe('2026-05-12');
     });
 
-    // Pins today's behavior. The business rule is Monday 09:00 (candidate C11);
-    // this expectation must flip when that bug is fixed, in its own change.
-    it('still ends at 20:00 on a Sunday even though the shop closes at 14:00', () => {
+    // Business rule (B9): a pickup after closing moves to the next working day
+    // at 09:00; on Sunday the shop closes at 14:00, so it becomes Monday 09:00.
+    it.each(['13:00', '14:00'])(
+      'moves a Sunday pickup after the 14:00 closing to Monday at opening when delivered at %s',
+      (deliveryTime) => {
+        // Arrange / Act
+        const result = calculatePickupTime(SUNDAY, deliveryTime, 'medio');
+
+        // Assert
+        expect(result).toEqual({
+          pickupTime: '09:00',
+          pickupDate: '2026-05-11',
+        });
+      }
+    );
+
+    it('still ends a Saturday 13:00 half-day at 20:00 the same day', () => {
       // Arrange / Act
-      const result = calculatePickupTime(SUNDAY, '13:00', 'medio');
+      const result = calculatePickupTime(SATURDAY, '13:00', 'medio');
 
       // Assert
-      expect(result).toEqual({ pickupTime: '20:00', pickupDate: '2026-05-10' });
+      expect(result).toEqual({ pickupTime: '20:00', pickupDate: '2026-05-16' });
     });
   });
 

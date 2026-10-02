@@ -33,12 +33,6 @@ export const BUG_KNOWLEDGE = {
     where:
       'pages/RentalsPage/hooks/editRentalSheetViewModel.helpers.ts:112 · rentalSheetViewModel.helpers.ts:78 · utils/rentalPricing.ts:9',
   },
-  B9: {
-    cause:
-      'La excepción de las 13:00/14:00 en calculatePickupTime fija las 20:00 del mismo día; vale de lunes a sábado (cierre 20:00) pero el domingo la tienda cierra a las 14:00.',
-    fix: 'Aplicar la excepción solo si el día de retiro no es domingo; el domingo cae en clampToBusinessHours, que ya da lunes 09:00. Hay que actualizar el test unitario que hoy fija las 20:00 del domingo.',
-    where: 'utils/rentalSchedule.ts · calculatePickupTime (rama 13:00/14:00)',
-  },
   B10: {
     cause:
       'El efecto de hidratación de la edición de venta vuelve a cargar el formulario cuando llega la propina y pisa lo que el usuario ya escribió (misma clase que B2).',
