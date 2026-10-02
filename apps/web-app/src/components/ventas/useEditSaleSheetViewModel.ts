@@ -1,16 +1,16 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { toast } from 'sonner';
+import { resolveSplitFormHydrationState } from '@/services/payments/paymentSplitFormHydration';
+import { normalizeAndValidatePaymentSplits } from '@/services/payments/paymentSplitValidation';
+import { buildDualPaymentSplits } from '@/services/payments/paymentSplitWritePath';
+import { calculateFinalSaleTotals } from '@/services/transactions/transactionTotals';
 import { useConfigStore } from '@/store/useConfigStore';
 import { useTipStore } from '@/store/useTipStore';
 import { useWaterSalesStore } from '@/store/useWaterSalesStore';
 import { PaymentMethod, Sale } from '@/types';
 import type { PaymentSplit } from '@aqua-guest/domain';
-import { normalizeAndValidatePaymentSplits } from '@/services/payments/paymentSplitValidation';
-import { buildDualPaymentSplits } from '@/services/payments/paymentSplitWritePath';
-import { resolveSplitFormHydrationState } from '@/services/payments/paymentSplitFormHydration';
-import { calculateFinalSaleTotals } from '@/services/transactions/transactionTotals';
-import { resolveEditSaleTipHydration } from './editSaleTipHydration';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { toast } from 'sonner';
 import { EditableCartItem } from './EditSaleItemsEditor';
+import { resolveEditSaleTipHydration } from './editSaleTipHydration';
 
 interface UseEditSaleSheetViewModelParams {
   sale: Sale | null;
@@ -46,8 +46,7 @@ export function useEditSaleSheetViewModel({
   const [tipNotes, setTipNotes] = useState('');
   const hydrationTokenRef = useRef(0);
   const tipRequestKeyRef = useRef<string | null>(null);
-  // The form is loaded from the sale once per opened sale. Data that arrives
-  // later (the tip) completes it but must not overwrite what the user typed (B10).
+  
   const subtotalTouchedRef = useRef(false);
   const tipHydratedForRef = useRef<string | null>(null);
 

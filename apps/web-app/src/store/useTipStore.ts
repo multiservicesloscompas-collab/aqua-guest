@@ -1,8 +1,8 @@
-import { create } from 'zustand';
+import { normalizeToVenezuelaDate } from '@/services/DateService';
+import { tipsDataService } from '@/services/tips/TipDataService';
 import type { PaymentMethod } from '@/types';
 import type { Tip, TipPayout } from '@/types/tips';
-import { tipsDataService } from '@/services/tips/TipDataService';
-import { normalizeToVenezuelaDate } from '@/services/DateService';
+import { create } from 'zustand';
 
 const dayOf = (isoDateLike: string) =>
   normalizeToVenezuelaDate(isoDateLike).substring(0, 10);
@@ -10,11 +10,6 @@ const dayOf = (isoDateLike: string) =>
 const isDayInRange = (day: string, startDate: string, endDate: string) =>
   day >= startDate && day <= endDate;
 
-/**
- * Loading a range replaces what the cache holds for that range: tips deleted or
- * moved elsewhere must leave the store (B1). `isStale` picks the cached tips the
- * loaded result is authoritative for.
- */
 function mergeLoadedTips(
   cached: readonly Tip[],
   loaded: readonly Tip[],

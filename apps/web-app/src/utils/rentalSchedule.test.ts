@@ -1,8 +1,8 @@
-import { describe, expect, it } from 'vitest';
 import type { RentalShift } from '@/types';
+import { describe, expect, it } from 'vitest';
 import { calculatePickupTime, clampToBusinessHours } from './rentalSchedule';
 
-// Local dates in May 2026 (no daylight-saving change in common time zones).
+
 const MONDAY = new Date(2026, 4, 11);
 const FRIDAY = new Date(2026, 4, 15);
 const SATURDAY = new Date(2026, 4, 16);

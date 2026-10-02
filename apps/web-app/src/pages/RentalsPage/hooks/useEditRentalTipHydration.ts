@@ -1,12 +1,12 @@
-import { useEffect, useRef, useState } from 'react';
 import { useTipStore } from '@/store/useTipStore';
 import type { WasherRental } from '@/types';
 import type { Tip } from '@/types/tips';
-import type { HydrateTipCaptureInput } from './useTipCaptureState';
+import { useEffect, useRef, useState } from 'react';
 import {
   createTipHydrationController,
   findTipByRentalOrigin,
 } from './editRentalTipHydration.controller';
+import type { HydrateTipCaptureInput } from './useTipCaptureState';
 
 interface TipCaptureApi {
   hydrateTipCapture: (input: HydrateTipCaptureInput) => void;
@@ -31,8 +31,6 @@ export function useEditRentalTipHydration({
   const [controller] = useState(() => createTipHydrationController());
   const { hydrateTipCapture, resetTipCapture } = tipCapture;
   const requestKeyRef = useRef<string | null>(null);
-  // The tip is applied to the form once per opened rental. Later updates of the
-  // tips store must not overwrite what the user is editing (B2).
   const appliedForRef = useRef<string | null>(null);
 
   useEffect(() => {
