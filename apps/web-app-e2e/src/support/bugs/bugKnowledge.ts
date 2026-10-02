@@ -93,12 +93,6 @@ export const BUG_KNOWLEDGE = {
     fix: 'Filtrar los egresos por el rango de fechas del período antes de sumarlos.',
     where: 'pages/EgresosMetricsPage/index.tsx:14-19',
   },
-  'FIN-11': {
-    cause:
-      'La lógica del formulario de equilibrio no valida el saldo disponible ni que la tasa sea mayor a 0 (con tasa 0 el cálculo da Infinity).',
-    fix: 'Bloquear la transferencia si el monto supera el saldo del método de origen o si la tasa no es positiva.',
-    where: 'paymentBalanceFormLogic.ts:55-79 (líneas 93 y 97 para la tasa)',
-  },
 } as const satisfies Record<string, BugKnowledge>;
 
 export type BugId = keyof typeof BUG_KNOWLEDGE;

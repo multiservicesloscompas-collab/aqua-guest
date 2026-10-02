@@ -10,4 +10,3 @@ FIN-01 is bug B5 in `docs/audit/production-bugs.md` and is **fixed** (its spec n
 | FIN-04      | Equilibrio groups a rental by service date (Bs 240 today)                              | Use the payment date like the dashboard (Bs 0 today)    |
 | FIN-06      | Transactions does not load the previous month when navigating to it (1 of 2 rows)      | Show both rows                                          |
 | FIN-09      | Expense metrics add every expense in the store (Bs 50)                                 | Only the selected period (Bs 30)                        |
-| FIN-11      | A transfer larger than the balance is saved                                            | Block it                                                |

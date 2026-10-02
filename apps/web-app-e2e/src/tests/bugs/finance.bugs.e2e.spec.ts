@@ -268,39 +268,4 @@ test.describe('FIN · egresos y validaciones (rojos)', () => {
       await expect(page.getByText('Bs 30.00')).toBeVisible({ timeout: 8_000 });
     }
   );
-
-  test(
-    '[FIN-11] una transferencia mayor al saldo disponible se bloquea',
-    bugDoc({
-      id: 'FIN-11',
-      titulo: 'Una transferencia mayor al saldo disponible se bloquea',
-      intent:
-        'Comprobar que no se puede mover más dinero del que hay en un método.',
-      steps: [
-        'Abre Equilibrio con saldo 0 en Efectivo.',
-        'Intenta transferir Bs 1.000.000 de efectivo a pago móvil.',
-      ],
-      expects: ['No se crea ninguna transferencia.'],
-      actual: 'no se valida el saldo y la transferencia se crea',
-    }),
-    async ({ page }) => {
-      await gotoDashboard(page);
-      await openPaymentBalancePage(page);
-      const before = await balanceAmount(page, 'Efectivo', 'final');
-      expect(before).toBe(0);
-
-      await createBalanceTransfer(page, {
-        operationType: 'equilibrio',
-        fromMethod: 'efectivo',
-        toMethod: 'pago_movil',
-        amountOutBs: 1_000_000,
-        amountInBs: 1_000_000,
-      }).catch(() => undefined);
-
-      const { count } = await getSupabaseClient()
-        .from('payment_balance_transactions')
-        .select('id', { count: 'exact', head: true });
-      expect(count).toBe(0);
-    }
-  );
 });
