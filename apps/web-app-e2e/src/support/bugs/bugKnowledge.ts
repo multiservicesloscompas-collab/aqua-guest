@@ -5,13 +5,6 @@ export interface BugKnowledge {
 }
 
 export const BUG_KNOWLEDGE = {
-  B1: {
-    cause:
-      'La tienda de propinas mezcla lo que carga con lo que ya tenía en un Map y nunca descarta las propinas que desaparecieron del rango.',
-    fix: 'Antes de mezclar, quitar de la caché las propinas cuyo día cae dentro del rango cargado (en la variante de pagadas, solo las pagadas, para no sacar las pendientes).',
-    where:
-      'store/useTipStore.ts · loadTipsByDateRange y loadPaidTipsByDateRange (normalizeToVenezuelaDate ya existe)',
-  },
   B4: {
     cause:
       'Los ayudantes de atribución solo confían en los pagos guardados cuando el pago es mixto (2+ métodos distintos); con un solo pago recalculan totalUsd × tasa de hoy.',
