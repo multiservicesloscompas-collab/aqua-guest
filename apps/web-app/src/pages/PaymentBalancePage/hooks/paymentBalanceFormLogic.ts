@@ -40,6 +40,13 @@ export const validatePaymentBalanceForm = (
   formData: PaymentBalanceFormData,
   exchangeRate: number
 ): { payload: ValidatedPayload | null; error: string | null } => {
+  if (!(exchangeRate > 0) || !Number.isFinite(exchangeRate)) {
+    return {
+      payload: null,
+      error: 'La tasa de cambio no es válida',
+    };
+  }
+
   if (!formData.fromMethod || !formData.toMethod || !formData.amountOut) {
     return {
       payload: null,
