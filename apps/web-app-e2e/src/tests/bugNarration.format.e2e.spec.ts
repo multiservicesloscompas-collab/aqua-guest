@@ -31,7 +31,7 @@ const annotationsOf = (details: ReturnType<typeof bugDoc>) => {
 };
 
 const BUG = bugDoc({
-  id: 'B10',
+  id: 'B1',
   titulo: 'Un bug de prueba',
   intent: 'Comprobar algo.',
   steps: ['Hace algo.'],
@@ -61,12 +61,12 @@ test.describe('bug narration', () => {
 
       // Assert
       expect(info).toEqual({
-        id: 'B10',
+        id: 'B1',
         kind: 'bug',
         actual: 'hace otra cosa',
-        ...BUG_KNOWLEDGE.B10,
+        ...BUG_KNOWLEDGE.B1,
       });
-      expect(readDoc(annotationsOf(BUG)).titulo).toBe('[B10] Un bug de prueba');
+      expect(readDoc(annotationsOf(BUG)).titulo).toBe('[B1] Un bug de prueba');
     }
   );
 

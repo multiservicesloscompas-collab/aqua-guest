@@ -33,12 +33,6 @@ export const BUG_KNOWLEDGE = {
     where:
       'pages/RentalsPage/hooks/editRentalSheetViewModel.helpers.ts:112 · rentalSheetViewModel.helpers.ts:78 · utils/rentalPricing.ts:9',
   },
-  B10: {
-    cause:
-      'El efecto de hidratación de la edición de venta vuelve a cargar el formulario cuando llega la propina y pisa lo que el usuario ya escribió (misma clase que B2).',
-    fix: 'Inicializar el formulario una vez y aplicar la propina sin reiniciar los campos que el usuario ya tocó; corregir junto con B3 porque ambos viven en la misma hidratación.',
-    where: 'components/ventas/useEditSaleSheetViewModel.ts (líneas ~88-138)',
-  },
   C1: {
     cause:
       'Los ayudantes de encolado escriben claves de negocio (sale:temp-x) en dependsOn, pero el orquestador global solo compara contra ids de acción en completedIds; además el origin_id temporal de la propina solo se remapea para pagos (C2). Latente: la bandera está apagada por defecto y corre el procesador legado.',
