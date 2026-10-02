@@ -1,4 +1,5 @@
 import { getSupabaseClient } from '../supabaseClient';
+import { addDays, todayVe } from './dates';
 
 export const BUG_MARKER = 'E2E-BUG';
 
@@ -189,4 +190,35 @@ export async function cleanupBugData(): Promise<void> {
     .delete()
     .not('id', 'is', null)
     .lte('rate', 0);
+}
+
+/** A paid rental (turno completo) with one efectivo payment split. */
+export async function seedPaidRentalWithSplit(opts: {
+  amountBs: number;
+  amountUsd: number;
+  rateUsed: number;
+}): Promise<string> {
+  const today = todayVe();
+  const id = await seedRental({
+    date: today,
+    machineId: await firstMachineId(),
+    shift: 'completo',
+    deliveryTime: '09:00',
+    pickupDate: addDays(today, 1),
+    pickupTime: '09:00',
+    totalUsd: opts.amountUsd,
+    isPaid: true,
+    datePaid: today,
+  });
+  const { error } = await getSupabaseClient()
+    .from('rental_payment_splits')
+    .insert({
+      rental_id: id,
+      payment_method: 'efectivo',
+      amount_bs: opts.amountBs,
+      amount_usd: opts.amountUsd,
+      exchange_rate_used: opts.rateUsed,
+    });
+  if (error) throw new Error(error.message);
+  return id;
 }

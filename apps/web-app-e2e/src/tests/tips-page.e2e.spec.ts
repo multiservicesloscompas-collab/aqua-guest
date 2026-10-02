@@ -1,3 +1,5 @@
+import { todayVe } from '../support/bugs/dates';
+import { seedPendingTip, seedSales } from '../support/bugs/dbSeed';
 import { captureDashboardSnapshot } from '../support/drivers/dashboardDriver';
 import { openTipsModule } from '../support/drivers/expenseDriver';
 import {
@@ -141,5 +143,46 @@ test(
         { timeout: 30_000, intervals: [1_000, 2_000] }
       )
       .toEqual({ rentals: 0, splits: 0, tips: 0 });
+  }
+);
+
+test(
+  'a tip deleted elsewhere disappears from the Tips page',
+  documented({
+    titulo: '[B1 corregido] Una propina borrada deja de aparecer en Propinas',
+    area: 'Propinas',
+    intent:
+      'Comprobar que la pantalla de Propinas no sigue mostrando una propina que ya no existe en la base.',
+    steps: [
+      'Siembra una venta con una propina pendiente y abre Propinas (la propina aparece).',
+      'Borra la propina directamente en la base.',
+      'Sale de Propinas, vuelve a entrar y espera la recarga.',
+    ],
+    expects: ['La propina ya no aparece en la lista.'],
+    data: 'Venta de Bs 1000 con una propina pendiente de Bs 100.',
+  }),
+  async ({ page }) => {
+    // Arrange
+    const [saleId] = await seedSales([
+      { date: todayVe(), dailyNumber: 1, totalBs: 1000 },
+    ]);
+    const tipId = await seedPendingTip({
+      originId: saleId,
+      originType: 'sale',
+      tipDate: todayVe(),
+      amountBs: 100,
+    });
+    await bootstrapAtDashboard(page);
+    await openTipsModule(page);
+    await expect(page.getByTestId(`tip-pay-button-${tipId}`)).toBeVisible();
+
+    // Act
+    await getSupabaseClient().from('tips').delete().eq('id', tipId);
+    await page.getByLabel('Ir a Inicio').click();
+    await openTipsModule(page);
+    await page.waitForTimeout(2_000);
+
+    // Assert
+    await expect(page.getByTestId(`tip-pay-button-${tipId}`)).toHaveCount(0);
   }
 );

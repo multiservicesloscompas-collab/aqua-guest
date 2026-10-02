@@ -1,5 +1,0 @@
-# Tips bugs (red on purpose)
-
-| ID  | User action                                                                                              | Expected                                   | Actual today                                                      | Root cause                                                                                                                                               |
-| :-- | :------------------------------------------------------------------------------------------------------- | :----------------------------------------- | :---------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| B1  | Open Tips, delete the tip in the database, leave and reopen Tips                                         | The tip is gone                            | It is still listed                                                | `useTipStore.loadTipsByDateRange` merges rows into a Map and never removes the ones that disappeared                                                     |

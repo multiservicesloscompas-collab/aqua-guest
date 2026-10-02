@@ -30,8 +30,9 @@ const annotationsOf = (details: ReturnType<typeof bugDoc>) => {
     : [];
 };
 
+// C12 stays open until the number format is decided, so this sample id is stable.
 const BUG = bugDoc({
-  id: 'B10',
+  id: 'C12',
   titulo: 'Un bug de prueba',
   intent: 'Comprobar algo.',
   steps: ['Hace algo.'],
@@ -61,12 +62,12 @@ test.describe('bug narration', () => {
 
       // Assert
       expect(info).toEqual({
-        id: 'B10',
+        id: 'C12',
         kind: 'bug',
         actual: 'hace otra cosa',
-        ...BUG_KNOWLEDGE.B10,
+        ...BUG_KNOWLEDGE.C12,
       });
-      expect(readDoc(annotationsOf(BUG)).titulo).toBe('[B10] Un bug de prueba');
+      expect(readDoc(annotationsOf(BUG)).titulo).toBe('[C12] Un bug de prueba');
     }
   );
 

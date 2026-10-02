@@ -1,4 +1,5 @@
 import { ComponentType, useMemo } from 'react';
+import { useDayFinancialData } from '@/hooks/useDayFinancialData';
 import { useAppStore } from '@/store/useAppStore';
 import { usePrepaidStore } from '@/store/usePrepaidStore';
 import { useWaterSalesStore } from '@/store/useWaterSalesStore';
@@ -100,12 +101,19 @@ export function usePaymentMethodDetailViewModel(
 ): PaymentMethodDetailViewModel {
   const { selectedDate, setSelectedDate } = useAppStore();
   const { prepaidOrders } = usePrepaidStore();
-  const { sales } = useWaterSalesStore();
-  const { expenses } = useExpenseStore();
+  const { sales, loadSalesByDateRange } = useWaterSalesStore();
+  const { expenses, loadExpensesByDate } = useExpenseStore();
   const { paymentBalanceTransactions } = usePaymentBalanceStore();
   const { config } = useConfigStore();
-  const { rentals } = useRentalStore();
-  const { tipPayouts } = useTipStore();
+  const { rentals, loadRentalsByDateRange } = useRentalStore();
+  const { tipPayouts, loadPaidTipsByDateRange } = useTipStore();
+
+  useDayFinancialData(selectedDate, {
+    loadSalesByDateRange,
+    loadRentalsByDateRange,
+    loadExpensesByDate,
+    loadPaidTipsByDateRange,
+  });
 
   const currencyConverter = useMemo(
     () => createCurrencyConverter(config.exchangeRate),

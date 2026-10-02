@@ -1,12 +1,12 @@
-import { useEffect, useRef, useState } from 'react';
 import { useTipStore } from '@/store/useTipStore';
 import type { WasherRental } from '@/types';
 import type { Tip } from '@/types/tips';
-import type { HydrateTipCaptureInput } from './useTipCaptureState';
+import { useEffect, useRef, useState } from 'react';
 import {
   createTipHydrationController,
   findTipByRentalOrigin,
 } from './editRentalTipHydration.controller';
+import type { HydrateTipCaptureInput } from './useTipCaptureState';
 
 interface TipCaptureApi {
   hydrateTipCapture: (input: HydrateTipCaptureInput) => void;
@@ -31,11 +31,13 @@ export function useEditRentalTipHydration({
   const [controller] = useState(() => createTipHydrationController());
   const { hydrateTipCapture, resetTipCapture } = tipCapture;
   const requestKeyRef = useRef<string | null>(null);
+  const appliedForRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!open || !rental) {
       controller.close();
       requestKeyRef.current = null;
+      appliedForRef.current = null;
       resetTipCapture();
       return;
     }
@@ -46,6 +48,8 @@ export function useEditRentalTipHydration({
 
     if (cachedTip) {
       requestKeyRef.current = requestKey;
+      if (appliedForRef.current === rental.id) return;
+      appliedForRef.current = rental.id;
       hydrateTipCapture({
         amountBs: cachedTip.amountBs,
         paymentMethod: cachedTip.capturePaymentMethod,
@@ -74,6 +78,8 @@ export function useEditRentalTipHydration({
         if (!controller.canApply(ticket)) return;
 
         if (linkedTip) {
+          if (appliedForRef.current === rental.id) return;
+          appliedForRef.current = rental.id;
           hydrateTipCapture({
             amountBs: linkedTip.amountBs,
             paymentMethod: linkedTip.capturePaymentMethod,

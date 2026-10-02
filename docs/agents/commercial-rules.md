@@ -47,7 +47,7 @@ For implementation detail and visual mapping, also load `apps/web-app/docs/busin
 - Dashboard metrics are aggregated results, not isolated source-of-truth records.
 - Transactions and payment summaries are derived views built from multiple domains.
 - Any commercial change that affects payment shape, paid status, dates, or tips can alter these derived views.
-- Equilibrio (`calculatePaymentBalanceSummary`) must agree with the dashboard per-method cards: its per-method `originalTotal` is the day's income minus the day's expenses and paid tip payouts on that method (`services/payments/methodOutflows.ts`, shared with the dashboard); `adjustments` are transfers only.
+- Equilibrio (`calculatePaymentBalanceSummary`) must agree with the dashboard per-method cards: its per-method `originalTotal` is the day's income minus the day's expenses and paid tip payouts on that method (`services/payments/methodOutflows.ts`, shared with the dashboard); `adjustments` are transfers only. Equilibrium transfers are deliberately **not** validated against the day's total: net accumulates across days and the app only has per-day totals (no cumulative per-method balance), so a day total of 0 does not mean the shop has no cash. Only an invalid exchange rate is rejected (`validatePaymentBalanceForm`).
 
 ## Practical Rule
 

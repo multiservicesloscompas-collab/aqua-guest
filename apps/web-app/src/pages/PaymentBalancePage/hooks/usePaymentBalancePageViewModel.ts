@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { toast } from 'sonner';
+import { useDayFinancialData } from '@/hooks/useDayFinancialData';
 import { useAppStore } from '@/store/useAppStore';
 import { useConfigStore } from '@/store/useConfigStore';
 import { useExpenseStore } from '@/store/useExpenseStore';
@@ -47,7 +48,13 @@ export function usePaymentBalancePageViewModel() {
     deletePaymentBalanceTransaction,
   } = usePaymentBalanceStore();
   const sales = useWaterSalesStore((state) => state.sales);
+  const loadSalesByDateRange = useWaterSalesStore(
+    (state) => state.loadSalesByDateRange
+  );
   const rentals = useRentalStore((state) => state.rentals);
+  const loadRentalsByDateRange = useRentalStore(
+    (state) => state.loadRentalsByDateRange
+  );
   const prepaidOrders = usePrepaidStore((state) => state.prepaidOrders);
   const expenses = useExpenseStore((state) => state.expenses);
   const loadExpensesByDate = useExpenseStore(
@@ -98,16 +105,12 @@ export function usePaymentBalancePageViewModel() {
     ]
   );
 
-  // coreLoadedAt: the global sync replaces expenses and tips, so reload after it.
-  const coreLoadedAt = useAppStore((state) => state.coreLoadedAt);
-  useEffect(() => {
-    void Promise.all([
-      loadExpensesByDate(selectedDate),
-      loadPaidTipsByDateRange(selectedDate, selectedDate),
-    ]).catch((error) => {
-      console.error('Error loading expenses and tips for Equilibrio', error);
-    });
-  }, [selectedDate, coreLoadedAt, loadExpensesByDate, loadPaidTipsByDateRange]);
+  useDayFinancialData(selectedDate, {
+    loadSalesByDateRange,
+    loadRentalsByDateRange,
+    loadExpensesByDate,
+    loadPaidTipsByDateRange,
+  });
 
   const transactionsForDate = useMemo(() => {
     return paymentBalanceTransactions

@@ -23,7 +23,6 @@ import {
   firstMachineId,
   seedExpense,
   seedRental,
-  seedSales,
   setExchangeRate,
 } from '../../support/bugs/dbSeed';
 import {
@@ -206,35 +205,6 @@ test.describe('FIN · consistencia financiera (rojos)', () => {
       expect(original).toBe(0);
     }
   );
-
-  test(
-    '[FIN-06] Transacciones carga datos del mes anterior al navegar la fecha',
-    bugDoc({
-      id: 'FIN-06',
-      titulo: 'Transacciones carga el mes anterior al navegar la fecha',
-      intent:
-        'Comprobar que al navegar a un día del mes anterior Transacciones trae sus movimientos.',
-      steps: [
-        'Siembra una venta y un egreso del último día del mes anterior.',
-        'Abre Transacciones y navega hasta ese día.',
-      ],
-      expects: ['Aparecen 2 movimientos.'],
-      actual: 'la pantalla no pide esos datos y solo aparece 1 movimiento',
-    }),
-    async ({ page }) => {
-      const day = lastDayOfPreviousMonth(TODAY());
-      await seedSales([{ date: day, dailyNumber: 1, totalBs: 100 }]);
-      await seedExpense({ date: day, amount: 20 });
-
-      await gotoDashboard(page);
-      await openTransactionsFromMenu(page);
-      await goToDate(page, day);
-
-      await expect(
-        page.locator('[data-testid^="transaction-row-"]')
-      ).toHaveCount(2, { timeout: 8_000 });
-    }
-  );
 });
 
 test.describe('FIN · egresos y validaciones (rojos)', () => {
@@ -266,41 +236,6 @@ test.describe('FIN · egresos y validaciones (rojos)', () => {
 
       await expect(page.getByText('Total Bs')).toBeVisible();
       await expect(page.getByText('Bs 30.00')).toBeVisible({ timeout: 8_000 });
-    }
-  );
-
-  test(
-    '[FIN-11] una transferencia mayor al saldo disponible se bloquea',
-    bugDoc({
-      id: 'FIN-11',
-      titulo: 'Una transferencia mayor al saldo disponible se bloquea',
-      intent:
-        'Comprobar que no se puede mover más dinero del que hay en un método.',
-      steps: [
-        'Abre Equilibrio con saldo 0 en Efectivo.',
-        'Intenta transferir Bs 1.000.000 de efectivo a pago móvil.',
-      ],
-      expects: ['No se crea ninguna transferencia.'],
-      actual: 'no se valida el saldo y la transferencia se crea',
-    }),
-    async ({ page }) => {
-      await gotoDashboard(page);
-      await openPaymentBalancePage(page);
-      const before = await balanceAmount(page, 'Efectivo', 'final');
-      expect(before).toBe(0);
-
-      await createBalanceTransfer(page, {
-        operationType: 'equilibrio',
-        fromMethod: 'efectivo',
-        toMethod: 'pago_movil',
-        amountOutBs: 1_000_000,
-        amountInBs: 1_000_000,
-      }).catch(() => undefined);
-
-      const { count } = await getSupabaseClient()
-        .from('payment_balance_transactions')
-        .select('id', { count: 'exact', head: true });
-      expect(count).toBe(0);
     }
   );
 });

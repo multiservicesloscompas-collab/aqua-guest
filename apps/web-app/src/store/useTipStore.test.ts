@@ -54,103 +54,180 @@ describe('useTipStore', () => {
     });
   });
 
-  // KNOWN BUG B1: loading a date range only merges into the cache, so tips deleted
-  // or moved elsewhere never leave the store. `it.fails` keeps the suite green while
-  // documenting the rule; switch back to `it` when B1 is fixed.
-  it.fails(
-    'loads tips range and derives payout read model without duplicates by day reload',
-    async () => {
-      loadTipsByDateRangeMock
-        .mockResolvedValueOnce([
-          {
-            id: 'tip-1',
-            originType: 'sale',
-            originId: 'sale-1',
-            tipDate: '2026-03-13',
-            amountBs: 10,
-            capturePaymentMethod: 'efectivo',
-            status: 'pending',
-            createdAt: '2026-03-13T10:00:00.000Z',
-            updatedAt: '2026-03-13T10:00:00.000Z',
-          },
-        ])
-        .mockResolvedValueOnce([
-          {
-            id: 'tip-2',
-            originType: 'sale',
-            originId: 'sale-2',
-            tipDate: '2026-03-13',
-            amountBs: 20,
-            capturePaymentMethod: 'pago_movil',
-            status: 'paid',
-            paidPaymentMethod: 'pago_movil',
-            paidAt: '2026-03-13T11:00:00.000Z',
-            createdAt: '2026-03-13T10:30:00.000Z',
-            updatedAt: '2026-03-13T11:00:00.000Z',
-          },
-        ]);
-
-      await useTipStore
-        .getState()
-        .loadTipsByDateRange('2026-03-13', '2026-03-13');
-      await useTipStore
-        .getState()
-        .loadTipsByDateRange('2026-03-13', '2026-03-13');
-
-      const { tips, tipPayouts } = useTipStore.getState();
-
-      expect(loadTipsByDateRangeMock).toHaveBeenCalledTimes(2);
-      expect(tips.map((tip) => tip.id)).toEqual(['tip-2']);
-      expect(tipPayouts.map((payout) => payout.id)).toEqual(['tip-2']);
-    }
-  );
-
-  // KNOWN BUG B1: loading a date range only merges into the cache, so tips deleted
-  // or moved elsewhere never leave the store. `it.fails` keeps the suite green while
-  // documenting the rule; switch back to `it` when B1 is fixed.
-  it.fails(
-    'replaces cached tips using Venezuela day normalization for ISO tipDate values',
-    async () => {
-      useTipStore.setState({
-        tips: [
-          {
-            id: 'tip-old',
-            originType: 'sale',
-            originId: 'sale-old',
-            tipDate: '2026-03-13',
-            amountBs: 11,
-            capturePaymentMethod: 'efectivo',
-            status: 'pending',
-            createdAt: '2026-03-13T08:00:00.000Z',
-            updatedAt: '2026-03-13T08:00:00.000Z',
-          },
-        ],
-        tipPayouts: [],
-        loadingByRange: {},
-      });
-
-      loadTipsByDateRangeMock.mockResolvedValueOnce([
+  it('loads tips range and derives payout read model without duplicates by day reload', async () => {
+    loadTipsByDateRangeMock
+      .mockResolvedValueOnce([
         {
-          id: 'tip-new',
+          id: 'tip-1',
           originType: 'sale',
-          originId: 'sale-new',
-          tipDate: '2026-03-14T01:30:00.000Z',
+          originId: 'sale-1',
+          tipDate: '2026-03-13',
+          amountBs: 10,
+          capturePaymentMethod: 'efectivo',
+          status: 'pending',
+          createdAt: '2026-03-13T10:00:00.000Z',
+          updatedAt: '2026-03-13T10:00:00.000Z',
+        },
+      ])
+      .mockResolvedValueOnce([
+        {
+          id: 'tip-2',
+          originType: 'sale',
+          originId: 'sale-2',
+          tipDate: '2026-03-13',
           amountBs: 20,
           capturePaymentMethod: 'pago_movil',
-          status: 'pending',
-          createdAt: '2026-03-14T01:30:00.000Z',
-          updatedAt: '2026-03-14T01:30:00.000Z',
+          status: 'paid',
+          paidPaymentMethod: 'pago_movil',
+          paidAt: '2026-03-13T11:00:00.000Z',
+          createdAt: '2026-03-13T10:30:00.000Z',
+          updatedAt: '2026-03-13T11:00:00.000Z',
         },
       ]);
 
-      await useTipStore
-        .getState()
-        .loadTipsByDateRange('2026-03-13', '2026-03-13');
+    await useTipStore
+      .getState()
+      .loadTipsByDateRange('2026-03-13', '2026-03-13');
+    await useTipStore
+      .getState()
+      .loadTipsByDateRange('2026-03-13', '2026-03-13');
 
-      const { tips } = useTipStore.getState();
-      expect(tips.map((tip) => tip.id)).toEqual(['tip-new']);
-    }
-  );
+    const { tips, tipPayouts } = useTipStore.getState();
+
+    expect(loadTipsByDateRangeMock).toHaveBeenCalledTimes(2);
+    expect(tips.map((tip) => tip.id)).toEqual(['tip-2']);
+    expect(tipPayouts.map((payout) => payout.id)).toEqual(['tip-2']);
+  });
+
+  it('replaces cached tips using Venezuela day normalization for ISO tipDate values', async () => {
+    useTipStore.setState({
+      tips: [
+        {
+          id: 'tip-old',
+          originType: 'sale',
+          originId: 'sale-old',
+          tipDate: '2026-03-13',
+          amountBs: 11,
+          capturePaymentMethod: 'efectivo',
+          status: 'pending',
+          createdAt: '2026-03-13T08:00:00.000Z',
+          updatedAt: '2026-03-13T08:00:00.000Z',
+        },
+      ],
+      tipPayouts: [],
+      loadingByRange: {},
+    });
+
+    loadTipsByDateRangeMock.mockResolvedValueOnce([
+      {
+        id: 'tip-new',
+        originType: 'sale',
+        originId: 'sale-new',
+        tipDate: '2026-03-14T01:30:00.000Z',
+        amountBs: 20,
+        capturePaymentMethod: 'pago_movil',
+        status: 'pending',
+        createdAt: '2026-03-14T01:30:00.000Z',
+        updatedAt: '2026-03-14T01:30:00.000Z',
+      },
+    ]);
+
+    await useTipStore
+      .getState()
+      .loadTipsByDateRange('2026-03-13', '2026-03-13');
+
+    const { tips } = useTipStore.getState();
+    expect(tips.map((tip) => tip.id)).toEqual(['tip-new']);
+  });
+
+  const tip = (
+    id: string,
+    overrides: Record<string, unknown> = {}
+  ): Record<string, unknown> => ({
+    id,
+    originType: 'sale',
+    originId: `sale-${id}`,
+    tipDate: '2026-03-13',
+    amountBs: 10,
+    capturePaymentMethod: 'efectivo',
+    status: 'pending',
+    createdAt: '2026-03-13T10:00:00.000Z',
+    updatedAt: '2026-03-13T10:00:00.000Z',
+    ...overrides,
+  });
+
+  it('drops a tip deleted elsewhere when its day is reloaded (B1)', async () => {
+    // Arrange
+    useTipStore.setState({
+      tips: [tip('tip-deleted'), tip('tip-kept')] as never,
+      tipPayouts: [],
+      loadingByRange: {},
+    });
+    loadTipsByDateRangeMock.mockResolvedValueOnce([tip('tip-kept')]);
+
+    // Act
+    await useTipStore
+      .getState()
+      .loadTipsByDateRange('2026-03-13', '2026-03-13');
+
+    // Assert
+    expect(useTipStore.getState().tips.map((item) => item.id)).toEqual([
+      'tip-kept',
+    ]);
+  });
+
+  it('keeps cached tips of days outside the loaded range (B1)', async () => {
+    useTipStore.setState({
+      tips: [tip('tip-other-day', { tipDate: '2026-03-20' })] as never,
+      tipPayouts: [],
+      loadingByRange: {},
+    });
+    loadTipsByDateRangeMock.mockResolvedValueOnce([tip('tip-new')]);
+
+    await useTipStore
+      .getState()
+      .loadTipsByDateRange('2026-03-13', '2026-03-13');
+
+    expect(
+      useTipStore
+        .getState()
+        .tips.map((item) => item.id)
+        .sort()
+    ).toEqual(['tip-new', 'tip-other-day']);
+  });
+
+  it('replaces the paid tips of the loaded paid-day range and keeps the pending ones (B1)', async () => {
+    useTipStore.setState({
+      tips: [
+        tip('paid-gone', {
+          status: 'paid',
+          paidAt: '2026-03-13T15:00:00.000Z',
+          paidPaymentMethod: 'efectivo',
+        }),
+        tip('still-pending'),
+      ] as never,
+      tipPayouts: [],
+      loadingByRange: {},
+    });
+    loadPaidTipsByDateRangeMock.mockResolvedValueOnce([
+      tip('paid-new', {
+        status: 'paid',
+        paidAt: '2026-03-13T16:00:00.000Z',
+        paidPaymentMethod: 'efectivo',
+      }),
+    ]);
+
+    await useTipStore
+      .getState()
+      .loadPaidTipsByDateRange('2026-03-13', '2026-03-13');
+
+    expect(
+      useTipStore
+        .getState()
+        .tips.map((item) => item.id)
+        .sort()
+    ).toEqual(['paid-new', 'still-pending']);
+  });
 
   it('updates note and refreshes tip list read model', async () => {
     useTipStore.setState({

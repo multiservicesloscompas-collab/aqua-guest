@@ -1,53 +1,16 @@
 import { expect, test } from '@playwright/test';
-import { addDays, nextSunday, todayVe } from '../../support/bugs/dates';
+import { todayVe } from '../../support/bugs/dates';
 import {
-  firstMachineId,
-  seedRental,
+  seedPaidRentalWithSplit,
   setExchangeRate,
 } from '../../support/bugs/dbSeed';
 import { bugDoc } from '../../support/bugs/ficha';
-import {
-  goToDate,
-  snapshotTodayRate,
-  useCleanDomain,
-} from '../../support/bugs/setup';
-import { delayRoute } from '../../support/bugs/networkFaults';
+import { snapshotTodayRate, useCleanDomain } from '../../support/bugs/setup';
 import { openRentalsModule } from '../../support/drivers/rentalDriver';
 import { parseUniversalMoney } from '../../support/money';
-import { getSupabaseClient } from '../../support/supabaseClient';
 import { gotoDashboard } from '../../support/uiNavigation';
 
 useCleanDomain();
-
-async function seedPaidRentalWithSplit(opts: {
-  amountBs: number;
-  amountUsd: number;
-  rateUsed: number;
-}): Promise<string> {
-  const today = todayVe();
-  const id = await seedRental({
-    date: today,
-    machineId: await firstMachineId(),
-    shift: 'completo',
-    deliveryTime: '09:00',
-    pickupDate: addDays(today, 1),
-    pickupTime: '09:00',
-    totalUsd: opts.amountUsd,
-    isPaid: true,
-    datePaid: today,
-  });
-  const { error } = await getSupabaseClient()
-    .from('rental_payment_splits')
-    .insert({
-      rental_id: id,
-      payment_method: 'efectivo',
-      amount_bs: opts.amountBs,
-      amount_usd: opts.amountUsd,
-      exchange_rate_used: opts.rateUsed,
-    });
-  if (error) throw new Error(error.message);
-  return id;
-}
 
 test.describe('Alquileres (rojos)', () => {
   test(
@@ -134,154 +97,6 @@ test.describe('Alquileres (rojos)', () => {
       // Assert
       await expect(option).toContainText('$6');
       expect(today).toBeTruthy();
-    }
-  );
-
-  for (const time of ['13:00', '14:00']) {
-    test(
-      `[B9] a Sunday ${time} half-day rental is picked up on Monday at 09:00`,
-      bugDoc({
-        id: 'B9',
-        titulo: `Entrega el domingo a las ${time} con medio turno se retira el lunes a las 09:00`,
-        intent:
-          'Comprobar que un retiro que cae después del cierre del domingo (14:00) pasa al lunes a las 09:00.',
-        steps: [
-          'Abre Lavadoras y navega a un domingo.',
-          `Abre un alquiler nuevo, elige medio turno y entrega a las ${time}.`,
-          'Lee la etiqueta de retiro.',
-        ],
-        expects: ['El retiro es «lunes … a las 09:00».'],
-        actual:
-          'una excepción de las 13:00 y 14:00 fija el retiro a las 20:00 del mismo domingo, con la tienda cerrada',
-      }),
-      async ({ page }) => {
-        // Arrange
-        await gotoDashboard(page);
-        await openRentalsModule(page);
-        await goToDate(page, nextSunday(todayVe()));
-
-        // Act
-        await page.getByTestId('rentals-add-fab').click();
-        await page.getByTestId('rental-shift-option-medio').click();
-        await page.getByTestId('rental-delivery-time-select').click();
-        await page.getByTestId(`rental-delivery-time-option-${time}`).click();
-
-        // Assert
-        const label = page.getByTestId('rental-pickup-label');
-        await expect(label).toContainText(/lunes/i);
-        await expect(label).toContainText('09:00');
-      }
-    );
-  }
-
-  test(
-    '[B9-control] a Saturday 13:00 half-day rental still ends at 20:00 the same day',
-    bugDoc({
-      id: 'B9',
-      titulo:
-        'entrega el sábado a las 13:00 con medio turno se retira a las 20:00',
-      intent:
-        'Fijar que el comportamiento de lunes a sábado (retiro a las 20:00 del mismo día) no cambia al corregir el domingo.',
-      steps: [
-        'Abre Lavadoras y navega a un sábado.',
-        'Abre un alquiler nuevo, elige medio turno y entrega a las 13:00.',
-        'Lee la etiqueta de retiro.',
-      ],
-      expects: ['El retiro es a las 20:00.'],
-      actual: 'no aplica',
-      control: true,
-    }),
-    async ({ page }) => {
-      // Arrange
-      await gotoDashboard(page);
-      await openRentalsModule(page);
-      await goToDate(page, addDays(nextSunday(todayVe()), -1));
-
-      // Act
-      await page.getByTestId('rentals-add-fab').click();
-      await page.getByTestId('rental-shift-option-medio').click();
-      await page.getByTestId('rental-delivery-time-select').click();
-      await page.getByTestId('rental-delivery-time-option-13:00').click();
-
-      // Assert
-      await expect(page.getByTestId('rental-pickup-label')).toContainText(
-        '20:00'
-      );
-    }
-  );
-
-  test(
-    '[B9-control] a Sunday 10:00 half-day rental is picked up on Monday at 09:00',
-    bugDoc({
-      id: 'B9',
-      titulo:
-        'entrega el domingo a las 10:00 con medio turno se retira el lunes a las 09:00',
-      intent:
-        'Fijar que el mismo domingo con otra hora ya da el resultado correcto, para que el bug quede acotado a las 13:00 y 14:00.',
-      steps: [
-        'Abre Lavadoras y navega a un domingo.',
-        'Abre un alquiler nuevo, elige medio turno y entrega a las 10:00.',
-        'Lee la etiqueta de retiro.',
-      ],
-      expects: ['El retiro es «lunes … a las 09:00».'],
-      actual: 'no aplica',
-      control: true,
-    }),
-    async ({ page }) => {
-      // Arrange
-      await gotoDashboard(page);
-      await openRentalsModule(page);
-      await goToDate(page, nextSunday(todayVe()));
-
-      // Act
-      await page.getByTestId('rentals-add-fab').click();
-      await page.getByTestId('rental-shift-option-medio').click();
-      await page.getByTestId('rental-delivery-time-select').click();
-      await page.getByTestId('rental-delivery-time-option-10:00').click();
-
-      // Assert
-      const label = page.getByTestId('rental-pickup-label');
-      await expect(label).toContainText(/lunes/i);
-      await expect(label).toContainText('09:00');
-    }
-  );
-
-  test(
-    '[B2] what you type in the edit sheet survives a background refresh',
-    bugDoc({
-      id: 'B2',
-      titulo: 'Lo que escribes en la edición no se borra cuando llega la tasa',
-      intent:
-        'Comprobar que el formulario de edición de un alquiler no se reinicia cuando la tasa de cambio termina de cargar en segundo plano.',
-      steps: [
-        'Siembra un alquiler y retrasa 6 segundos la respuesta de la tasa de cambio.',
-        'Abre la edición del alquiler y escribe una nota.',
-        'Espera a que llegue la tasa.',
-      ],
-      expects: ['La nota sigue escrita en el formulario.'],
-      actual:
-        'el formulario se reinicia con cada cambio de la tasa o de los alquileres y borra lo que el usuario escribió',
-    }),
-    async ({ page }) => {
-      // Arrange
-      const id = await seedPaidRentalWithSplit({
-        amountBs: 240,
-        amountUsd: 6,
-        rateUsed: 40,
-      });
-      await delayRoute(page, 'exchange_rates', 'GET', () => 6_000);
-      await gotoDashboard(page);
-      await openRentalsModule(page);
-      await page.getByTestId(`rental-edit-${id}`).click();
-      const notes = page.getByPlaceholder('Observaciones...');
-      await expect(notes).toBeVisible();
-
-      // Act
-      await notes.fill('nota escrita por el usuario');
-      await page.waitForTimeout(8_000); // the delayed rate arrives in the meantime
-
-      // Assert
-      await expect(notes).toHaveValue('nota escrita por el usuario');
     }
   );
 });

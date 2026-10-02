@@ -1,7 +1,27 @@
-import { create } from 'zustand';
+import { normalizeToVenezuelaDate } from '@/services/DateService';
+import { tipsDataService } from '@/services/tips/TipDataService';
 import type { PaymentMethod } from '@/types';
 import type { Tip, TipPayout } from '@/types/tips';
-import { tipsDataService } from '@/services/tips/TipDataService';
+import { create } from 'zustand';
+
+const dayOf = (isoDateLike: string) =>
+  normalizeToVenezuelaDate(isoDateLike).substring(0, 10);
+
+const isDayInRange = (day: string, startDate: string, endDate: string) =>
+  day >= startDate && day <= endDate;
+
+function mergeLoadedTips(
+  cached: readonly Tip[],
+  loaded: readonly Tip[],
+  isStale: (tip: Tip) => boolean
+): Tip[] {
+  const merged = new Map<string, Tip>();
+  cached
+    .filter((tip) => !isStale(tip))
+    .forEach((tip) => merged.set(tip.id, tip));
+  loaded.forEach((tip) => merged.set(tip.id, tip));
+  return Array.from(merged.values());
+}
 
 interface TipState {
   tips: Tip[];
@@ -9,7 +29,10 @@ interface TipState {
   loadingByRange: Record<string, boolean>;
   setTips: (tips: Tip[]) => void;
   loadTipsByDateRange: (startDate: string, endDate: string) => Promise<void>;
-  loadPaidTipsByDateRange: (startDate: string, endDate: string) => Promise<void>;
+  loadPaidTipsByDateRange: (
+    startDate: string,
+    endDate: string
+  ) => Promise<void>;
   updateTipNote: (tipId: string, notes?: string) => Promise<void>;
   paySingleTip: (input: {
     tipId: string;
@@ -51,11 +74,9 @@ export const useTipStore = create<TipState>()((set, get) => ({
       );
 
       set((state) => {
-        const nextTipsMap = new Map<string, Tip>();
-        state.tips.forEach((t) => nextTipsMap.set(t.id, t));
-        loadedTips.forEach((t) => nextTipsMap.set(t.id, t));
-
-        const nextTips = Array.from(nextTipsMap.values());
+        const nextTips = mergeLoadedTips(state.tips, loadedTips, (tip) =>
+          isDayInRange(dayOf(tip.tipDate), startDate, endDate)
+        );
 
         return {
           tips: nextTips,
@@ -92,11 +113,13 @@ export const useTipStore = create<TipState>()((set, get) => ({
       );
 
       set((state) => {
-        const nextTipsMap = new Map<string, Tip>();
-        state.tips.forEach((t) => nextTipsMap.set(t.id, t));
-        loadedTips.forEach((t) => nextTipsMap.set(t.id, t));
-
-        const nextTips = Array.from(nextTipsMap.values());
+        const nextTips = mergeLoadedTips(
+          state.tips,
+          loadedTips,
+          (tip) =>
+            tip.status === 'paid' &&
+            isDayInRange(dayOf(tip.paidAt ?? tip.tipDate), startDate, endDate)
+        );
 
         return {
           tips: nextTips,
@@ -142,7 +165,9 @@ export const useTipStore = create<TipState>()((set, get) => ({
 
     if (paidAt) {
       const paidDateOnly = paidAt.split('T')[0];
-      reloadPromises.push(get().loadPaidTipsByDateRange(paidDateOnly, paidDateOnly));
+      reloadPromises.push(
+        get().loadPaidTipsByDateRange(paidDateOnly, paidDateOnly)
+      );
     } else {
       reloadPromises.push(get().loadPaidTipsByDateRange(tipDate, tipDate));
     }

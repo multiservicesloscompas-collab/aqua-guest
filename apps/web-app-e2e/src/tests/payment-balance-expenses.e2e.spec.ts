@@ -7,6 +7,7 @@ import { captureDashboardSnapshot } from '../support/drivers/dashboardDriver';
 import { createExpense } from '../support/drivers/expenseDriver';
 import { createWaterSale } from '../support/drivers/waterSaleDriver';
 import { documented, expect, test } from '../support/fixtures';
+import { getSupabaseClient } from '../support/supabaseClient';
 import { gotoDashboard } from '../support/uiNavigation';
 
 test(
@@ -92,5 +93,50 @@ test(
         timeout: 5_000,
       })
       .toBeCloseTo(before - 50, 1);
+  }
+);
+
+test(
+  'a transfer is not capped by the day total in Equilibrio',
+  documented({
+    titulo:
+      '[FIN-11 regla de negocio] Una transferencia no se limita por el total del día en Equilibrio',
+    area: 'Equilibrio',
+    intent:
+      'Fijar la regla de negocio: el neto se acumula entre días, así que un total diario en 0 no impide transferir dinero que el local sí tiene.',
+    steps: [
+      'Abre Equilibrio con Efectivo final en Bs 0 para el día.',
+      'Transfiere Bs 1000 de efectivo a pago móvil.',
+    ],
+    expects: ['La transferencia se registra (1 transferencia en la base).'],
+    data: 'Día sin ventas ni egresos; transferencia de Bs 1000.',
+  }),
+  async ({ page }) => {
+    // Arrange
+    await gotoDashboard(page);
+    await openPaymentBalancePage(page);
+    expect(await balanceAmount(page, 'Efectivo', 'final')).toBe(0);
+
+    // Act
+    await createBalanceTransfer(page, {
+      operationType: 'equilibrio',
+      fromMethod: 'efectivo',
+      toMethod: 'pago_movil',
+      amountOutBs: 1000,
+      amountInBs: 1000,
+    });
+
+    // Assert
+    await expect
+      .poll(
+        async () => {
+          const { count } = await getSupabaseClient()
+            .from('payment_balance_transactions')
+            .select('id', { count: 'exact', head: true });
+          return count;
+        },
+        { timeout: 8_000 }
+      )
+      .toBe(1);
   }
 );

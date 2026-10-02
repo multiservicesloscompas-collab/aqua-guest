@@ -1,16 +1,16 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { toast } from 'sonner';
+import { resolveSplitFormHydrationState } from '@/services/payments/paymentSplitFormHydration';
+import { normalizeAndValidatePaymentSplits } from '@/services/payments/paymentSplitValidation';
+import { buildDualPaymentSplits } from '@/services/payments/paymentSplitWritePath';
+import { calculateFinalSaleTotals } from '@/services/transactions/transactionTotals';
 import { useConfigStore } from '@/store/useConfigStore';
 import { useTipStore } from '@/store/useTipStore';
 import { useWaterSalesStore } from '@/store/useWaterSalesStore';
 import { PaymentMethod, Sale } from '@/types';
 import type { PaymentSplit } from '@aqua-guest/domain';
-import { normalizeAndValidatePaymentSplits } from '@/services/payments/paymentSplitValidation';
-import { buildDualPaymentSplits } from '@/services/payments/paymentSplitWritePath';
-import { resolveSplitFormHydrationState } from '@/services/payments/paymentSplitFormHydration';
-import { calculateFinalSaleTotals } from '@/services/transactions/transactionTotals';
-import { resolveEditSaleTipHydration } from './editSaleTipHydration';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { toast } from 'sonner';
 import { EditableCartItem } from './EditSaleItemsEditor';
+import { resolveEditSaleTipHydration } from './editSaleTipHydration';
 
 interface UseEditSaleSheetViewModelParams {
   sale: Sale | null;
@@ -36,7 +36,7 @@ export function useEditSaleSheetViewModel({
   const [split2Method, setSplit2Method] = useState<PaymentMethod>('efectivo');
   const [split1Amount, setSplit1Amount] = useState('');
   const [notes, setNotes] = useState('');
-  const [subtotalBs, setSubtotalBs] = useState('');
+  const [subtotalBs, setSubtotalBsState] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [items, setItems] = useState<EditableCartItem[]>([]);
   const [tipEnabled, setTipEnabled] = useState(false);
@@ -46,6 +46,14 @@ export function useEditSaleSheetViewModel({
   const [tipNotes, setTipNotes] = useState('');
   const hydrationTokenRef = useRef(0);
   const tipRequestKeyRef = useRef<string | null>(null);
+  
+  const subtotalTouchedRef = useRef(false);
+  const tipHydratedForRef = useRef<string | null>(null);
+
+  const setSubtotalBs = (value: string) => {
+    subtotalTouchedRef.current = true;
+    setSubtotalBsState(value);
+  };
 
   const tipAmountBs = tipEnabled ? Number(tipAmount) || 0 : 0;
   const finalTotals = useMemo(
@@ -72,7 +80,9 @@ export function useEditSaleSheetViewModel({
     setSplit1Amount(splitState.split1Amount);
     setSplit2Method(splitState.split2Method);
     setNotes(sale.notes || '');
-    setSubtotalBs(sale.totalBs.toString());
+    subtotalTouchedRef.current = false;
+    tipHydratedForRef.current = null;
+    setSubtotalBsState(sale.totalBs.toString());
     setItems(sale.items || []);
     setTipEnabled(false);
     setTipAmount('');
@@ -84,10 +94,14 @@ export function useEditSaleSheetViewModel({
     if (!open || !sale) {
       hydrationTokenRef.current += 1;
       tipRequestKeyRef.current = null;
+      tipHydratedForRef.current = null;
+      subtotalTouchedRef.current = false;
       return;
     }
 
     const applyHydrationFromTips = (sourceTips: typeof tips) => {
+      if (tipHydratedForRef.current === sale.id) return;
+      tipHydratedForRef.current = sale.id;
       const tipHydration = resolveEditSaleTipHydration(sale, sourceTips);
       const hydratedTipAmountBs = tipHydration.enabled
         ? Number(tipHydration.amount) || 0
@@ -97,7 +111,11 @@ export function useEditSaleSheetViewModel({
       setTipAmount(tipHydration.amount);
       setTipPaymentMethod(tipHydration.paymentMethod);
       setTipNotes(tipHydration.notes);
-      setSubtotalBs(Math.max(0, sale.totalBs - hydratedTipAmountBs).toString());
+      if (!subtotalTouchedRef.current) {
+        setSubtotalBsState(
+          Math.max(0, sale.totalBs - hydratedTipAmountBs).toString()
+        );
+      }
 
       if (tipHydration.enabled) {
         // Stored splits include the tip; the form edits the principal only.
@@ -148,7 +166,9 @@ export function useEditSaleSheetViewModel({
         setTipAmount('');
         setTipPaymentMethod(sale.paymentMethod);
         setTipNotes('');
-        setSubtotalBs(sale.totalBs.toString());
+        if (!subtotalTouchedRef.current) {
+          setSubtotalBsState(sale.totalBs.toString());
+        }
       });
   }, [loadTipsByDateRange, open, sale, tips]);
 

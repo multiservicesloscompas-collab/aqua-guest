@@ -19,6 +19,8 @@ vi.mock('@/lib/supabaseClient', () => {
 
 const DATE = '2026-03-07';
 const loadExpensesByDateMock = vi.fn();
+const loadSalesByDateRangeMock = vi.fn();
+const loadRentalsByDateRangeMock = vi.fn();
 const loadPaidTipsByDateRangeMock = vi.fn();
 
 const cashFinal = (
@@ -28,12 +30,17 @@ const cashFinal = (
 describe('usePaymentBalancePageViewModel summary (FIN-05, FIN-03)', () => {
   beforeEach(() => {
     loadExpensesByDateMock.mockReset().mockResolvedValue([]);
+    loadSalesByDateRangeMock.mockReset().mockResolvedValue(undefined);
+    loadRentalsByDateRangeMock.mockReset().mockResolvedValue(undefined);
     loadPaidTipsByDateRangeMock.mockReset().mockResolvedValue(undefined);
     useAppStore.setState({ selectedDate: DATE });
     useConfigStore.setState((state) => ({
       config: { ...state.config, exchangeRate: 50 },
     }));
-    useRentalStore.setState({ rentals: [] });
+    useRentalStore.setState({
+      rentals: [],
+      loadRentalsByDateRange: loadRentalsByDateRangeMock,
+    });
     usePaymentBalanceStore.setState({ paymentBalanceTransactions: [] });
     useExpenseStore.setState({
       expenses: [],
@@ -45,6 +52,7 @@ describe('usePaymentBalancePageViewModel summary (FIN-05, FIN-03)', () => {
       loadPaidTipsByDateRange: loadPaidTipsByDateRangeMock,
     });
     useWaterSalesStore.setState({
+      loadSalesByDateRange: loadSalesByDateRangeMock,
       sales: [
         {
           id: 'sale-1',
@@ -145,11 +153,13 @@ describe('usePaymentBalancePageViewModel summary (FIN-05, FIN-03)', () => {
     expect(cashFinal(result.current.balanceSummary)).toBe(50);
   });
 
-  it('loads the expenses and paid tips of the selected date', () => {
+  it('loads the sales, rentals, expenses and paid tips of the selected date', () => {
     const { rerender } = renderHook(() => usePaymentBalancePageViewModel());
 
     expect(loadExpensesByDateMock).toHaveBeenCalledWith(DATE);
     expect(loadPaidTipsByDateRangeMock).toHaveBeenCalledWith(DATE, DATE);
+    expect(loadSalesByDateRangeMock).toHaveBeenCalledWith(DATE, DATE);
+    expect(loadRentalsByDateRangeMock).toHaveBeenCalledWith(DATE, DATE);
 
     act(() => {
       useAppStore.setState({ selectedDate: '2026-03-08' });
