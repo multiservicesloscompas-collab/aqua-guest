@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type {
   PaymentMethod,
   RentalShift,
@@ -36,6 +36,11 @@ export function useEditRentalFormState({
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const tipCapture = useTipCaptureState();
 
+  // The form loads from the rental when the sheet opens for it. The exchange
+  // rate is only read, so a late rate update must not reset what the user typed (B2).
+  const exchangeRateRef = useRef(exchangeRate);
+  exchangeRateRef.current = exchangeRate;
+
   useEffect(() => {
     if (!rental) return;
 
@@ -47,7 +52,7 @@ export function useEditRentalFormState({
     setCustomerPhone(rental.customerPhone);
     setCustomerAddress(rental.customerAddress);
     setSelectedCustomerId(rental.customerId || '');
-    const splitState = resolveRentalSplitState(rental, exchangeRate);
+    const splitState = resolveRentalSplitState(rental, exchangeRateRef.current);
     setPaymentMethod(splitState.paymentMethod || 'efectivo');
     setSplit1Amount(splitState.split1Amount);
     setSplit2Method(splitState.split2Method);
@@ -57,7 +62,7 @@ export function useEditRentalFormState({
     setStatus(rental.status);
     setIsPaid(rental.isPaid);
     setDatePaid(rental.datePaid || '');
-  }, [rental, exchangeRate]);
+  }, [rental]);
 
   return {
     machineId,

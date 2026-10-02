@@ -12,13 +12,6 @@ export const BUG_KNOWLEDGE = {
     where:
       'store/useTipStore.ts · loadTipsByDateRange y loadPaidTipsByDateRange (normalizeToVenezuelaDate ya existe)',
   },
-  B2: {
-    cause:
-      'Un useEffect reinicia todos los campos del formulario cada vez que cambia `rental` o `exchangeRate`, y `rental` cambia de identidad con cualquier refresco de la tienda.',
-    fix: 'Inicializar el estado una sola vez desde el alquiler (inicializador perezoso) y poner key={rental.id} en EditRentalSheet para que cambiar de alquiler sí reinicie.',
-    where:
-      'pages/RentalsPage/hooks/useEditRentalFormState.ts:39-60 · EditRentalSheet.tsx',
-  },
   B4: {
     cause:
       'Los ayudantes de atribución solo confían en los pagos guardados cuando el pago es mixto (2+ métodos distintos); con un solo pago recalculan totalUsd × tasa de hoy.',

@@ -368,4 +368,41 @@ describe('useEditRentalTipHydration', () => {
       expect(tipCapture.hydrateTipCapture).toHaveBeenCalledTimes(2);
     });
   });
+
+  it('applies the persisted tip once per opened rental, not on every tips update (B2)', async () => {
+    // Arrange
+    const tipCapture = {
+      hydrateTipCapture: vi.fn(),
+      resetTipCapture: vi.fn(),
+    };
+    const onTipHydrated = vi.fn();
+    const rental = buildRental('rental-1');
+    setCurrentTips([buildTip('rental-1', 35)]);
+    const { rerender } = render(
+      <Harness
+        open={true}
+        rental={rental}
+        tipCapture={tipCapture}
+        onTipHydrated={onTipHydrated}
+      />
+    );
+    await waitFor(() => {
+      expect(tipCapture.hydrateTipCapture).toHaveBeenCalledTimes(1);
+    });
+
+    // Act: the tips store updates again while the sheet stays open
+    setCurrentTips([{ ...buildTip('rental-1', 35), notes: 'otra' }]);
+    rerender(
+      <Harness
+        open={true}
+        rental={rental}
+        tipCapture={tipCapture}
+        onTipHydrated={onTipHydrated}
+      />
+    );
+
+    // Assert
+    expect(tipCapture.hydrateTipCapture).toHaveBeenCalledTimes(1);
+    expect(onTipHydrated).toHaveBeenCalledTimes(1);
+  });
 });

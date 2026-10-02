@@ -31,11 +31,15 @@ export function useEditRentalTipHydration({
   const [controller] = useState(() => createTipHydrationController());
   const { hydrateTipCapture, resetTipCapture } = tipCapture;
   const requestKeyRef = useRef<string | null>(null);
+  // The tip is applied to the form once per opened rental. Later updates of the
+  // tips store must not overwrite what the user is editing (B2).
+  const appliedForRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!open || !rental) {
       controller.close();
       requestKeyRef.current = null;
+      appliedForRef.current = null;
       resetTipCapture();
       return;
     }
@@ -46,6 +50,8 @@ export function useEditRentalTipHydration({
 
     if (cachedTip) {
       requestKeyRef.current = requestKey;
+      if (appliedForRef.current === rental.id) return;
+      appliedForRef.current = rental.id;
       hydrateTipCapture({
         amountBs: cachedTip.amountBs,
         paymentMethod: cachedTip.capturePaymentMethod,
@@ -74,6 +80,8 @@ export function useEditRentalTipHydration({
         if (!controller.canApply(ticket)) return;
 
         if (linkedTip) {
+          if (appliedForRef.current === rental.id) return;
+          appliedForRef.current = rental.id;
           hydrateTipCapture({
             amountBs: linkedTip.amountBs,
             paymentMethod: linkedTip.capturePaymentMethod,
