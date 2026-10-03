@@ -1,6 +1,6 @@
 export const PAYMENT_METHOD = {
-  pago_movil: 'pago_movil',
   efectivo: 'efectivo',
+  pago_movil: 'pago_movil',
   punto_venta: 'punto_venta',
   divisa: 'divisa',
 } as const;

@@ -46,8 +46,8 @@ describe('domain constants', () => {
   it('lists every shift and payment method once', () => {
     expect(RENTAL_SHIFTS).toEqual(['medio', 'completo', 'doble']);
     expect(PAYMENT_METHODS).toEqual([
-      'pago_movil',
       'efectivo',
+      'pago_movil',
       'punto_venta',
       'divisa',
     ]);

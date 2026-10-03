@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { PaymentMethodLabels } from '@/types';
-import type { PaymentSplit } from '@aqua-guest/domain';
+import {
+  PAYMENT_METHODS as DOMAIN_PAYMENT_METHODS,
+  type PaymentSplit,
+} from '@aqua-guest/domain';
 import { PAYMENT_METHODS } from './paymentMethods';
 import { getPaymentMethods } from './paymentSplitReadModel';
 import { validatePaymentSplits } from './paymentSplitValidation';
@@ -17,6 +20,11 @@ describe('PAYMENT_METHODS', () => {
       'punto_venta',
       'divisa',
     ]);
+  });
+
+  it('is the list owned by the domain, not a second copy', () => {
+    // Arrange / Act / Assert
+    expect(PAYMENT_METHODS).toBe(DOMAIN_PAYMENT_METHODS);
   });
 
   it('covers exactly the methods that have a label', () => {

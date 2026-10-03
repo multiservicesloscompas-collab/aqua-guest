@@ -1,15 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import type { PaymentMethod } from '@/types';
+import { PAYMENT_METHODS } from '@aqua-guest/domain';
 import { calculateRentalPrice } from '@/utils/rentalPricing';
 import { mapShiftOptions as mapCreateShiftOptions } from './rentalSheetViewModel.helpers';
 import { mapShiftOptions as mapEditShiftOptions } from './editRentalSheetViewModel.helpers';
-
-const PAYMENT_METHODS: PaymentMethod[] = [
-  'pago_movil',
-  'efectivo',
-  'punto_venta',
-  'divisa',
-];
 
 function priceTextFor(
   options: ReturnType<typeof mapCreateShiftOptions>,
