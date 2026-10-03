@@ -9,6 +9,10 @@ export type RentalShift = (typeof RENTAL_SHIFT)[keyof typeof RENTAL_SHIFT];
 export const RENTAL_SHIFTS: ReadonlyArray<RentalShift> =
   Object.values(RENTAL_SHIFT);
 
+export function isRentalShift(value: string): value is RentalShift {
+  return RENTAL_SHIFTS.some((shift) => shift === value);
+}
+
 export interface RentalShiftDefinition {
   id: string;
   label: string;

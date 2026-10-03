@@ -5,6 +5,7 @@ import { getDatesInRange } from '@/services/DateService';
 import { DateKeyedLruCache } from '@/services/cache/DateKeyedLruCache';
 import { PAYMENT_SPLIT_SCHEMA } from '@/services/payments/paymentSplitSchemaContract';
 import type { RentalReadRow } from '@/services/rentals/rentalSchemaContract';
+import { fromShiftSnapshotColumns } from '@/services/rentals/rentalShiftSnapshot';
 import { rentalPaymentSplitAdapter } from '@/services/payments/paymentSplitSupabaseAdapters';
 
 const RENTALS_SELECT = `*, customers(name, phone, address), ${PAYMENT_SPLIT_SCHEMA.rentalsSplitsTable}(payment_method, amount_bs, amount_usd, exchange_rate_used)`;
@@ -23,6 +24,7 @@ function toRentalRow(r: RentalReadRow): WasherRental {
     customerAddress: r.customers?.address || r.customer_address || '',
     machineId: r.machine_id,
     shift: r.shift,
+    shiftSnapshot: fromShiftSnapshotColumns(r.shift, r),
     deliveryTime: r.delivery_time ? r.delivery_time.substring(0, 5) : '',
     pickupTime: r.pickup_time ? r.pickup_time.substring(0, 5) : '',
     pickupDate: r.pickup_date,

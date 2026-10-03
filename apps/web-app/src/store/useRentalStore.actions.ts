@@ -1,5 +1,6 @@
 import supabase from '@/lib/supabaseClient';
-import { WasherRental } from '@/types';
+import { RentalShiftConfig, WasherRental } from '@/types';
+import { toShiftSnapshotColumns } from '@/services/rentals/rentalShiftSnapshot';
 import { rentalsDataService } from '@/services/RentalsDataService';
 import {
   enqueueOfflineRental,
@@ -121,11 +122,15 @@ export async function addRentalAction(
       totalUsd: finalTotals.totalUsd,
     });
 
+    const shiftDefinition =
+      rental.shiftSnapshot ?? RentalShiftConfig[rental.shift];
+
     const payload: RentalInsertRow = {
       date: rental.date,
       customer_id: customerId,
       machine_id: rental.machineId,
       shift: rental.shift,
+      ...toShiftSnapshotColumns(shiftDefinition),
       delivery_time: rental.deliveryTime,
       pickup_time: rental.pickupTime,
       pickup_date: rental.pickupDate,
@@ -141,7 +146,12 @@ export async function addRentalAction(
     if (!window.navigator.onLine) {
       const offlineRental = enqueueOfflineRental({
         payload,
-        rental: { ...rental, customerId, totalUsd: finalTotals.totalUsd },
+        rental: {
+          ...rental,
+          customerId,
+          shiftSnapshot: shiftDefinition,
+          totalUsd: finalTotals.totalUsd,
+        },
         paymentSplits: splitWrite.paymentSplits,
         dependencyKeys: customerId.startsWith('temp-')
           ? [buildCustomerBusinessKey(customerId)]

@@ -1,7 +1,8 @@
 import { useMemo } from 'react';
 import { parse } from 'date-fns';
 import { calculatePickupTime, formatPickupInfo } from '@/utils/rentalSchedule';
-import { calculateRentalPrice } from '@/utils/rentalPricing';
+import { calculateShiftBasePrice } from '@/utils/rentalPricing';
+import { resolveEditedRentalShift } from '@/utils/rentalShift';
 import { buildDualPaymentSplits } from '@/services/payments/paymentSplitWritePath';
 import { calculateFinalRentalTotals } from '@/services/transactions/transactionTotals';
 import { getUnavailableMachineIds } from './editRentalSheetViewModel.helpers';
@@ -27,20 +28,22 @@ interface Params {
 }
 
 export function useEditRentalSheetComputed(params: Params) {
+  const shiftDefinition = useMemo(
+    () => resolveEditedRentalShift(params.rental, params.shift),
+    [params.rental, params.shift]
+  );
+
   const pickupInfo = useMemo(() => {
     if (!params.rental) return { pickupDate: '', pickupTime: '' };
     const date = parse(params.rental.date, 'yyyy-MM-dd', new Date());
-    return calculatePickupTime(date, params.deliveryTime, params.shift);
-  }, [params.rental, params.deliveryTime, params.shift]);
+    return calculatePickupTime(date, params.deliveryTime, shiftDefinition);
+  }, [params.rental, params.deliveryTime, shiftDefinition]);
 
   const subtotalUsd = useMemo(
     () =>
-      calculateRentalPrice(
-        params.shift,
-        params.paymentMethod,
-        params.deliveryFee
-      ),
-    [params.shift, params.paymentMethod, params.deliveryFee]
+      calculateShiftBasePrice(shiftDefinition, params.paymentMethod) +
+      params.deliveryFee,
+    [shiftDefinition, params.paymentMethod, params.deliveryFee]
   );
 
   const totalUsd = useMemo(

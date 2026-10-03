@@ -1,13 +1,17 @@
+import type { PaymentSplitRow } from '@/services/payments/paymentSplitSchemaContract';
+import type {
+  ShiftSnapshotColumns,
+  ShiftSnapshotColumnsRow,
+} from '@/services/rentals/rentalShiftSnapshot';
 import type {
   PaymentMethod,
   PaymentSplit,
   RentalShift,
   RentalStatus,
 } from '@aqua-guest/domain';
-import type { PaymentSplitRow } from '@/services/payments/paymentSplitSchemaContract';
 
 /** Row returned by `insert(...).select('*')` on `rentals`. */
-export interface RentalRow {
+export interface RentalRow extends ShiftSnapshotColumnsRow {
   id: string;
   date: string;
   customer_id: string;
@@ -28,7 +32,7 @@ export interface RentalRow {
   updated_at?: string | null;
 }
 
-export type RentalInsertRow = {
+export type RentalInsertRow = Partial<ShiftSnapshotColumns> & {
   date: string;
   customer_id: string;
   machine_id: string;
@@ -50,11 +54,7 @@ export type RentalUpdateRow = Partial<RentalInsertRow> & {
   updated_at?: string;
 };
 
-/**
- * Tolerant read shape used by `RentalsDataService`: joins `customers` and the
- * split relation, and accepts camelCase timestamps from legacy payloads.
- */
-export interface RentalReadRow {
+export interface RentalReadRow extends ShiftSnapshotColumnsRow {
   id: string;
   date: string;
   customer_id?: string;

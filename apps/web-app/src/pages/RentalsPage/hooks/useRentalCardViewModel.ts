@@ -2,7 +2,8 @@ import { useCallback, useMemo, useState } from 'react';
 import { toast } from '@/components/ui/sonner';
 import { useMachineStore } from '@/store/useMachineStore';
 import { canExtendRental } from '@/utils/rentalExtensions';
-import { RentalShiftConfig, RentalStatus, WasherRental } from '@/types';
+import { RentalStatus, WasherRental } from '@/types';
+import { resolveRentalShift } from '@/utils/rentalShift';
 
 interface RentalCardViewModelInput {
   rental: WasherRental;
@@ -31,7 +32,7 @@ export function useRentalCardViewModel({
     () => washingMachines.find((m) => m.id === rental.machineId),
     [washingMachines, rental.machineId]
   );
-  const shiftConfig = RentalShiftConfig[rental.shift];
+  const shiftConfig = resolveRentalShift(rental);
   const canExtend = canExtendRental(rental);
 
   const handleStatusClick = useCallback((status: RentalStatus) => {
@@ -51,10 +52,13 @@ export function useRentalCardViewModel({
     setPaymentDialogOpen(true);
   }, []);
 
-  const handlePaymentConfirm = useCallback((datePaid?: string) => {
-    onPaymentToggle(rental.id, datePaid);
-    setPaymentDialogOpen(false);
-  }, [onPaymentToggle, rental.id]);
+  const handlePaymentConfirm = useCallback(
+    (datePaid?: string) => {
+      onPaymentToggle(rental.id, datePaid);
+      setPaymentDialogOpen(false);
+    },
+    [onPaymentToggle, rental.id]
+  );
 
   const handleEditClick = useCallback(() => {
     onEdit?.(rental);

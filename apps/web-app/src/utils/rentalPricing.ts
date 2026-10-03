@@ -5,6 +5,7 @@ import {
   PaymentMethod,
   WasherRental,
 } from '@/types';
+import { resolveRentalShift } from './rentalShift';
 
 export function calculateShiftBasePrice(
   definition: RentalShiftDefinition,
@@ -28,13 +29,14 @@ export function calculateRentalPrice(
 }
 
 export function calculateRentalSubtotalUsd(
-  rental: Pick<WasherRental, 'shift' | 'paymentMethod'> &
-    Partial<Pick<WasherRental, 'deliveryFee'>>
+  rental: Pick<WasherRental, 'shift' | 'paymentMethod' | 'totalUsd'> &
+    Partial<Pick<WasherRental, 'deliveryFee' | 'shiftSnapshot'>>
 ): number {
-  return calculateRentalPrice(
-    rental.shift,
-    rental.paymentMethod,
-    Number(rental.deliveryFee) || 0
+  const deliveryFee = Number(rental.deliveryFee) || 0;
+  const definition = resolveRentalShift({ ...rental, deliveryFee });
+
+  return (
+    calculateShiftBasePrice(definition, rental.paymentMethod) + deliveryFee
   );
 }
 

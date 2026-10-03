@@ -101,6 +101,12 @@ export interface SeedRentalInput {
   isPaid?: boolean;
   datePaid?: string | null;
   notes?: string;
+  shiftSnapshot?: {
+    label: string;
+    hours: number;
+    priceUsd: number;
+    divisaDiscountUsd: number;
+  };
 }
 
 export async function seedRental(input: SeedRentalInput): Promise<string> {
@@ -122,6 +128,10 @@ export async function seedRental(input: SeedRentalInput): Promise<string> {
       is_paid: input.isPaid ?? false,
       date_paid: input.datePaid ?? null,
       notes: input.notes ?? BUG_MARKER,
+      shift_label: input.shiftSnapshot?.label ?? null,
+      shift_hours: input.shiftSnapshot?.hours ?? null,
+      shift_price_usd: input.shiftSnapshot?.priceUsd ?? null,
+      shift_divisa_discount_usd: input.shiftSnapshot?.divisaDiscountUsd ?? null,
     })
     .select('id')
     .single();

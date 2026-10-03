@@ -23,6 +23,7 @@ import {
 } from 'date-fns';
 import { es } from 'date-fns/locale';
 import type { AppRoute } from '@/types';
+import { getShiftMetricLabel } from '@/utils/rentalShift';
 
 interface LavadorasMetricsPageProps {
   onNavigate?: (route: AppRoute) => void;
@@ -280,11 +281,7 @@ export function LavadorasMetricsPage(_props: LavadorasMetricsPageProps = {}) {
                 className="flex items-center justify-between py-3.5 px-2 border-b border-border/30 last:border-0 hover:bg-muted/10 rounded-lg transition-colors"
               >
                 <span className="text-sm capitalize font-semibold text-muted-foreground">
-                  {shift === 'medio'
-                    ? 'Medio Turno'
-                    : shift === 'completo'
-                    ? 'Turno Completo'
-                    : 'Turno Doble'}
+                  {getShiftMetricLabel(shift)}
                 </span>
                 <span className="text-sm font-black text-foreground">
                   {count}

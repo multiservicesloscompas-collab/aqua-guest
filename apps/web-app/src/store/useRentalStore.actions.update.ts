@@ -9,6 +9,8 @@ import {
   calculateFinalRentalTotals,
   mergeTipIntoPaymentSplits,
 } from '@/services/transactions/transactionTotals';
+import { RentalShiftConfig } from '@/types';
+import { toShiftSnapshotColumns } from '@/services/rentals/rentalShiftSnapshot';
 import type { TipCaptureInput } from '@/types/tips';
 import type { RentalUpdateRow } from '@/services/rentals/rentalSchemaContract';
 import type { CustomerUpdate, WasherRentalUpdate } from '@aqua-guest/domain';
@@ -87,8 +89,16 @@ export async function updateRentalAction(
 
     if (effectiveUpdates.machineId !== undefined)
       payload.machine_id = effectiveUpdates.machineId;
-    if (effectiveUpdates.shift !== undefined)
-      payload.shift = effectiveUpdates.shift;
+    const nextShift = effectiveUpdates.shift;
+    if (nextShift !== undefined) payload.shift = nextShift;
+    if (nextShift !== undefined && nextShift !== currentRental.shift) {
+      const shiftDefinition =
+        effectiveUpdates.shiftSnapshot ?? RentalShiftConfig[nextShift];
+      Object.assign(payload, toShiftSnapshotColumns(shiftDefinition));
+      effectiveUpdates.shiftSnapshot = shiftDefinition;
+    } else {
+      delete effectiveUpdates.shiftSnapshot;
+    }
     if (effectiveUpdates.date !== undefined)
       payload.date = effectiveUpdates.date;
     if (effectiveUpdates.deliveryTime !== undefined)

@@ -124,12 +124,17 @@ describe('calculateShiftBasePrice', () => {
 });
 
 describe('calculateRentalSubtotalUsd', () => {
-  it('adds the delivery fee to the shift price for the rental payment method', () => {
-    // Arrange
-    const rental = { shift: completo, paymentMethod: divisa, deliveryFee: 2 };
+  const baseRental = {
+    shift: completo,
+    paymentMethod: divisa,
+    deliveryFee: 2,
+    totalUsd: 7,
+    shiftSnapshot: undefined,
+  };
 
-    // Act
-    const subtotal = calculateRentalSubtotalUsd(rental);
+  it('adds the delivery fee to the shift price for the rental payment method', () => {
+    // Arrange / Act
+    const subtotal = calculateRentalSubtotalUsd(baseRental);
 
     // Assert
     expect(subtotal).toBe(7);
@@ -138,6 +143,7 @@ describe('calculateRentalSubtotalUsd', () => {
   it('treats a missing delivery fee as zero', () => {
     // Arrange
     const rental = {
+      ...baseRental,
       shift: medio,
       paymentMethod: efectivo,
       deliveryFee: undefined,
@@ -152,9 +158,52 @@ describe('calculateRentalSubtotalUsd', () => {
     RENTAL_SHIFTS.forEach((shift) => {
       PAYMENT_METHODS.forEach((paymentMethod) => {
         expect(
-          calculateRentalSubtotalUsd({ shift, paymentMethod, deliveryFee: 3 })
+          calculateRentalSubtotalUsd({
+            ...baseRental,
+            shift,
+            paymentMethod,
+            deliveryFee: 3,
+          })
         ).toBe(calculateRentalPrice(shift, paymentMethod, 3));
       });
     });
+  });
+
+  it('prices with the snapshot stored in the rental, not with the current shift', () => {
+    // Arrange
+    const rental = {
+      ...baseRental,
+      shift: doble,
+      paymentMethod: efectivo,
+      deliveryFee: 1,
+      shiftSnapshot: {
+        ...LEGACY_SHIFT_DEFINITIONS[doble],
+        priceUsd: 10,
+      },
+    };
+
+    // Act
+    const subtotal = calculateRentalSubtotalUsd(rental);
+
+    // Assert
+    expect(subtotal).toBe(11);
+  });
+
+  it('applies the snapshot divisa discount of the rental', () => {
+    // Arrange
+    const rental = {
+      ...baseRental,
+      shift: doble,
+      paymentMethod: divisa,
+      deliveryFee: 0,
+      shiftSnapshot: {
+        ...LEGACY_SHIFT_DEFINITIONS[doble],
+        priceUsd: 10,
+        divisaDiscountUsd: 3,
+      },
+    };
+
+    // Act / Assert
+    expect(calculateRentalSubtotalUsd(rental)).toBe(7);
   });
 });

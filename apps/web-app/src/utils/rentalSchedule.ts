@@ -1,4 +1,5 @@
-import { BUSINESS_HOURS, RentalShift, RentalShiftConfig } from '@/types';
+import type { RentalShiftDefinition } from '@aqua-guest/domain';
+import { BUSINESS_HOURS } from '@/types';
 import {
   addDays,
   format,
@@ -51,18 +52,10 @@ export function clampToBusinessHours(dateTime: Date): Date {
 
 export function calculatePickupTime(
   deliveryDate: Date,
-  deliveryTime: string, // HH:mm
-  shift: RentalShift
+  deliveryTime: string,
+  shift: Pick<RentalShiftDefinition, 'hours'>
 ): { pickupTime: string; pickupDate: string } {
   if (!deliveryTime) {
-    return {
-      pickupTime: format(deliveryDate, 'HH:mm'),
-      pickupDate: format(deliveryDate, 'yyyy-MM-dd'),
-    };
-  }
-
-  const shiftConfig = RentalShiftConfig[shift];
-  if (!shiftConfig) {
     return {
       pickupTime: format(deliveryDate, 'HH:mm'),
       pickupDate: format(deliveryDate, 'yyyy-MM-dd'),
@@ -74,7 +67,7 @@ export function calculatePickupTime(
   const deliveryDateTime = setMinutes(setHours(deliveryDate, hours), minutes);
 
   let pickupDateTime = new Date(
-    deliveryDateTime.getTime() + shiftConfig.hours * 60 * 60 * 1000
+    deliveryDateTime.getTime() + shift.hours * 60 * 60 * 1000
   );
 
   const { closeTime } = getBusinessHoursWindow(pickupDateTime);

@@ -58,6 +58,7 @@ Washer-rental transactions.
 
 - PK: `id uuid`
 - Core fields: `date`, `customer_id`, `machine_id`, `shift`, `delivery_time`, `pickup_time`, `pickup_date`, `delivery_fee`, `total_usd`, `payment_method`, `status`, `date_paid`, `notes`, `is_paid`
+- Shift snapshot (nullable, written on create and when the shift changes): `shift_label`, `shift_hours`, `shift_price_usd`, `shift_divisa_discount_usd`. Rentals created before the snapshot have all four `NULL` and resolve to the frozen legacy definition of their `shift`
 - Agenda send fields: `agenda_template_send_state`, `agenda_template_sent`, `agenda_template_sent_at`
 - Lifecycle fields: `created_at`, `updated_at`, `deleted_at`
 - Real relationships:

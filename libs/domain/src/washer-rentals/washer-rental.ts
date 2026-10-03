@@ -1,5 +1,5 @@
 import type { PaymentMethod, PaymentSplit } from '../payments';
-import type { RentalShift } from './rental-shift';
+import type { RentalShift, RentalShiftDefinition } from './rental-shift';
 
 export type RentalStatus = 'agendado' | 'enviado' | 'finalizado';
 
@@ -21,6 +21,7 @@ export interface WasherRental {
   customerAddress: string;
   machineId: string;
   shift: RentalShift;
+  shiftSnapshot?: RentalShiftDefinition;
   deliveryTime: string;
   pickupTime: string;
   pickupDate: string;

@@ -11,6 +11,7 @@ import {
   formatPickupInfo,
   generateTimeSlots,
 } from '@/utils/rentalSchedule';
+import { RentalShiftConfig } from '@/types';
 import { calculateRentalPrice } from '@/utils/rentalPricing';
 import { buildDualPaymentSplits } from '@/services/payments/paymentSplitWritePath';
 import { calculateFinalRentalTotals } from '@/services/transactions/transactionTotals';
@@ -103,7 +104,7 @@ export function useRentalSheetViewModel({
   const timeSlots = useMemo(() => generateTimeSlots(), []);
   const pickupInfo = useMemo(() => {
     const date = parse(selectedDate, 'yyyy-MM-dd', new Date());
-    return calculatePickupTime(date, deliveryTime, shift);
+    return calculatePickupTime(date, deliveryTime, RentalShiftConfig[shift]);
   }, [selectedDate, deliveryTime, shift]);
 
   const subtotalUsd = useMemo(

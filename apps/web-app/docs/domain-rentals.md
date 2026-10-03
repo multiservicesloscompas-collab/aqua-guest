@@ -94,11 +94,12 @@ Actions taken within the Washer Rentals domain have significant ripple effects a
 
 ## ⚙️ Agent Implementation Rules (CRITICAL)
 
-1.  **Pickup Time Calculation:** NEVER allow manual entry of `pickupTime` or `pickupDate`. It MUST be auto-calculated using `calculatePickupTime` in `src/utils/rentalSchedule.ts` based on the `deliveryDate`, `deliveryTime`, and `shift` duration.
+1.  **Pickup Time Calculation:** NEVER allow manual entry of `pickupTime` or `pickupDate`. It MUST be auto-calculated using `calculatePickupTime` in `src/utils/rentalSchedule.ts` based on the `deliveryDate`, `deliveryTime`, and the resolved shift definition (its `hours`).
 2.  **Business Hours Constraint:** Pickup times MUST respect `BUSINESS_HOURS` (9am-8pm Mon-Sat, 9am-2pm Sun). If a shift ends outside these hours, the pickup time must be adjusted to the next available business hour (e.g., 9am the next day).
 3.  **Pricing Rules:** Rental prices are primarily in USD. The `totalUsd` is calculated by `calculateRentalPrice` in `src/utils/rentalPricing.ts` (base price + delivery fee). **Divisa discount:** the base price is `priceUsd - divisaDiscountUsd` when `paymentMethod` is 'divisa' (computed by `calculateShiftBasePrice`). Today only 'completo' has a discount ($1), so it costs $5 in divisa instead of $6.
-4.  **Extensions:** Use `applyExtensionToRental` in `src/utils/rentalExtensions.ts`. This recalculates `pickupTime` and `pickupDate` respecting business hours and adds `additionalFee` to `totalUsd`. Original pickup times must be preserved for tracking.
-5.  **Status Flow:** Rentals move from 'agendado' -> 'enviado' -> 'finalizado'. Only non-finalized rentals affect machine availability.
-6.  **Machine Availability:** When creating a rental, machines that are currently rented (status !== 'finalizado') and overlap with the requested time slot MUST be disabled.
-7.  **Payment Status:** `isPaid` is a boolean. When true, `datePaid` MUST be set to the current date. When false, `datePaid` must be null. Dashboard metrics for rentals rely entirely on `datePaid`, NOT the service `date`.
-8.  **Supabase Failures:** If a Supabase write fails (create/update/delete), do not update local state as a fallback. Propagate the error so the UI can notify the user.
+4.  **Shift History:** a rental stores a snapshot of its shift (`shiftSnapshot`: label, hours, price, divisa discount). Read a rental's shift only through `resolveRentalShift` in `src/utils/rentalShift.ts` (snapshot, then the frozen `LEGACY_SHIFT_DEFINITIONS`), never through the live definition, so editing or deleting a shift never changes past rentals. The edit sheet keeps the rental's own terms while its shift is unchanged (`resolveEditedRentalShift`); the snapshot is rewritten only when the user picks another shift.
+5.  **Extensions:** Use `applyExtensionToRental` in `src/utils/rentalExtensions.ts`. This recalculates `pickupTime` and `pickupDate` respecting business hours and adds `additionalFee` to `totalUsd`. Original pickup times must be preserved for tracking.
+6.  **Status Flow:** Rentals move from 'agendado' -> 'enviado' -> 'finalizado'. Only non-finalized rentals affect machine availability.
+7.  **Machine Availability:** When creating a rental, machines that are currently rented (status !== 'finalizado') and overlap with the requested time slot MUST be disabled.
+8.  **Payment Status:** `isPaid` is a boolean. When true, `datePaid` MUST be set to the current date. When false, `datePaid` must be null. Dashboard metrics for rentals rely entirely on `datePaid`, NOT the service `date`.
+9.  **Supabase Failures:** If a Supabase write fails (create/update/delete), do not update local state as a fallback. Propagate the error so the UI can notify the user.
