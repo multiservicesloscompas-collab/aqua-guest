@@ -183,6 +183,19 @@ describe('SyncManager', () => {
     expect(processGlobalOfflineQueueMock).not.toHaveBeenCalled();
   });
 
+  it('does not refresh companies and user profiles when the app starts online', async () => {
+    onlineState = true;
+
+    render(<SyncManager />);
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(companiesSelectMock).not.toHaveBeenCalled();
+    expect(userProfilesSelectMock).not.toHaveBeenCalled();
+  });
+
   it('refreshes companies and user profiles on reconnect', async () => {
     onlineState = false;
 
