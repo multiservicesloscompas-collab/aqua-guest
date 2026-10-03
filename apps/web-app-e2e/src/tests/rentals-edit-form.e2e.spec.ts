@@ -42,3 +42,38 @@ test(
     await expect(notes).toHaveValue('nota escrita por el usuario');
   }
 );
+
+test(
+  'the edit sheet prices the Completo shift like the create sheet',
+  documented({
+    titulo:
+      '[B7 corregido] La edición muestra el precio correcto del turno completo',
+    area: 'Alquileres',
+    intent:
+      'Comprobar que, para un alquiler pagado en efectivo, la edición muestra el turno Completo a $6 (solo en divisa cuesta $5).',
+    steps: [
+      'Siembra un alquiler de turno completo pagado en efectivo.',
+      'Abre la edición del alquiler y lee el texto de la opción «Completo».',
+    ],
+    expects: ['La opción Completo dice $6.'],
+    data: 'Alquiler turno completo pagado en efectivo.',
+  }),
+  async ({ page }) => {
+    // Arrange
+    const id = await seedPaidRentalWithSplit({
+      amountBs: 240,
+      amountUsd: 6,
+      rateUsed: 40,
+    });
+    await gotoDashboard(page);
+    await openRentalsModule(page);
+
+    // Act
+    await page.getByTestId(`rental-edit-${id}`).click();
+    const option = page.getByTestId('rental-shift-option-completo');
+    await expect(option).toBeVisible();
+
+    // Assert
+    await expect(option).toContainText('$6');
+  }
+);

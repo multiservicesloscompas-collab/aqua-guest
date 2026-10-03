@@ -1,16 +1,9 @@
 import { format, parse } from 'date-fns';
 import { es } from 'date-fns/locale';
-import {
-  PaymentMethod,
-  PaymentMethodLabels,
-  RentalShift,
-  RentalShiftConfig,
-  WasherRental,
-} from '@/types';
+import { PaymentMethod, PaymentMethodLabels, WasherRental } from '@/types';
 import type {
   MachineItem,
   PaymentMethodOption,
-  ShiftOption,
 } from './rentalSheetViewModel.helpers';
 import { resolveSplitFormHydrationState } from '@/services/payments/paymentSplitFormHydration';
 
@@ -94,19 +87,7 @@ export function mapMachineItems(params: {
     }));
 }
 
-export function mapShiftOptions(paymentMethod: PaymentMethod): ShiftOption[] {
-  return (Object.keys(RentalShiftConfig) as RentalShift[]).map((key) => {
-    const config = RentalShiftConfig[key];
-    const price =
-      key === 'completo' && paymentMethod === 'efectivo' ? 5 : config.priceUsd;
-
-    return {
-      value: key,
-      label: config.label,
-      priceText: `$${price}`,
-    };
-  });
-}
+export { mapShiftOptions } from './rentalSheetViewModel.helpers';
 
 export const PAYMENT_METHOD_OPTIONS: PaymentMethodOption[] = [
   { value: 'pago_movil', label: PaymentMethodLabels.pago_movil },
