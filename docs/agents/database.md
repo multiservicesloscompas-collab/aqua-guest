@@ -70,10 +70,10 @@ Washer-rental transactions.
 
 ### `rental_shifts`
 
-Catalog of washer-rental shifts (added additively; the app does not read it yet).
+Catalog of washer-rental shifts. The app reads it for the rental selector and manages it from the shifts screen (create, edit, soft delete).
 
 - PK: `id text` (`'medio'`, `'completo'`, `'doble'` for the historical shifts, a generated uuid for new ones)
-- Core fields: `label`, `price_usd`, `hours`, `divisa_discount_usd` (USD off when paid in divisa; `0` = no discount, never above `price_usd`), `is_active`
+- Core fields: `code` (`UPPER_SNAKE_CASE`, unique, immutable; `MEDIO`, `COMPLETO`, `DOBLE` for the historical shifts, derived from the label for new ones), `label`, `price_usd`, `hours`, `divisa_discount_usd` (USD off when paid in divisa; `0` = no discount, never above `price_usd`), `is_active`
 - Lifecycle fields: `created_at`, `updated_at`, `deleted_at` (shifts are soft-deleted, never physically deleted)
 - Implicit relationships:
   - `washer_rentals.shift` stores a shift id as text, with no FK on purpose: a rental must keep working after its shift is deactivated or deleted
