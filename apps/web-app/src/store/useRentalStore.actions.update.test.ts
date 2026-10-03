@@ -196,7 +196,7 @@ describe('updateRentalAction shift snapshot', () => {
       shift_label: 'Completo',
       shift_hours: 24,
       shift_price_usd: 6,
-      shift_divisa_discount_usd: 1,
+      shift_divisa_discount_rule_usd: 1,
     });
   });
 

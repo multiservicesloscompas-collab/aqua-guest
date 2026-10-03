@@ -15,7 +15,7 @@ import { gotoDashboard } from '../support/uiNavigation';
 import { bootstrapAtDashboard } from '../support/waterSalesTipsMatrix/uiHelpers';
 
 const SHIFT_COLUMNS =
-  'total_usd,shift_label,shift_hours,shift_price_usd,shift_divisa_discount_usd';
+  'total_usd,shift_label,shift_hours,shift_price_usd,shift_divisa_discount_rule_usd';
 
 async function readRentalShiftColumns(rentalId: string) {
   const { data } = await getSupabaseClient()
@@ -30,9 +30,9 @@ async function readRentalShiftColumns(rentalId: string) {
     priceUsd:
       data?.shift_price_usd === null ? null : Number(data?.shift_price_usd),
     divisaDiscountUsd:
-      data?.shift_divisa_discount_usd === null
+      data?.shift_divisa_discount_rule_usd === null
         ? null
-        : Number(data?.shift_divisa_discount_usd),
+        : Number(data?.shift_divisa_discount_rule_usd),
   };
 }
 

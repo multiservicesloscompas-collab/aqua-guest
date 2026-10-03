@@ -27,7 +27,7 @@ describe('toShiftSnapshotColumns', () => {
       shift_label: 'Doble Especial',
       shift_hours: 36,
       shift_price_usd: 10,
-      shift_divisa_discount_usd: 2,
+      shift_divisa_discount_rule_usd: 2,
     });
   });
 });
@@ -50,7 +50,7 @@ describe('fromShiftSnapshotColumns', () => {
       shift_label: 'Completo',
       shift_hours: '24',
       shift_price_usd: '6',
-      shift_divisa_discount_usd: '1',
+      shift_divisa_discount_rule_usd: '1',
     };
 
     // Act
@@ -66,7 +66,7 @@ describe('fromShiftSnapshotColumns', () => {
       shift_label: null,
       shift_hours: null,
       shift_price_usd: null,
-      shift_divisa_discount_usd: null,
+      shift_divisa_discount_rule_usd: null,
     };
 
     // Act / Assert

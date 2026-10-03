@@ -4,7 +4,7 @@ export interface ShiftSnapshotColumns {
   shift_label: string;
   shift_hours: number;
   shift_price_usd: number;
-  shift_divisa_discount_usd: number;
+  shift_divisa_discount_rule_usd: number;
 }
 
 export type ShiftSnapshotColumnsRow = {
@@ -21,7 +21,7 @@ export function toShiftSnapshotColumns(
     shift_label: definition.label,
     shift_hours: definition.hours,
     shift_price_usd: definition.priceUsd,
-    shift_divisa_discount_usd: definition.divisaDiscountUsd,
+    shift_divisa_discount_rule_usd: definition.divisaDiscountUsd,
   };
 }
 
@@ -33,7 +33,7 @@ export function fromShiftSnapshotColumns(
     shift_label: label,
     shift_hours: hours,
     shift_price_usd: priceUsd,
-    shift_divisa_discount_usd: divisaDiscountUsd,
+    shift_divisa_discount_rule_usd: divisaDiscountUsd,
   } = columns;
 
   if (

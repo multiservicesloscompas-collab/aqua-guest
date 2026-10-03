@@ -131,7 +131,8 @@ export async function seedRental(input: SeedRentalInput): Promise<string> {
       shift_label: input.shiftSnapshot?.label ?? null,
       shift_hours: input.shiftSnapshot?.hours ?? null,
       shift_price_usd: input.shiftSnapshot?.priceUsd ?? null,
-      shift_divisa_discount_usd: input.shiftSnapshot?.divisaDiscountUsd ?? null,
+      shift_divisa_discount_rule_usd:
+        input.shiftSnapshot?.divisaDiscountUsd ?? null,
     })
     .select('id')
     .single();
