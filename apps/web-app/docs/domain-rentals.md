@@ -11,7 +11,7 @@ Manage the rental of washing machines by scheduling shifts (medio, completo, dob
 - **`WasherRental`**: `id`, `date`, `customerId`, `customerName`, `customerPhone`, `customerAddress`, `machineId`, `shift` ('medio' | 'completo' | 'doble'), `deliveryTime` (HH:mm), `pickupTime` (HH:mm), `pickupDate` (YYYY-MM-DD), `deliveryFee` (USD), `totalUsd` (USD), `paymentMethod`, `status` ('agendado' | 'enviado' | 'finalizado'), `isPaid` (boolean), `datePaid` (YYYY-MM-DD), `notes`, `extensions[]`, `originalPickupTime`, `originalPickupDate`, `createdAt`, `updatedAt`.
 - **Compatibilidad pago mixto (Fase base):** `WasherRental` soporta `paymentSplits?: PaymentSplit[]` como campo opcional para rollout gradual, manteniendo `paymentMethod` como compatibilidad legacy.
 - **Write-path pago mixto (Fase 2):** los flujos crear/editar construyen splits normalizados desde UI (método principal/secundario), validan totales y persisten en `rental_payment_splits` vía adapters. `payment_method` en `washer_rentals` sigue como campo derivado de compatibilidad.
-- **`RentalShiftConfig`**: Defines `hours` and `priceUsd` for each shift type.
+- **`RentalShiftDefinition`** (`@aqua-guest/domain`): `id`, `label`, `priceUsd`, `hours`, `divisaDiscountUsd` (USD off when paid in divisa; 0 = none). `LEGACY_SHIFT_DEFINITIONS` freezes the three historical shifts; `RentalShiftConfig` in `src/types` is that constant.
 - **`RentalExtension`**: `additionalHours`, `additionalFee` (USD), `notes`.
 - **`WashingMachine`**: `id`, `name`, `kg`, `brand`, `status` ('disponible' | 'mantenimiento' | 'averiada'), `isAvailable`.
 
@@ -96,7 +96,7 @@ Actions taken within the Washer Rentals domain have significant ripple effects a
 
 1.  **Pickup Time Calculation:** NEVER allow manual entry of `pickupTime` or `pickupDate`. It MUST be auto-calculated using `calculatePickupTime` in `src/utils/rentalSchedule.ts` based on the `deliveryDate`, `deliveryTime`, and `shift` duration.
 2.  **Business Hours Constraint:** Pickup times MUST respect `BUSINESS_HOURS` (9am-8pm Mon-Sat, 9am-2pm Sun). If a shift ends outside these hours, the pickup time must be adjusted to the next available business hour (e.g., 9am the next day).
-3.  **Pricing Rules:** Rental prices are primarily in USD. The `totalUsd` is calculated by `calculateRentalPrice` in `src/utils/rentalPricing.ts` (base price + delivery fee). **Special Rule:** If `shift` is 'completo' (24h) and `paymentMethod` is 'divisa', the base price is $5 instead of the default $6.
+3.  **Pricing Rules:** Rental prices are primarily in USD. The `totalUsd` is calculated by `calculateRentalPrice` in `src/utils/rentalPricing.ts` (base price + delivery fee). **Divisa discount:** the base price is `priceUsd - divisaDiscountUsd` when `paymentMethod` is 'divisa' (computed by `calculateShiftBasePrice`). Today only 'completo' has a discount ($1), so it costs $5 in divisa instead of $6.
 4.  **Extensions:** Use `applyExtensionToRental` in `src/utils/rentalExtensions.ts`. This recalculates `pickupTime` and `pickupDate` respecting business hours and adds `additionalFee` to `totalUsd`. Original pickup times must be preserved for tracking.
 5.  **Status Flow:** Rentals move from 'agendado' -> 'enviado' -> 'finalizado'. Only non-finalized rentals affect machine availability.
 6.  **Machine Availability:** When creating a rental, machines that are currently rented (status !== 'finalizado') and overlap with the requested time slot MUST be disabled.

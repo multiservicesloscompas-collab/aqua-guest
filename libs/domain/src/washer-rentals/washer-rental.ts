@@ -1,6 +1,5 @@
 import type { PaymentMethod, PaymentSplit } from '../payments';
-
-export type RentalShift = 'medio' | 'completo' | 'doble';
+import type { RentalShift } from './rental-shift';
 
 export type RentalStatus = 'agendado' | 'enviado' | 'finalizado';
 

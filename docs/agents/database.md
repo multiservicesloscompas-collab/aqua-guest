@@ -67,6 +67,17 @@ Washer-rental transactions.
   - `machine_id` behaves like a logical link to `washing_machines.id`, but no FK is currently present
   - Can be referenced by `tips` when `tips.origin_type = 'rental'`
 
+### `rental_shifts`
+
+Catalog of washer-rental shifts (added additively; the app does not read it yet).
+
+- PK: `id text` (`'medio'`, `'completo'`, `'doble'` for the historical shifts, a generated uuid for new ones)
+- Core fields: `label`, `price_usd`, `hours`, `divisa_discount_usd` (USD off when paid in divisa; `0` = no discount, never above `price_usd`), `is_active`
+- Lifecycle fields: `created_at`, `updated_at`, `deleted_at` (shifts are soft-deleted, never physically deleted)
+- Implicit relationships:
+  - `washer_rentals.shift` stores a shift id as text, with no FK on purpose: a rental must keep working after its shift is deactivated or deleted
+- RLS: `Allow all on rental_shifts` (`FOR ALL TO public`), like the other tables
+
 ### `expenses`
 
 Expense header records.
@@ -200,6 +211,7 @@ Real foreign keys in `public`:
 Important implicit relationships without FK enforcement:
 
 - `washer_rentals.machine_id -> washing_machines.id`
+- `washer_rentals.shift -> rental_shifts.id` (never enforced)
 - `tips.origin_type + tips.origin_id -> sales.id | washer_rentals.id`
 - `tip_payout_idempotency.tip_id -> tips.id`
 

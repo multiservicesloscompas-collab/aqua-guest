@@ -2,6 +2,7 @@ import { CalendarDays, Clock, MapPin } from 'lucide-react';
 import { format, parse } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { WasherRental } from '@/types';
+import { calculateRentalSubtotalUsd } from '@/utils/rentalPricing';
 import type { PaymentDisplayModel } from '@/services/payments/paymentDisplayModel';
 import { deriveRentalTipAmountBs } from '@/services/transactions/transactionTotals';
 import { useConfigStore } from '@/store/useConfigStore';
@@ -21,15 +22,7 @@ export function RentalCardDetails({
   paymentDisplay,
 }: RentalCardDetailsProps) {
   const exchangeRate = useConfigStore((state) => state.config.exchangeRate);
-  const baseUsd =
-    rental.shift === 'completo' && rental.paymentMethod === 'divisa'
-      ? 5
-      : rental.shift === 'medio'
-      ? 4
-      : rental.shift === 'completo'
-      ? 6
-      : 12;
-  const subtotalUsd = baseUsd + Number(rental.deliveryFee || 0);
+  const subtotalUsd = calculateRentalSubtotalUsd(rental);
   const tipAmountBs =
     tip?.amountBs ??
     deriveRentalTipAmountBs(rental.totalUsd, subtotalUsd, exchangeRate);
