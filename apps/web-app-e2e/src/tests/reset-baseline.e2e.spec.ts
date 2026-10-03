@@ -7,6 +7,7 @@ import {
   BASELINE_LITER_PRICING,
   BASELINE_MACHINES,
   BASELINE_PRODUCTS,
+  BASELINE_RENTAL_SHIFTS,
 } from '../support/reset/baseline';
 import {
   DOMAIN_TABLES,
@@ -19,6 +20,7 @@ import { getSupabaseClient } from '../support/supabaseClient';
 const SEEDED_TABLES: readonly DomainTable[] = [
   'customers',
   'washing_machines',
+  'rental_shifts',
   'exchange_rates',
   'liter_pricing',
   'products',
@@ -36,6 +38,7 @@ async function expectBaseline() {
   }
   expect(counts.customers).toBe(BASELINE_CUSTOMERS.length);
   expect(counts.washing_machines).toBe(BASELINE_MACHINES.length);
+  expect(counts.rental_shifts).toBe(BASELINE_RENTAL_SHIFTS.length);
   expect(counts.products).toBe(BASELINE_PRODUCTS.length);
   expect(counts.liter_pricing).toBe(BASELINE_LITER_PRICING.length);
   expect(counts.exchange_rates).toBe(1);
@@ -58,11 +61,11 @@ test.describe('e2e database reset', () => {
       steps: [
         'La fixture reinicia la base antes del test.',
         'Lee de la base la tasa de hoy, el precio de 19 L y las lavadoras.',
-        'Cuenta las filas de las 15 tablas.',
+        'Cuenta las filas de las 16 tablas.',
       ],
       expects: [
         'Las tablas de movimientos (ventas, alquileres, egresos, propinas, prepagos, transferencias y sus splits) tienen 0 filas.',
-        'Hay 4 clientes, 5 lavadoras, 6 productos, 7 precios por litros y 1 tasa.',
+        'Hay 4 clientes, 5 lavadoras, 3 turnos de alquiler, 6 productos, 7 precios por litros y 1 tasa.',
         'La tasa de hoy es 1000 y el precio de 19 L es 700.',
         'Las lavadoras se llaman Lavadora 1 a 5 y están en estado disponible.',
       ],
@@ -192,7 +195,7 @@ test.describe('e2e database reset', () => {
       steps: ['Siembra 1 venta.', 'Ejecuta el reset sin línea base.'],
       expects: [
         'El informe indica que no sembró nada.',
-        'Las 15 tablas quedan con 0 filas, incluidos clientes, lavadoras y productos.',
+        'Las 16 tablas quedan con 0 filas, incluidos clientes, lavadoras y productos.',
       ],
     }),
     async () => {

@@ -85,6 +85,33 @@ export const BASELINE_MACHINES = [
   is_available: true,
 }));
 
+export const BASELINE_RENTAL_SHIFTS = [
+  {
+    id: 'medio',
+    code: 'MEDIO',
+    label: 'Medio Turno',
+    price_usd: 4,
+    hours: 8,
+    divisa_discount_usd: 0,
+  },
+  {
+    id: 'completo',
+    code: 'COMPLETO',
+    label: 'Completo',
+    price_usd: 6,
+    hours: 24,
+    divisa_discount_usd: 1,
+  },
+  {
+    id: 'doble',
+    code: 'DOBLE',
+    label: 'Doble',
+    price_usd: 12,
+    hours: 48,
+    divisa_discount_usd: 0,
+  },
+] as const;
+
 export const BASELINE_CUSTOMERS = [1, 2, 3, 4].map((n) => ({
   name: `Cliente Prueba ${n}`,
   phone: `0414-100000${n}`,

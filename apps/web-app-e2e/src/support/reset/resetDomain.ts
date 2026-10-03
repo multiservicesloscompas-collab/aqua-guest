@@ -6,6 +6,7 @@ import {
   BASELINE_LITER_PRICING,
   BASELINE_MACHINES,
   BASELINE_PRODUCTS,
+  BASELINE_RENTAL_SHIFTS,
 } from './baseline';
 
 /**
@@ -26,6 +27,7 @@ export const DOMAIN_TABLES = [
   'payment_balance_transactions',
   'customers',
   'washing_machines',
+  'rental_shifts',
   'exchange_rates',
   'liter_pricing',
   'products',
@@ -91,6 +93,7 @@ async function seedBaseline(client: Client): Promise<void> {
     { date: todayVe(), rate: BASELINE_EXCHANGE_RATE },
   ]);
   await insertRows(client, 'washing_machines', BASELINE_MACHINES);
+  await insertRows(client, 'rental_shifts', BASELINE_RENTAL_SHIFTS);
   await insertRows(client, 'customers', BASELINE_CUSTOMERS);
 }
 
