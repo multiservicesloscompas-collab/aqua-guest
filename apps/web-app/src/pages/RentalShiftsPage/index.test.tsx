@@ -35,9 +35,9 @@ const NOCTURNO: RentalShiftCatalogEntry = {
 };
 
 function setOnline(isOnline: boolean) {
-  Object.defineProperty(globalThis.navigator, 'onLine', {
+  Object.defineProperty(globalThis, 'navigator', {
     configurable: true,
-    value: isOnline,
+    value: { onLine: isOnline },
   });
 }
 
