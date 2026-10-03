@@ -120,3 +120,65 @@ export async function seedRentalShift(input: {
   }
   return data.id as string;
 }
+
+export interface RentalShiftRow {
+  id: string;
+  shift: string;
+  totalUsd: number;
+  pickupDate: string;
+  pickupTime: string;
+  label: string | null;
+  hours: number | null;
+  priceUsd: number | null;
+  divisaDiscountUsd: number | null;
+}
+
+function toNullableNumber(value: unknown): number | null {
+  return value === null || value === undefined ? null : Number(value);
+}
+
+export async function readRentals(): Promise<RentalShiftRow[]> {
+  const { data, error } = await getSupabaseClient()
+    .from('washer_rentals')
+    .select(
+      'id,shift,total_usd,pickup_date,pickup_time,shift_label,shift_hours,shift_price_usd,shift_divisa_discount_rule_usd'
+    )
+    .order('created_at', { ascending: true });
+  if (error) throw new Error(`Cannot read rentals: ${error.message}`);
+  return (data ?? []).map((row) => ({
+    id: row.id as string,
+    shift: row.shift as string,
+    totalUsd: Number(row.total_usd),
+    pickupDate: row.pickup_date as string,
+    pickupTime: String(row.pickup_time).substring(0, 5),
+    label: (row.shift_label as string | null) ?? null,
+    hours: toNullableNumber(row.shift_hours),
+    priceUsd: toNullableNumber(row.shift_price_usd),
+    divisaDiscountUsd: toNullableNumber(row.shift_divisa_discount_rule_usd),
+  }));
+}
+
+export async function readLatestRental(): Promise<RentalShiftRow> {
+  await expect
+    .poll(async () => (await readRentals()).length, { timeout: 15_000 })
+    .toBeGreaterThan(0);
+  const rentals = await readRentals();
+  return rentals[rentals.length - 1];
+}
+
+export async function readRentalById(id: string): Promise<RentalShiftRow> {
+  const rental = (await readRentals()).find((row) => row.id === id);
+  if (!rental) throw new Error(`Rental not found: ${id}`);
+  return rental;
+}
+
+export async function updateShiftInDb(
+  id: string,
+  changes: Record<string, string | number | boolean | null>
+): Promise<void> {
+  const { error } = await getSupabaseClient()
+    .from('rental_shifts')
+    .update(changes)
+    .eq('id', id);
+  if (error) throw new Error(`Cannot update shift: ${error.message}`);
+}
