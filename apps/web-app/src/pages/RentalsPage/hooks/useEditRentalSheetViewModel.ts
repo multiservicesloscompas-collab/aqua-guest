@@ -4,6 +4,8 @@ import { useCustomerStore } from '@/store/useCustomerStore';
 import { useRentalStore } from '@/store/useRentalStore';
 import { useMachineStore } from '@/store/useMachineStore';
 import { useConfigStore } from '@/store/useConfigStore';
+import { useShiftCatalog } from '@/hooks/useShiftCatalog';
+import { listSelectableShifts } from '@/utils/shiftCatalog';
 import { getVenezuelaDate } from '@/services/DateService';
 import { generateTimeSlots } from '@/utils/rentalSchedule';
 import { RentalStatus, RentalStatusLabels, WasherRental } from '@/types';
@@ -43,6 +45,7 @@ export function useEditRentalSheetViewModel({
   const exchangeRate = useConfigStore((state) => state.config.exchangeRate);
   const { updateRental, rentals } = useRentalStore();
   const { washingMachines } = useMachineStore();
+  const shiftCatalog = useShiftCatalog();
   const form = useEditRentalFormState({ rental, exchangeRate });
 
   const {
@@ -127,6 +130,7 @@ export function useEditRentalSheetViewModel({
   } = useEditRentalSheetComputed({
     rental,
     shift,
+    shiftCatalog,
     paymentMethod,
     deliveryFee,
     deliveryTime,
@@ -154,8 +158,12 @@ export function useEditRentalSheetViewModel({
   );
 
   const shiftOptions = useMemo(
-    () => mapShiftOptions(paymentMethod),
-    [paymentMethod]
+    () =>
+      mapShiftOptions(
+        listSelectableShifts(shiftCatalog, rental),
+        paymentMethod
+      ),
+    [shiftCatalog, rental, paymentMethod]
   );
 
   const paymentMethodOptions = useMemo(() => PAYMENT_METHOD_OPTIONS, []);

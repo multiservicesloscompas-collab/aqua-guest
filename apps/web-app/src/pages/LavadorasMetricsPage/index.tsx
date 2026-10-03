@@ -23,7 +23,7 @@ import {
 } from 'date-fns';
 import { es } from 'date-fns/locale';
 import type { AppRoute } from '@/types';
-import { getShiftMetricLabel } from '@/utils/rentalShift';
+import { getRentalShiftMetricLabel } from '@/utils/rentalShift';
 
 interface LavadorasMetricsPageProps {
   onNavigate?: (route: AppRoute) => void;
@@ -96,8 +96,14 @@ export function LavadorasMetricsPage(_props: LavadorasMetricsPageProps = {}) {
     const totalUsd = filteredRentals.reduce((sum, r) => sum + r.totalUsd, 0);
     const totalBs = totalUsd * config.exchangeRate;
 
-    const byShift = filteredRentals.reduce<Record<string, number>>((acc, r) => {
-      acc[r.shift] = (acc[r.shift] ?? 0) + 1;
+    const byShift = filteredRentals.reduce<
+      Record<string, { label: string; count: number }>
+    >((acc, r) => {
+      const current = acc[r.shift];
+      acc[r.shift] = {
+        label: current?.label ?? getRentalShiftMetricLabel(r),
+        count: (current?.count ?? 0) + 1,
+      };
       return acc;
     }, {});
 
@@ -275,19 +281,21 @@ export function LavadorasMetricsPage(_props: LavadorasMetricsPageProps = {}) {
             </div>
           </div>
           <div className="space-y-1">
-            {Object.entries(metrics.byShift).map(([shift, count]) => (
-              <div
-                key={shift}
-                className="flex items-center justify-between py-3.5 px-2 border-b border-border/30 last:border-0 hover:bg-muted/10 rounded-lg transition-colors"
-              >
-                <span className="text-sm capitalize font-semibold text-muted-foreground">
-                  {getShiftMetricLabel(shift)}
-                </span>
-                <span className="text-sm font-black text-foreground">
-                  {count}
-                </span>
-              </div>
-            ))}
+            {Object.entries(metrics.byShift).map(
+              ([shift, { label, count }]) => (
+                <div
+                  key={shift}
+                  className="flex items-center justify-between py-3.5 px-2 border-b border-border/30 last:border-0 hover:bg-muted/10 rounded-lg transition-colors"
+                >
+                  <span className="text-sm capitalize font-semibold text-muted-foreground">
+                    {label}
+                  </span>
+                  <span className="text-sm font-black text-foreground">
+                    {count}
+                  </span>
+                </div>
+              )
+            )}
           </div>
         </section>
       </main>

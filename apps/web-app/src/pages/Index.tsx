@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 import { useMachineStore } from '@/store/useMachineStore';
+import { useRentalShiftStore } from '@/store/useRentalShiftStore';
 import { useNavStore } from '@/store/useNavStore';
 import { Header } from '@/components/layout/Header';
 import { BottomNav } from '@/components/layout/BottomNav';
@@ -119,6 +120,7 @@ const Index = () => {
     await loadFromSupabase();
     useMachineStore.getState().loadWashingMachines();
     await useMachineStore.getState().loadWashingMachines();
+    await useRentalShiftStore.getState().loadShifts();
     setLastLoaded(Date.now());
   };
 
@@ -132,6 +134,7 @@ const Index = () => {
     const minutesSinceLastLoad = (Date.now() - lastLoaded) / (1000 * 60);
     if (isFirstLoad.current || minutesSinceLastLoad >= 5) {
       loadFromSupabase();
+      void useRentalShiftStore.getState().loadShifts();
       setLastLoaded(Date.now());
       isFirstLoad.current = false;
     }

@@ -11,7 +11,8 @@ import {
   formatPickupInfo,
   generateTimeSlots,
 } from '@/utils/rentalSchedule';
-import { RentalShiftConfig } from '@/types';
+import { useShiftCatalog } from '@/hooks/useShiftCatalog';
+import { resolveShiftDefinitionOrDefault } from '@/utils/shiftCatalog';
 import { calculateRentalPrice } from '@/utils/rentalPricing';
 import { buildDualPaymentSplits } from '@/services/payments/paymentSplitWritePath';
 import { calculateFinalRentalTotals } from '@/services/transactions/transactionTotals';
@@ -51,6 +52,7 @@ export function useRentalSheetViewModel({
   const { customers } = useCustomerStore();
   const { addRental, rentals } = useRentalStore();
   const { washingMachines } = useMachineStore();
+  const shiftCatalog = useShiftCatalog();
   const form = useRentalSheetFormState();
   const {
     machineId,
@@ -101,15 +103,26 @@ export function useRentalSheetViewModel({
     }
   }, [open, setDeliveryTime]);
 
+  const shiftDefinition = useMemo(
+    () => resolveShiftDefinitionOrDefault(shiftCatalog, shift),
+    [shiftCatalog, shift]
+  );
+
+  useEffect(() => {
+    if (!shiftCatalog.some((definition) => definition.id === shift)) {
+      setShift(shiftCatalog[0].id);
+    }
+  }, [shiftCatalog, shift, setShift]);
+
   const timeSlots = useMemo(() => generateTimeSlots(), []);
   const pickupInfo = useMemo(() => {
     const date = parse(selectedDate, 'yyyy-MM-dd', new Date());
-    return calculatePickupTime(date, deliveryTime, RentalShiftConfig[shift]);
-  }, [selectedDate, deliveryTime, shift]);
+    return calculatePickupTime(date, deliveryTime, shiftDefinition);
+  }, [selectedDate, deliveryTime, shiftDefinition]);
 
   const subtotalUsd = useMemo(
-    () => calculateRentalPrice(shift, paymentMethod, deliveryFee),
-    [shift, paymentMethod, deliveryFee]
+    () => calculateRentalPrice(shiftDefinition, paymentMethod, deliveryFee),
+    [shiftDefinition, paymentMethod, deliveryFee]
   );
 
   const tipAmountBsNumeric = useMemo(
@@ -186,8 +199,8 @@ export function useRentalSheetViewModel({
   );
 
   const shiftOptions = useMemo(
-    () => mapShiftOptions(paymentMethod),
-    [paymentMethod]
+    () => mapShiftOptions(shiftCatalog, paymentMethod),
+    [shiftCatalog, paymentMethod]
   );
   const paymentMethodOptions = useMemo(() => PAYMENT_METHOD_OPTIONS, []);
   const pickupLabel = useMemo(

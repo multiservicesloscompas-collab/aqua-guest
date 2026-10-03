@@ -1,5 +1,6 @@
 import supabase from '@/lib/supabaseClient';
-import { RentalShiftConfig, WasherRental } from '@/types';
+import { WasherRental } from '@/types';
+import { UNKNOWN_SHIFT_ERROR, findShiftDefinition } from '@/utils/shiftCatalog';
 import { toShiftSnapshotColumns } from '@/services/rentals/rentalShiftSnapshot';
 import { rentalsDataService } from '@/services/RentalsDataService';
 import {
@@ -17,6 +18,7 @@ import type {
   RentalRow,
 } from '@/services/rentals/rentalSchemaContract';
 import { useCustomerStore } from './useCustomerStore';
+import { getShiftCatalog } from './useRentalShiftStore';
 import {
   type RentalState,
   buildRentalWriteContext,
@@ -123,7 +125,9 @@ export async function addRentalAction(
     });
 
     const shiftDefinition =
-      rental.shiftSnapshot ?? RentalShiftConfig[rental.shift];
+      rental.shiftSnapshot ??
+      findShiftDefinition(getShiftCatalog(), rental.shift);
+    if (!shiftDefinition) throw new Error(UNKNOWN_SHIFT_ERROR);
 
     const payload: RentalInsertRow = {
       date: rental.date,

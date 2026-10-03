@@ -39,11 +39,15 @@ const RENTAL: WasherRental = {
   updatedAt: '2026-05-11T08:00:00.000Z',
 };
 
-function compute(shift: WasherRental['shift']) {
+function compute(
+  shift: WasherRental['shift'],
+  shiftCatalog: RentalShiftDefinition[] = []
+) {
   return renderHook(() =>
     useEditRentalSheetComputed({
       rental: RENTAL,
       shift,
+      shiftCatalog,
       paymentMethod: PAYMENT_METHOD.efectivo,
       deliveryFee: 1,
       deliveryTime: '09:00',
@@ -82,6 +86,27 @@ describe('useEditRentalSheetComputed', () => {
     expect(computed.subtotalUsd).toBe(medio.priceUsd + 1);
     expect(computed.pickupInfo).toEqual({
       pickupTime: '17:00',
+      pickupDate: '2026-05-11',
+    });
+  });
+
+  it('prices and schedules a custom catalog shift picked while editing', () => {
+    // Arrange
+    const nocturno: RentalShiftDefinition = {
+      id: 'uuid-nocturno',
+      label: 'Nocturno',
+      priceUsd: 5,
+      hours: 4,
+      divisaDiscountUsd: 0,
+    };
+
+    // Act
+    const computed = compute(nocturno.id, [nocturno]);
+
+    // Assert
+    expect(computed.subtotalUsd).toBe(6);
+    expect(computed.pickupInfo).toEqual({
+      pickupTime: '13:00',
       pickupDate: '2026-05-11',
     });
   });

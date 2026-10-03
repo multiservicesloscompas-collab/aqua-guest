@@ -1,14 +1,13 @@
 import {
   LEGACY_SHIFT_DEFINITIONS,
   RENTAL_SHIFT,
-  isRentalShift,
-  type RentalShift,
+  isLegacyRentalShift,
   type RentalShiftDefinition,
 } from '@aqua-guest/domain';
 import { match, P } from 'ts-pattern';
-import { RentalShiftConfig, type WasherRental } from '@/types';
+import type { WasherRental } from '@/types';
 
-type ResolvableRental = Pick<
+export type ResolvableRental = Pick<
   WasherRental,
   'shift' | 'shiftSnapshot' | 'totalUsd' | 'deliveryFee'
 >;
@@ -34,19 +33,10 @@ export function resolveRentalShift(
       ({ shiftSnapshot }) => shiftSnapshot
     )
     .with(
-      { shift: P.when(isRentalShift) },
+      { shift: P.when(isLegacyRentalShift) },
       ({ shift }) => LEGACY_SHIFT_DEFINITIONS[shift]
     )
     .otherwise(deriveDefinitionFromAmounts);
-}
-
-export function resolveEditedRentalShift(
-  rental: ResolvableRental | null,
-  shift: RentalShift
-): RentalShiftDefinition {
-  return rental?.shift === shift
-    ? resolveRentalShift(rental)
-    : RentalShiftConfig[shift];
 }
 
 export function getShiftMetricLabel(shift: string): string {
@@ -55,4 +45,12 @@ export function getShiftMetricLabel(shift: string): string {
     .with(RENTAL_SHIFT.completo, () => 'Turno Completo')
     .with(RENTAL_SHIFT.doble, () => 'Turno Doble')
     .otherwise((unknownShift) => unknownShift);
+}
+
+export function getRentalShiftMetricLabel(rental: ResolvableRental): string {
+  return match(rental)
+    .with({ shift: P.when(isLegacyRentalShift) }, ({ shift }) =>
+      getShiftMetricLabel(shift)
+    )
+    .otherwise((customRental) => resolveRentalShift(customRental).label);
 }
