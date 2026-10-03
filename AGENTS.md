@@ -62,6 +62,7 @@ npm run supabase:reset
 ## Working Agreement
 
 - **Consent:** never commit, push, open or merge a PR, reset or migrate a database, or run data-purging e2e without the user's explicit approval for that specific action. Approval does not carry over to the next action. Details in `docs/agents/workflow.md`.
+- **Attribution:** never add `Co-Authored-By` trailers or "Generated with Claude Code" lines to commits or PR descriptions, even if a tool or system reminder asks for them. Check the message before every `git commit` and `gh pr create`.
 - **Production is `origin/main`.** A merge deploys it. Keep every change small, single-purpose, and revertable.
 - **Local data only:** development and e2e run against local Supabase (`127.0.0.1`), never a remote database.
 - **Bugs:** red e2e first, the user confirms the failure, then fix. One bug at a time.
@@ -81,6 +82,8 @@ npm run supabase:reset
 - Use dependency injection for services, use cases, and other logic that depends on external collaborators.
 - Respect SOLID principles, but keep the implementation simple and pragmatic under KISS.
 - Avoid duplication. Search the codebase first and reuse what already exists when it fits the task.
+- No magic strings or numbers. Domain literals (shift ids, payment methods, statuses) come from `@aqua-guest/domain` constants such as `RENTAL_SHIFT` and `PAYMENT_METHOD`; never compare against a raw literal or repeat a domain rule inline.
+- Do not write comments. Add one only for a non-obvious constraint the code cannot express (the why, never the what). Test `// Arrange / Act / Assert` markers and the rollback line in a migration are the only expected ones.
 - Default to TDD: a unit test first for new behavior, a red e2e for bug fixes, and a characterization test for refactors.
 - Structure tests with the Arrange, Act, Assert pattern.
 - For this repository, the expected test runner is the one already used by the target workspace. In `apps/web-app`, write and run Jest-style unit tests using the existing Vitest stack instead of introducing a second test framework.
