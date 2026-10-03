@@ -58,6 +58,7 @@ Washer-rental transactions.
 
 - PK: `id uuid`
 - Core fields: `date`, `customer_id`, `machine_id`, `shift`, `delivery_time`, `pickup_time`, `pickup_date`, `delivery_fee`, `total_usd`, `payment_method`, `status`, `date_paid`, `notes`, `is_paid`
+- Shift snapshot (nullable, written on create and when the shift changes): `shift_label`, `shift_hours`, `shift_price_usd`, `shift_divisa_discount_rule_usd`. The last one is the rule copied from the shift (USD taken off when paid in divisa), not a discount already applied: whether it applies depends on the rental's payment method. Rentals created before the snapshot have all four `NULL` and resolve to the frozen legacy definition of their `shift`
 - Agenda send fields: `agenda_template_send_state`, `agenda_template_sent`, `agenda_template_sent_at`
 - Lifecycle fields: `created_at`, `updated_at`, `deleted_at`
 - Real relationships:
@@ -66,6 +67,17 @@ Washer-rental transactions.
 - Implicit relationships:
   - `machine_id` behaves like a logical link to `washing_machines.id`, but no FK is currently present
   - Can be referenced by `tips` when `tips.origin_type = 'rental'`
+
+### `rental_shifts`
+
+Catalog of washer-rental shifts (added additively; the app does not read it yet).
+
+- PK: `id text` (`'medio'`, `'completo'`, `'doble'` for the historical shifts, a generated uuid for new ones)
+- Core fields: `label`, `price_usd`, `hours`, `divisa_discount_usd` (USD off when paid in divisa; `0` = no discount, never above `price_usd`), `is_active`
+- Lifecycle fields: `created_at`, `updated_at`, `deleted_at` (shifts are soft-deleted, never physically deleted)
+- Implicit relationships:
+  - `washer_rentals.shift` stores a shift id as text, with no FK on purpose: a rental must keep working after its shift is deactivated or deleted
+- RLS: `Allow all on rental_shifts` (`FOR ALL TO public`), like the other tables
 
 ### `expenses`
 
@@ -200,6 +212,7 @@ Real foreign keys in `public`:
 Important implicit relationships without FK enforcement:
 
 - `washer_rentals.machine_id -> washing_machines.id`
+- `washer_rentals.shift -> rental_shifts.id` (never enforced)
 - `tips.origin_type + tips.origin_id -> sales.id | washer_rentals.id`
 - `tip_payout_idempotency.tip_id -> tips.id`
 

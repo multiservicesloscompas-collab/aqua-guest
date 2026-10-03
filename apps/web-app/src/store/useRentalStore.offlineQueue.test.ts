@@ -149,6 +149,74 @@ describe('useRentalStore offline queueing', () => {
     expect(useRentalStore.getState().rentals).toHaveLength(1);
   });
 
+  it('queues the shift snapshot columns with the rental insert', async () => {
+    await useRentalStore.getState().addRental({
+      date: '2026-03-09',
+      customerId: 'customer-1',
+      customerName: 'Cliente Uno',
+      customerPhone: '0414-0000000',
+      customerAddress: 'Dirección',
+      machineId: 'machine-1',
+      shift: 'completo',
+      deliveryTime: '09:00',
+      pickupTime: '09:00',
+      pickupDate: '2026-03-10',
+      deliveryFee: 0,
+      totalUsd: 6,
+      paymentMethod: 'efectivo',
+      status: 'agendado',
+      isPaid: false,
+    });
+
+    const insert = useSyncStore
+      .getState()
+      .queue.find((entry) => entry.table === 'washer_rentals');
+    expect(insert?.payload).toMatchObject({
+      shift: 'completo',
+      shift_label: 'Completo',
+      shift_hours: 24,
+      shift_price_usd: 6,
+      shift_divisa_discount_rule_usd: 1,
+    });
+  });
+
+  it('queues the snapshot given with the draft instead of the current definition', async () => {
+    await useRentalStore.getState().addRental({
+      date: '2026-03-09',
+      customerId: 'customer-1',
+      customerName: 'Cliente Uno',
+      customerPhone: '0414-0000000',
+      customerAddress: 'Dirección',
+      machineId: 'machine-1',
+      shift: 'doble',
+      shiftSnapshot: {
+        id: 'doble',
+        label: 'Doble Especial',
+        priceUsd: 10,
+        hours: 36,
+        divisaDiscountUsd: 2,
+      },
+      deliveryTime: '09:00',
+      pickupTime: '21:00',
+      pickupDate: '2026-03-10',
+      deliveryFee: 0,
+      totalUsd: 10,
+      paymentMethod: 'efectivo',
+      status: 'agendado',
+      isPaid: false,
+    });
+
+    const insert = useSyncStore
+      .getState()
+      .queue.find((entry) => entry.table === 'washer_rentals');
+    expect(insert?.payload).toMatchObject({
+      shift_label: 'Doble Especial',
+      shift_hours: 36,
+      shift_price_usd: 10,
+      shift_divisa_discount_rule_usd: 2,
+    });
+  });
+
   it('queues rental update + split replacement and avoids supabase when offline', async () => {
     useRentalStore.setState({
       rentals: [

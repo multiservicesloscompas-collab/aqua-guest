@@ -7,6 +7,7 @@ import {
   PaymentMethodLabels,
   RentalShiftConfig,
 } from '@/types';
+import { calculateRentalPrice } from '@/utils/rentalPricing';
 
 export interface MachineItem {
   id: string;
@@ -68,16 +69,11 @@ export function mapMachineItems(params: {
 }
 
 export function mapShiftOptions(paymentMethod: PaymentMethod): ShiftOption[] {
-  return (Object.keys(RentalShiftConfig) as RentalShift[]).map((key) => {
-    const config = RentalShiftConfig[key];
-    const price =
-      key === 'completo' && paymentMethod === 'divisa' ? 5 : config.priceUsd;
-    return {
-      value: key,
-      label: config.label,
-      priceText: `$${price}`,
-    };
-  });
+  return (Object.keys(RentalShiftConfig) as RentalShift[]).map((key) => ({
+    value: key,
+    label: RentalShiftConfig[key].label,
+    priceText: `$${calculateRentalPrice(key, paymentMethod, 0)}`,
+  }));
 }
 
 export function getUnavailableMachineIds(params: {

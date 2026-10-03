@@ -1,7 +1,8 @@
-import type { RentalShift } from '@/types';
 import { describe, expect, it } from 'vitest';
+import { LEGACY_SHIFT_DEFINITIONS } from '@aqua-guest/domain';
 import { calculatePickupTime, clampToBusinessHours } from './rentalSchedule';
 
+const { medio, completo, doble } = LEGACY_SHIFT_DEFINITIONS;
 
 const MONDAY = new Date(2026, 4, 11);
 const FRIDAY = new Date(2026, 4, 15);
@@ -12,7 +13,7 @@ describe('calculatePickupTime', () => {
   describe('inside business hours', () => {
     it('keeps the pickup at delivery plus the shift duration', () => {
       // Arrange / Act
-      const result = calculatePickupTime(MONDAY, '09:00', 'medio');
+      const result = calculatePickupTime(MONDAY, '09:00', medio);
 
       // Assert
       expect(result).toEqual({ pickupTime: '17:00', pickupDate: '2026-05-11' });
@@ -20,7 +21,7 @@ describe('calculatePickupTime', () => {
 
     it('accepts a pickup exactly at closing time', () => {
       // Arrange / Act
-      const result = calculatePickupTime(MONDAY, '12:00', 'medio');
+      const result = calculatePickupTime(MONDAY, '12:00', medio);
 
       // Assert
       expect(result).toEqual({ pickupTime: '20:00', pickupDate: '2026-05-11' });
@@ -28,7 +29,7 @@ describe('calculatePickupTime', () => {
 
     it('moves a full shift to the same time the next day', () => {
       // Arrange / Act
-      const result = calculatePickupTime(MONDAY, '10:00', 'completo');
+      const result = calculatePickupTime(MONDAY, '10:00', completo);
 
       // Assert
       expect(result).toEqual({ pickupTime: '10:00', pickupDate: '2026-05-12' });
@@ -36,7 +37,7 @@ describe('calculatePickupTime', () => {
 
     it('moves a double shift two days ahead', () => {
       // Arrange / Act
-      const result = calculatePickupTime(FRIDAY, '10:00', 'doble');
+      const result = calculatePickupTime(FRIDAY, '10:00', doble);
 
       // Assert
       expect(result).toEqual({ pickupTime: '10:00', pickupDate: '2026-05-17' });
@@ -46,7 +47,7 @@ describe('calculatePickupTime', () => {
   describe('Sunday closing hour', () => {
     it('accepts a Sunday pickup exactly at 14:00', () => {
       // Arrange / Act
-      const result = calculatePickupTime(SATURDAY, '14:00', 'completo');
+      const result = calculatePickupTime(SATURDAY, '14:00', completo);
 
       // Assert
       expect(result).toEqual({ pickupTime: '14:00', pickupDate: '2026-05-17' });
@@ -54,7 +55,7 @@ describe('calculatePickupTime', () => {
 
     it('moves a Sunday pickup after 14:00 to Monday at opening', () => {
       // Arrange / Act
-      const result = calculatePickupTime(SATURDAY, '15:00', 'completo');
+      const result = calculatePickupTime(SATURDAY, '15:00', completo);
 
       // Assert
       expect(result).toEqual({ pickupTime: '09:00', pickupDate: '2026-05-18' });
@@ -64,7 +65,7 @@ describe('calculatePickupTime', () => {
   describe('outside business hours', () => {
     it('moves a pickup after closing to the next day at opening', () => {
       // Arrange / Act
-      const result = calculatePickupTime(MONDAY, '15:00', 'medio');
+      const result = calculatePickupTime(MONDAY, '15:00', medio);
 
       // Assert
       expect(result).toEqual({ pickupTime: '09:00', pickupDate: '2026-05-12' });
@@ -72,7 +73,7 @@ describe('calculatePickupTime', () => {
 
     it('moves a pickup before opening to opening time the same day', () => {
       // Arrange / Act
-      const result = calculatePickupTime(MONDAY, '00:00', 'medio');
+      const result = calculatePickupTime(MONDAY, '00:00', medio);
 
       // Assert
       expect(result).toEqual({ pickupTime: '09:00', pickupDate: '2026-05-11' });
@@ -84,7 +85,7 @@ describe('calculatePickupTime', () => {
       'ends a same-day pickup after closing at 20:00 when delivered at %s',
       (deliveryTime) => {
         // Arrange / Act
-        const result = calculatePickupTime(MONDAY, deliveryTime, 'medio');
+        const result = calculatePickupTime(MONDAY, deliveryTime, medio);
 
         // Assert
         expect(result).toEqual({
@@ -96,7 +97,7 @@ describe('calculatePickupTime', () => {
 
     it('does not apply the exception to other delivery times', () => {
       // Arrange / Act
-      const result = calculatePickupTime(MONDAY, '15:00', 'medio');
+      const result = calculatePickupTime(MONDAY, '15:00', medio);
 
       // Assert
       expect(result.pickupTime).toBe('09:00');
@@ -109,7 +110,7 @@ describe('calculatePickupTime', () => {
       'moves a Sunday pickup after the 14:00 closing to Monday at opening when delivered at %s',
       (deliveryTime) => {
         // Arrange / Act
-        const result = calculatePickupTime(SUNDAY, deliveryTime, 'medio');
+        const result = calculatePickupTime(SUNDAY, deliveryTime, medio);
 
         // Assert
         expect(result).toEqual({
@@ -121,7 +122,7 @@ describe('calculatePickupTime', () => {
 
     it('still ends a Saturday 13:00 half-day at 20:00 the same day', () => {
       // Arrange / Act
-      const result = calculatePickupTime(SATURDAY, '13:00', 'medio');
+      const result = calculatePickupTime(SATURDAY, '13:00', medio);
 
       // Assert
       expect(result).toEqual({ pickupTime: '20:00', pickupDate: '2026-05-16' });
@@ -131,21 +132,21 @@ describe('calculatePickupTime', () => {
   describe('without enough information', () => {
     it('returns the delivery date at midnight when there is no delivery time', () => {
       // Arrange / Act
-      const result = calculatePickupTime(MONDAY, '', 'medio');
+      const result = calculatePickupTime(MONDAY, '', medio);
 
       // Assert
       expect(result).toEqual({ pickupTime: '00:00', pickupDate: '2026-05-11' });
     });
 
-    it('returns the delivery date at midnight for an unknown shift', () => {
+    it('keeps the delivery moment for a shift with no duration', () => {
       // Arrange
-      const unknownShift = 'inexistente' as RentalShift;
+      const noDuration = { ...medio, hours: 0 };
 
       // Act
-      const result = calculatePickupTime(MONDAY, '10:00', unknownShift);
+      const result = calculatePickupTime(MONDAY, '10:00', noDuration);
 
       // Assert
-      expect(result).toEqual({ pickupTime: '00:00', pickupDate: '2026-05-11' });
+      expect(result).toEqual({ pickupTime: '10:00', pickupDate: '2026-05-11' });
     });
   });
 });

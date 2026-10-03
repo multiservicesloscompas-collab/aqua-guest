@@ -5,7 +5,8 @@ import { Clock, MapPin, Phone, User, WashingMachine } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { RentalShiftConfig, RentalStatusLabels, WasherRental } from '@/types';
+import { RentalStatusLabels, WasherRental } from '@/types';
+import { resolveRentalShift } from '@/utils/rentalShift';
 
 interface DeliveryRentalCardProps {
   rental: WasherRental;
@@ -29,7 +30,7 @@ export function DeliveryRentalCard({
             <div>
               <p className="font-medium">{getMachineName(rental.machineId)}</p>
               <p className="text-sm text-muted-foreground">
-                {RentalShiftConfig[rental.shift].label}
+                {resolveRentalShift(rental).label}
               </p>
             </div>
           </div>

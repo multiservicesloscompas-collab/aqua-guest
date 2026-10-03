@@ -4,9 +4,9 @@ import {
   Expense,
   PrepaidOrder,
   PaymentBalanceTransaction,
-  PaymentMethod,
   TipPayout,
 } from '@/types';
+import { PAYMENT_METHODS } from '@/services/payments/paymentMethods';
 import {
   allocateRentalToMethodTotalsBs,
   allocateSaleToMethodTotalsBs,
@@ -56,13 +56,6 @@ export function filterByDateRange<T>(
     return d >= range.start && d <= range.end;
   });
 }
-
-const PAYMENT_METHODS: PaymentMethod[] = [
-  'efectivo',
-  'pago_movil',
-  'punto_venta',
-  'divisa',
-];
 
 function emptyMethodTotals(): PaymentMethodTotals {
   return createEmptyMethodTotals();

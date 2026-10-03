@@ -6,7 +6,6 @@ import {
 } from '../../support/bugs/dbSeed';
 import { bugDoc } from '../../support/bugs/ficha';
 import { snapshotTodayRate, useCleanDomain } from '../../support/bugs/setup';
-import { openRentalsModule } from '../../support/drivers/rentalDriver';
 import { parseUniversalMoney } from '../../support/money';
 import { gotoDashboard } from '../../support/uiNavigation';
 
@@ -59,44 +58,6 @@ test.describe('Alquileres (rojos)', () => {
       } finally {
         await restore();
       }
-    }
-  );
-
-  test(
-    '[B7] the edit sheet prices the Completo shift like the create sheet',
-    bugDoc({
-      id: 'B7',
-      titulo: 'La edición muestra el precio correcto del turno completo',
-      intent:
-        'Comprobar que, para un alquiler pagado en efectivo, la edición muestra el turno Completo a $6 (solo en divisa cuesta $5).',
-      steps: [
-        'Siembra un alquiler de turno completo pagado en efectivo.',
-        'Abre la edición del alquiler y lee el texto de la opción «Completo».',
-      ],
-      expects: ['La opción Completo dice $6.'],
-      actual:
-        'la edición aplica la regla de divisa al revés y muestra $5 para efectivo',
-    }),
-    async ({ page }) => {
-      // Arrange
-      const today = todayVe();
-      const id = await seedPaidRentalWithSplit({
-        amountBs: 240,
-        amountUsd: 6,
-        rateUsed: 40,
-      });
-      expect(id).toBeTruthy();
-      await gotoDashboard(page);
-      await openRentalsModule(page);
-
-      // Act
-      await page.getByTestId(`rental-edit-${id}`).click();
-      const option = page.getByTestId('rental-shift-option-completo');
-      await expect(option).toBeVisible();
-
-      // Assert
-      await expect(option).toContainText('$6');
-      expect(today).toBeTruthy();
     }
   );
 });

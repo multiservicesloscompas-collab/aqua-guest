@@ -17,7 +17,6 @@ interface UseEditRentalTipHydrationParams {
   open: boolean;
   rental: WasherRental | null;
   tipCapture: TipCaptureApi;
-  /** Called with the persisted tip each time it is hydrated into the form. */
   onTipHydrated?: (tip: Tip) => void;
 }
 

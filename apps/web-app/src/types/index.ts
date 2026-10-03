@@ -1,3 +1,4 @@
+import { LEGACY_SHIFT_DEFINITIONS } from '@aqua-guest/domain';
 import type {
   CartItem,
   Customer,
@@ -17,6 +18,7 @@ import type {
   Product,
   RentalExtension,
   RentalShift,
+  RentalShiftDefinition,
   RentalStatus,
   Sale,
   WasherRental,
@@ -67,14 +69,9 @@ export const MachineStatusColors: Record<MachineStatus, string> = {
 
 export type { WashingMachine, RentalShift };
 
-export const RentalShiftConfig: Record<
-  RentalShift,
-  { label: string; priceUsd: number; hours: number }
-> = {
-  medio: { label: 'Medio Turno', priceUsd: 4, hours: 8 },
-  completo: { label: 'Completo', priceUsd: 6, hours: 24 },
-  doble: { label: 'Doble', priceUsd: 12, hours: 48 },
-};
+export const RentalShiftConfig: Readonly<
+  Record<RentalShift, RentalShiftDefinition>
+> = LEGACY_SHIFT_DEFINITIONS;
 
 export type { RentalStatus };
 

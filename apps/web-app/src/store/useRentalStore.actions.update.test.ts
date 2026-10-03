@@ -1,4 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+  LEGACY_SHIFT_DEFINITIONS,
+  RENTAL_SHIFT,
+  type RentalShiftDefinition,
+} from '@aqua-guest/domain';
+import { useSyncStore } from './useSyncStore';
 import { updateRentalAction } from './useRentalStore.actions.update';
 import type { RentalState } from './useRentalStore.core';
 
@@ -137,5 +143,103 @@ describe('updateRentalAction tip-aware recomputation guard', () => {
       },
     ]);
     expect(replaceRentalSplitsMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('updateRentalAction shift snapshot', () => {
+  const DOBLE_ESPECIAL: RentalShiftDefinition = {
+    ...LEGACY_SHIFT_DEFINITIONS[RENTAL_SHIFT.doble],
+    label: 'Doble Especial',
+    priceUsd: 10,
+  };
+
+  function run(
+    updates: Parameters<typeof updateRentalAction>[1],
+    seed?: Partial<RentalState['rentals'][number]>
+  ) {
+    let state = buildState();
+    if (seed) state = { ...state, rentals: [{ ...state.rentals[0], ...seed }] };
+    const setState = vi.fn((partial) => {
+      const next = typeof partial === 'function' ? partial(state) : partial;
+      state = { ...state, ...next };
+    });
+    return updateRentalAction(
+      'rental-1',
+      updates,
+      null,
+      setState,
+      () => state
+    ).then(() => ({
+      rental: state.rentals[0],
+      payload: useSyncStore.getState().queue.at(-1)?.payload ?? {},
+    }));
+  }
+
+  beforeEach(() => {
+    useSyncStore.setState({ queue: [] });
+    Object.defineProperty(globalThis, 'navigator', {
+      configurable: true,
+      value: { onLine: false },
+    });
+  });
+
+  it('writes the snapshot of the new shift when the shift changes', async () => {
+    // Arrange / Act
+    const { rental, payload } = await run({ shift: RENTAL_SHIFT.completo });
+
+    // Assert
+    expect(rental.shiftSnapshot).toEqual(
+      LEGACY_SHIFT_DEFINITIONS[RENTAL_SHIFT.completo]
+    );
+    expect(payload).toMatchObject({
+      shift: RENTAL_SHIFT.completo,
+      shift_label: 'Completo',
+      shift_hours: 24,
+      shift_price_usd: 6,
+      shift_divisa_discount_rule_usd: 1,
+    });
+  });
+
+  it('uses the snapshot passed with the update when the shift changes', async () => {
+    // Arrange / Act
+    const { rental, payload } = await run({
+      shift: RENTAL_SHIFT.doble,
+      shiftSnapshot: DOBLE_ESPECIAL,
+    });
+
+    // Assert
+    expect(rental.shiftSnapshot).toEqual(DOBLE_ESPECIAL);
+    expect(payload).toMatchObject({
+      shift_label: 'Doble Especial',
+      shift_price_usd: 10,
+    });
+  });
+
+  it('leaves the snapshot columns alone when the shift does not change', async () => {
+    // Arrange / Act
+    const { rental, payload } = await run({
+      shift: RENTAL_SHIFT.medio,
+      notes: 'x',
+    });
+
+    // Assert
+    expect(rental.shiftSnapshot).toBeUndefined();
+    expect(
+      Object.keys(payload).filter((key) => key.startsWith('shift_'))
+    ).toEqual([]);
+  });
+
+  it('keeps the stored snapshot when the edit saves the same shift', async () => {
+    // Arrange / Act
+    const { rental, payload } = await run(
+      { shift: RENTAL_SHIFT.doble, notes: 'x' },
+      { shift: RENTAL_SHIFT.doble, shiftSnapshot: DOBLE_ESPECIAL }
+    );
+
+    // Assert
+    expect(rental.shiftSnapshot).toEqual(DOBLE_ESPECIAL);
+    expect(
+      Object.keys(payload).filter((key) => key.startsWith('shift_'))
+    ).toEqual([]);
   });
 });

@@ -11,7 +11,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { canExtendRental } from '@/utils/rentalExtensions';
-import { RentalShiftConfig, WasherRental } from '@/types';
+import { WasherRental } from '@/types';
+import { resolveRentalShift } from '@/utils/rentalShift';
 
 interface FollowUpRentalCardProps {
   rental: WasherRental;
@@ -73,7 +74,7 @@ export function FollowUpRentalCard({
                 {rental.deliveryTime} → {rental.pickupTime}
               </span>
             </div>
-            <span>{RentalShiftConfig[rental.shift].label}</span>
+            <span>{resolveRentalShift(rental).label}</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-1 text-sm font-semibold text-primary">

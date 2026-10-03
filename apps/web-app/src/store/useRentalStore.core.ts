@@ -1,5 +1,6 @@
 import { preparePaymentWritePayload } from '@/services/payments/paymentSplitWritePath';
 import type { RentalRow } from '@/services/rentals/rentalSchemaContract';
+import { fromShiftSnapshotColumns } from '@/services/rentals/rentalShiftSnapshot';
 import { PaymentMethod, WasherRental } from '@/types';
 import type { TipCaptureInput } from '@/types/tips';
 import type {
@@ -71,6 +72,7 @@ export function mapRentalRowToWasherRental(
     customerAddress: originalRental?.customerAddress ?? '',
     machineId: rentalRow.machine_id,
     shift: rentalRow.shift,
+    shiftSnapshot: fromShiftSnapshotColumns(rentalRow.shift, rentalRow),
     deliveryTime: rentalRow.delivery_time,
     pickupTime: rentalRow.pickup_time,
     pickupDate: rentalRow.pickup_date,
