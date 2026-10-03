@@ -17,6 +17,7 @@ import { ExchangeRateConfigPage } from '@/pages/ExchangeRateConfigPage';
 import { WaterPricingConfigPage } from '@/pages/WaterPricingConfigPage';
 import CustomersPage from '@/pages/CustomersPage/index';
 import WashingMachinesPage from '@/pages/WashingMachinesPage';
+import RentalShiftsPage from '@/pages/RentalShiftsPage';
 import { FollowUpPage } from '@/pages/FollowUpPage';
 import { ExchangeHistoryPage } from '@/pages/ExchangeHistoryPage';
 import { PrePaysPage } from '@/pages/PrePaysPage/index';
@@ -60,6 +61,10 @@ const routeHeaderMap: Record<AppRoute, RouteHeader> = {
   clientes: { title: 'Clientes' },
   lavadoras: { title: 'Lavadoras', subtitle: 'Gestión de máquinas' },
   config: { title: 'Configuración', subtitle: 'Ajustes de la app' },
+  'turnos-alquiler': {
+    title: 'Turnos de Alquiler',
+    subtitle: 'Duración y precio',
+  },
   seguimiento: { title: 'Seguimiento', subtitle: 'Alquileres pendientes' },
   prepagados: { title: 'Agua Prepagada' },
   deliverys: { title: 'Entregas', subtitle: 'Historial de entregas' },
@@ -166,6 +171,8 @@ const Index = () => {
         return <CustomersPage />;
       case 'lavadoras':
         return <WashingMachinesPage />;
+      case 'turnos-alquiler':
+        return <RentalShiftsPage />;
       case 'egresos':
         return <ExpensesPage />;
       case 'config':

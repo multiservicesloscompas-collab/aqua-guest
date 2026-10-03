@@ -3,6 +3,7 @@ import {
   ClipboardList,
   CreditCard,
   DollarSign,
+  Clock,
   Droplets,
   History,
   Home,
@@ -89,6 +90,7 @@ export const moduleSubItems: Record<ModuleRoute, ModuleSubItem[]> = {
     },
     { label: 'Seguimiento', route: 'seguimiento', icon: ClipboardList },
     { label: 'Gestión de Máquinas', route: 'lavadoras', icon: WashingMachine },
+    { label: 'Turnos de Alquiler', route: 'turnos-alquiler', icon: Clock },
   ],
   entregas: [
     {
@@ -115,7 +117,11 @@ export const moduleSubItems: Record<ModuleRoute, ModuleSubItem[]> = {
   ],
   configuracion: [
     { label: 'Tasa de Cambio', route: 'config-tasa-cambio', icon: DollarSign },
-    { label: 'Precio por Litros', route: 'config-precios-agua', icon: Settings },
+    {
+      label: 'Precio por Litros',
+      route: 'config-precios-agua',
+      icon: Settings,
+    },
     { label: 'Historial de Tasas', route: 'historial-tasas', icon: History },
   ],
   dashboard: [],
