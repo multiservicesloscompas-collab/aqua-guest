@@ -11,9 +11,10 @@ import {
   createDefaultMixedPaymentFlags,
   isMixedPaymentEnabledForModule,
 } from '@/services/payments/paymentSplitFeatureFlag';
-import type {
-  MixedPaymentFeatureFlags,
-  PaymentSplitModule,
+import {
+  DEFAULT_EXCHANGE_RATE,
+  type MixedPaymentFeatureFlags,
+  type PaymentSplitModule,
 } from '@aqua-guest/domain';
 import supabase from '@/lib/supabaseClient';
 import type { LiterPricingRow } from '@/services/config/configSchemaContract';
@@ -49,7 +50,7 @@ export const useConfigStore = create<ConfigState>()(
   persist(
     (set, get) => ({
       config: {
-        exchangeRate: 36.5,
+        exchangeRate: DEFAULT_EXCHANGE_RATE,
         lastUpdated: new Date().toISOString(),
         literPricing: DEFAULT_LITER_BREAKPOINTS,
         exchangeRateHistory: [],
