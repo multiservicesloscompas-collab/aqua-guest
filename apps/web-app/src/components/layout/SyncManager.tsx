@@ -19,7 +19,7 @@ export const SyncManager: React.FC = () => {
   const { queue, removeFromQueue, replaceQueue } = useSyncStore();
   const [isSyncing, setIsSyncing] = useState(false);
   const inFlightActionIdsRef = useRef<Set<string>>(new Set());
-  const wasOnlineRef = useRef(false);
+  const wasOnlineRef = useRef(isOnline);
 
   const stalledQueueLengthRef = useRef<number | null>(null);
   const queueRef = useRef(queue);
