@@ -1,3 +1,4 @@
+import { cloneElement, type ReactElement, type ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -8,7 +9,8 @@ import {
 import { useRentalShiftStore } from '@/store/useRentalShiftStore';
 import RentalShiftsPage from './index';
 
-const { dataServiceMock } = vi.hoisted(() => ({
+const { dataServiceMock, drawerState } = vi.hoisted(() => ({
+  drawerState: { close: () => undefined as void },
   dataServiceMock: {
     listActive: vi.fn(),
     create: vi.fn(),
@@ -20,6 +22,35 @@ const { dataServiceMock } = vi.hoisted(() => ({
 vi.mock('@/services/rentals/RentalShiftsDataService', () => ({
   rentalShiftsDataService: dataServiceMock,
 }));
+
+vi.mock('@/components/ui/drawer', () => {
+  const passthrough = ({ children }: { children?: ReactNode }) => (
+    <div>{children}</div>
+  );
+  return {
+    Drawer: ({
+      open,
+      onOpenChange,
+      children,
+    }: {
+      open: boolean;
+      onOpenChange: (open: boolean) => void;
+      children?: ReactNode;
+    }) => {
+      drawerState.close = () => onOpenChange(false);
+      return open ? <div>{children}</div> : null;
+    },
+    DrawerContent: passthrough,
+    DrawerHeader: passthrough,
+    DrawerTitle: passthrough,
+    DrawerDescription: passthrough,
+    DrawerFooter: passthrough,
+    DrawerClose: ({ children }: { children: ReactElement }) =>
+      cloneElement(children as ReactElement<{ onClick: () => void }>, {
+        onClick: () => drawerState.close(),
+      }),
+  };
+});
 
 vi.mock('sonner', () => ({
   toast: { success: vi.fn(), error: vi.fn() },
@@ -35,10 +66,7 @@ const NOCTURNO: RentalShiftCatalogEntry = {
 };
 
 function setOnline(isOnline: boolean) {
-  Object.defineProperty(globalThis, 'navigator', {
-    configurable: true,
-    value: { onLine: isOnline },
-  });
+  vi.stubGlobal('navigator', { onLine: isOnline, userAgent: '' });
 }
 
 async function openNewShiftForm() {
