@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 import { useMachineStore } from '@/store/useMachineStore';
+import { useRentalShiftStore } from '@/store/useRentalShiftStore';
 import { useNavStore } from '@/store/useNavStore';
 import { Header } from '@/components/layout/Header';
 import { BottomNav } from '@/components/layout/BottomNav';
@@ -16,6 +17,7 @@ import { ExchangeRateConfigPage } from '@/pages/ExchangeRateConfigPage';
 import { WaterPricingConfigPage } from '@/pages/WaterPricingConfigPage';
 import CustomersPage from '@/pages/CustomersPage/index';
 import WashingMachinesPage from '@/pages/WashingMachinesPage';
+import RentalShiftsPage from '@/pages/RentalShiftsPage';
 import { FollowUpPage } from '@/pages/FollowUpPage';
 import { ExchangeHistoryPage } from '@/pages/ExchangeHistoryPage';
 import { PrePaysPage } from '@/pages/PrePaysPage/index';
@@ -59,6 +61,10 @@ const routeHeaderMap: Record<AppRoute, RouteHeader> = {
   clientes: { title: 'Clientes' },
   lavadoras: { title: 'Lavadoras', subtitle: 'Gestión de máquinas' },
   config: { title: 'Configuración', subtitle: 'Ajustes de la app' },
+  'turnos-alquiler': {
+    title: 'Turnos de Alquiler',
+    subtitle: 'Duración y precio',
+  },
   seguimiento: { title: 'Seguimiento', subtitle: 'Alquileres pendientes' },
   prepagados: { title: 'Agua Prepagada' },
   deliverys: { title: 'Entregas', subtitle: 'Historial de entregas' },
@@ -119,6 +125,7 @@ const Index = () => {
     await loadFromSupabase();
     useMachineStore.getState().loadWashingMachines();
     await useMachineStore.getState().loadWashingMachines();
+    await useRentalShiftStore.getState().loadShifts();
     setLastLoaded(Date.now());
   };
 
@@ -132,6 +139,7 @@ const Index = () => {
     const minutesSinceLastLoad = (Date.now() - lastLoaded) / (1000 * 60);
     if (isFirstLoad.current || minutesSinceLastLoad >= 5) {
       loadFromSupabase();
+      void useRentalShiftStore.getState().loadShifts();
       setLastLoaded(Date.now());
       isFirstLoad.current = false;
     }
@@ -163,6 +171,8 @@ const Index = () => {
         return <CustomersPage />;
       case 'lavadoras':
         return <WashingMachinesPage />;
+      case 'turnos-alquiler':
+        return <RentalShiftsPage />;
       case 'egresos':
         return <ExpensesPage />;
       case 'config':

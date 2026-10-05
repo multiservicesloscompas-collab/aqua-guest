@@ -4,13 +4,18 @@ export const RENTAL_SHIFT = {
   doble: 'doble',
 } as const;
 
-export type RentalShift = (typeof RENTAL_SHIFT)[keyof typeof RENTAL_SHIFT];
+export type LegacyRentalShift =
+  (typeof RENTAL_SHIFT)[keyof typeof RENTAL_SHIFT];
 
-export const RENTAL_SHIFTS: ReadonlyArray<RentalShift> =
+export type RentalShift = string;
+
+export const DEFAULT_RENTAL_SHIFT: LegacyRentalShift = RENTAL_SHIFT.completo;
+
+export const LEGACY_RENTAL_SHIFTS: ReadonlyArray<LegacyRentalShift> =
   Object.values(RENTAL_SHIFT);
 
-export function isRentalShift(value: string): value is RentalShift {
-  return RENTAL_SHIFTS.some((shift) => shift === value);
+export function isLegacyRentalShift(value: string): value is LegacyRentalShift {
+  return LEGACY_RENTAL_SHIFTS.some((shift) => shift === value);
 }
 
 export interface RentalShiftDefinition {
@@ -21,8 +26,16 @@ export interface RentalShiftDefinition {
   divisaDiscountUsd: number;
 }
 
+export interface RentalShiftCatalogEntry extends RentalShiftDefinition {
+  code: string;
+}
+
+export type RentalShiftDraft = Omit<RentalShiftDefinition, 'id'>;
+
+export type RentalShiftUpdate = Partial<RentalShiftDraft>;
+
 export const LEGACY_SHIFT_DEFINITIONS: Readonly<
-  Record<RentalShift, RentalShiftDefinition>
+  Record<LegacyRentalShift, RentalShiftDefinition>
 > = {
   [RENTAL_SHIFT.medio]: {
     id: RENTAL_SHIFT.medio,
@@ -46,3 +59,9 @@ export const LEGACY_SHIFT_DEFINITIONS: Readonly<
     divisaDiscountUsd: 0,
   },
 };
+
+export const LEGACY_SHIFT_CATALOG: ReadonlyArray<RentalShiftCatalogEntry> =
+  LEGACY_RENTAL_SHIFTS.map((shift) => ({
+    ...LEGACY_SHIFT_DEFINITIONS[shift],
+    code: shift.toUpperCase(),
+  }));

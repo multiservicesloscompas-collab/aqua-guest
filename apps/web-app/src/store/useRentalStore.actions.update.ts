@@ -9,11 +9,12 @@ import {
   calculateFinalRentalTotals,
   mergeTipIntoPaymentSplits,
 } from '@/services/transactions/transactionTotals';
-import { RentalShiftConfig } from '@/types';
+import { UNKNOWN_SHIFT_ERROR, findShiftDefinition } from '@/utils/shiftCatalog';
 import { toShiftSnapshotColumns } from '@/services/rentals/rentalShiftSnapshot';
 import type { TipCaptureInput } from '@/types/tips';
 import type { RentalUpdateRow } from '@/services/rentals/rentalSchemaContract';
 import type { CustomerUpdate, WasherRentalUpdate } from '@aqua-guest/domain';
+import { getShiftCatalog } from './useRentalShiftStore';
 import {
   type RentalState,
   buildRentalWriteContext,
@@ -93,7 +94,9 @@ export async function updateRentalAction(
     if (nextShift !== undefined) payload.shift = nextShift;
     if (nextShift !== undefined && nextShift !== currentRental.shift) {
       const shiftDefinition =
-        effectiveUpdates.shiftSnapshot ?? RentalShiftConfig[nextShift];
+        effectiveUpdates.shiftSnapshot ??
+        findShiftDefinition(getShiftCatalog(), nextShift);
+      if (!shiftDefinition) throw new Error(UNKNOWN_SHIFT_ERROR);
       Object.assign(payload, toShiftSnapshotColumns(shiftDefinition));
       effectiveUpdates.shiftSnapshot = shiftDefinition;
     } else {

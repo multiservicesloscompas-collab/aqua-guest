@@ -2,7 +2,10 @@ import { useMemo } from 'react';
 import { parse } from 'date-fns';
 import { calculatePickupTime, formatPickupInfo } from '@/utils/rentalSchedule';
 import { calculateShiftBasePrice } from '@/utils/rentalPricing';
-import { resolveEditedRentalShift } from '@/utils/rentalShift';
+import {
+  resolveEditedRentalShift,
+  type RentalShiftCatalog,
+} from '@/utils/shiftCatalog';
 import { buildDualPaymentSplits } from '@/services/payments/paymentSplitWritePath';
 import { calculateFinalRentalTotals } from '@/services/transactions/transactionTotals';
 import { getUnavailableMachineIds } from './editRentalSheetViewModel.helpers';
@@ -16,6 +19,7 @@ import type {
 interface Params {
   rental: WasherRental | null;
   shift: RentalShift;
+  shiftCatalog: RentalShiftCatalog;
   paymentMethod: PaymentMethod;
   deliveryFee: number;
   deliveryTime: string;
@@ -29,8 +33,13 @@ interface Params {
 
 export function useEditRentalSheetComputed(params: Params) {
   const shiftDefinition = useMemo(
-    () => resolveEditedRentalShift(params.rental, params.shift),
-    [params.rental, params.shift]
+    () =>
+      resolveEditedRentalShift(
+        params.rental,
+        params.shift,
+        params.shiftCatalog
+      ),
+    [params.rental, params.shift, params.shiftCatalog]
   );
 
   const pickupInfo = useMemo(() => {

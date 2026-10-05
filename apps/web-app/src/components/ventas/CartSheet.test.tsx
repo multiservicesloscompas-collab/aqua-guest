@@ -30,9 +30,16 @@ const mockConfigState = {
 
 vi.mock('@/components/ui/drawer', () => ({
   Drawer: ({ children }: { children: ReactNode }) => <div>{children}</div>,
-  DrawerContent: ({ children }: { children: ReactNode }) => <div>{children}</div>,
-  DrawerHeader: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+  DrawerContent: ({ children }: { children: ReactNode }) => (
+    <div>{children}</div>
+  ),
+  DrawerHeader: ({ children }: { children: ReactNode }) => (
+    <div>{children}</div>
+  ),
   DrawerTitle: ({ children }: { children: ReactNode }) => <h2>{children}</h2>,
+  DrawerDescription: ({ children }: { children: ReactNode }) => (
+    <p>{children}</p>
+  ),
   DrawerClose: ({ children }: { children: ReactNode }) => <div>{children}</div>,
 }));
 
@@ -96,7 +103,9 @@ describe('CartSheet mixed payment UX', () => {
 
     await user.click(screen.getByRole('button', { name: /pago mixto/i }));
 
-    const secondaryAmountInput = screen.getByLabelText(/Monto método secundario/i);
+    const secondaryAmountInput = screen.getByLabelText(
+      /Monto método secundario/i
+    );
     await user.clear(secondaryAmountInput);
     await user.type(secondaryAmountInput, '30');
 

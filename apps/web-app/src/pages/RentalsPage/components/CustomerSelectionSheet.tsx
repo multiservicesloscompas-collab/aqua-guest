@@ -1,4 +1,10 @@
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
 import { CustomerSearch } from './CustomerSearch';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -52,12 +58,17 @@ export function CustomerSelectionSheet({
               <User className="w-5 h-5 text-primary" />
               Seleccionar Cliente
             </SheetTitle>
+            <SheetDescription className="sr-only">
+              Elige o registra al cliente del alquiler
+            </SheetDescription>
           </SheetHeader>
 
           <div className="space-y-6">
             {!isSelected && (
               <div className="space-y-3">
-                <Label className="text-sm font-medium">Buscar cliente registrado</Label>
+                <Label className="text-sm font-medium">
+                  Buscar cliente registrado
+                </Label>
                 <CustomerSearch
                   customers={customers}
                   selectedCustomerId={selectedCustomerId}
@@ -73,13 +84,17 @@ export function CustomerSelectionSheet({
             <div className="space-y-3 pt-2">
               <div className="flex items-center justify-between">
                 <Label className="text-sm font-medium">
-                  {isSelected ? 'Datos del cliente seleccionado' : 'O ingresa los datos (Nuevo cliente)'}
+                  {isSelected
+                    ? 'Datos del cliente seleccionado'
+                    : 'O ingresa los datos (Nuevo cliente)'}
                 </Label>
               </div>
               <div
                 className={cn(
                   'space-y-3 p-4 rounded-xl border transition-colors',
-                  isSelected ? 'bg-primary/5 border-primary/20' : 'bg-transparent border-border'
+                  isSelected
+                    ? 'bg-primary/5 border-primary/20'
+                    : 'bg-transparent border-border'
                 )}
               >
                 <Input
@@ -88,7 +103,8 @@ export function CustomerSelectionSheet({
                   onChange={(event) => onChangeCustomerName(event.target.value)}
                   className={cn(
                     'h-12 bg-background',
-                    isSelected && 'bg-background/50 text-foreground pointer-events-none'
+                    isSelected &&
+                      'bg-background/50 text-foreground pointer-events-none'
                   )}
                   readOnly={isSelected}
                 />
@@ -98,10 +114,13 @@ export function CustomerSelectionSheet({
                     placeholder="Teléfono (opcional)"
                     type="tel"
                     value={customerPhone}
-                    onChange={(event) => onChangeCustomerPhone(event.target.value)}
+                    onChange={(event) =>
+                      onChangeCustomerPhone(event.target.value)
+                    }
                     className={cn(
                       'h-12 pl-10 bg-background',
-                      isSelected && 'bg-background/50 text-foreground pointer-events-none'
+                      isSelected &&
+                        'bg-background/50 text-foreground pointer-events-none'
                     )}
                     readOnly={isSelected}
                   />
@@ -111,10 +130,13 @@ export function CustomerSelectionSheet({
                   <Input
                     placeholder="Dirección de entrega"
                     value={customerAddress}
-                    onChange={(event) => onChangeCustomerAddress(event.target.value)}
+                    onChange={(event) =>
+                      onChangeCustomerAddress(event.target.value)
+                    }
                     className={cn(
                       'h-12 pl-10 bg-background',
-                      isSelected && 'bg-background/50 text-foreground pointer-events-none'
+                      isSelected &&
+                        'bg-background/50 text-foreground pointer-events-none'
                     )}
                     readOnly={isSelected}
                   />

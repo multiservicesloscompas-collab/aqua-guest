@@ -168,7 +168,7 @@ export async function deleteRental(
 export async function editRental(
   page: Page,
   rentalId: string,
-  changes: { shift?: 'medio' | 'completo' | 'doble'; primary?: string }
+  changes: { shift?: string; primary?: string }
 ): Promise<void> {
   await openRentalsModule(page);
   await page.getByTestId(`rental-edit-${rentalId}`).click();

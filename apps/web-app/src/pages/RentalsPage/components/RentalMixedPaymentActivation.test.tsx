@@ -24,6 +24,9 @@ vi.mock('@/components/ui/sheet', () => ({
   ),
   SheetHeader: ({ children }: { children: ReactNode }) => <div>{children}</div>,
   SheetTitle: ({ children }: { children: ReactNode }) => <h2>{children}</h2>,
+  SheetDescription: ({ children }: { children: ReactNode }) => (
+    <p>{children}</p>
+  ),
 }));
 
 vi.mock('../hooks/useRentalSheetViewModel', () => ({
@@ -204,9 +207,7 @@ describe('Rentals mixed payment activation UI', () => {
     expect(
       screen.getByLabelText(/Monto método secundario/i)
     ).toBeInTheDocument();
-    expect(
-      screen.getByText(/Monto método secundario:/i)
-    ).toBeInTheDocument();
+    expect(screen.getByText(/Monto método secundario:/i)).toBeInTheDocument();
   });
 
   it('shows edit mixed-payment fields only after activation button press', async () => {

@@ -33,6 +33,7 @@ export function BottomNav({
     'config',
     'seguimiento',
     'lavadoras',
+    'turnos-alquiler',
     'equilibrio-pagos',
     'deliverys',
     'prepagados',

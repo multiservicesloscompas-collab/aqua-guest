@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { DEFAULT_RENTAL_SHIFT } from '@aqua-guest/domain';
 import type {
   PaymentMethod,
   RentalShift,
@@ -18,14 +19,15 @@ export function useEditRentalFormState({
   exchangeRate,
 }: UseEditRentalFormStateParams) {
   const [machineId, setMachineId] = useState('');
-  const [shift, setShift] = useState<RentalShift>('completo');
+  const [shift, setShift] = useState<RentalShift>(DEFAULT_RENTAL_SHIFT);
   const [deliveryTime, setDeliveryTime] = useState('09:00');
   const [deliveryFee, setDeliveryFee] = useState(0);
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerAddress, setCustomerAddress] = useState('');
   const [selectedCustomerId, setSelectedCustomerId] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('pago_movil');
+  const [paymentMethod, setPaymentMethod] =
+    useState<PaymentMethod>('pago_movil');
   const [split2Method, setSplit2Method] = useState<PaymentMethod>('efectivo');
   const [split1Amount, setSplit1Amount] = useState('');
   const [isMixedPayment, setIsMixedPayment] = useState(false);

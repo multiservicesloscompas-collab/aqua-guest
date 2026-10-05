@@ -1,4 +1,3 @@
-import { LEGACY_SHIFT_DEFINITIONS } from '@aqua-guest/domain';
 import type {
   CartItem,
   Customer,
@@ -18,7 +17,6 @@ import type {
   Product,
   RentalExtension,
   RentalShift,
-  RentalShiftDefinition,
   RentalStatus,
   Sale,
   WasherRental,
@@ -68,10 +66,6 @@ export const MachineStatusColors: Record<MachineStatus, string> = {
 };
 
 export type { WashingMachine, RentalShift };
-
-export const RentalShiftConfig: Readonly<
-  Record<RentalShift, RentalShiftDefinition>
-> = LEGACY_SHIFT_DEFINITIONS;
 
 export type { RentalStatus };
 

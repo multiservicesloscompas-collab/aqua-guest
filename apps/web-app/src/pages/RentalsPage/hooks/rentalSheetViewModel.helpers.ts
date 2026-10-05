@@ -2,11 +2,8 @@ import { format, parse } from 'date-fns';
 import { es } from 'date-fns/locale';
 import type { PaymentMethod, RentalShift, WasherRental } from '@/types';
 import type { SelectOption } from '@/types/ui';
-import {
-  BUSINESS_HOURS,
-  PaymentMethodLabels,
-  RentalShiftConfig,
-} from '@/types';
+import { BUSINESS_HOURS, PaymentMethodLabels } from '@/types';
+import type { RentalShiftCatalog } from '@/utils/shiftCatalog';
 import { calculateRentalPrice } from '@/utils/rentalPricing';
 
 export interface MachineItem {
@@ -68,11 +65,14 @@ export function mapMachineItems(params: {
     }));
 }
 
-export function mapShiftOptions(paymentMethod: PaymentMethod): ShiftOption[] {
-  return (Object.keys(RentalShiftConfig) as RentalShift[]).map((key) => ({
-    value: key,
-    label: RentalShiftConfig[key].label,
-    priceText: `$${calculateRentalPrice(key, paymentMethod, 0)}`,
+export function mapShiftOptions(
+  shifts: RentalShiftCatalog,
+  paymentMethod: PaymentMethod
+): ShiftOption[] {
+  return shifts.map((definition) => ({
+    value: definition.id,
+    label: definition.label,
+    priceText: `$${calculateRentalPrice(definition, paymentMethod, 0)}`,
   }));
 }
 

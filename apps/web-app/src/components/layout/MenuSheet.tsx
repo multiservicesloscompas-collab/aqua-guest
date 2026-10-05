@@ -2,6 +2,7 @@ import {
   Drawer,
   DrawerContent,
   DrawerHeader,
+  DrawerDescription,
   DrawerTitle,
   DrawerClose,
 } from '@/components/ui/drawer';
@@ -37,7 +38,7 @@ export function MenuSheet({
       <DrawerContent
         className={cn(
           'flex flex-col',
-          isTabletViewport 
+          isTabletViewport
             ? cn(
                 'h-full rounded-none border-l w-full right-0 left-auto top-0',
                 isTabletLandscape ? 'sm:max-w-[28rem]' : 'sm:max-w-[26rem]'
@@ -52,6 +53,9 @@ export function MenuSheet({
 
         <DrawerHeader className="pb-4 shrink-0">
           <DrawerTitle className="text-lg">Más opciones</DrawerTitle>
+          <DrawerDescription className="sr-only">
+            Otras secciones de la aplicación
+          </DrawerDescription>
         </DrawerHeader>
 
         <div

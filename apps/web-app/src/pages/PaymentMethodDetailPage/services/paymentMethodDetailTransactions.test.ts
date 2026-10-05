@@ -255,4 +255,51 @@ describe('paymentMethodDetailTransactions', () => {
       linkedReference: 'Avance #tx-avanc',
     });
   });
+
+  it('describes a rental with the label of its shift instead of its key', () => {
+    // Arrange
+    const rental: WasherRental = {
+      id: 'rental-2',
+      date: '2026-03-07',
+      customerName: 'Ana',
+      customerPhone: '000',
+      customerAddress: 'Dir',
+      machineId: 'm1',
+      shift: 'uuid-nocturno',
+      shiftSnapshot: {
+        id: 'uuid-nocturno',
+        label: 'Nocturno',
+        priceUsd: 5,
+        hours: 12,
+        divisaDiscountUsd: 0,
+      },
+      deliveryTime: '10:00',
+      pickupTime: '18:00',
+      pickupDate: '2026-03-07',
+      deliveryFee: 0,
+      totalUsd: 5,
+      paymentMethod: 'efectivo',
+      status: 'finalizado',
+      isPaid: true,
+      datePaid: '2026-03-07',
+      createdAt: '2026-03-07T10:00:00.000Z',
+      updatedAt: '2026-03-07T10:00:00.000Z',
+    };
+
+    // Act
+    const [transaction] = buildPaymentMethodTransactions({
+      paymentMethod: 'efectivo',
+      selectedDate: '2026-03-07',
+      exchangeRate: 50,
+      sales: [],
+      rentals: [rental],
+      expenses: EMPTY_EXPENSES,
+      prepaidOrders: EMPTY_PREPAID,
+      paymentBalanceTransactions: [],
+      getMethodLabel,
+    });
+
+    // Assert
+    expect(transaction.description).toBe('Ana - Nocturno');
+  });
 });

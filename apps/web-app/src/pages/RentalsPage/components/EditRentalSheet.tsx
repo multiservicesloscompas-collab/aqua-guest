@@ -2,6 +2,7 @@ import {
   Sheet,
   SheetContent,
   SheetHeader,
+  SheetDescription,
   SheetTitle,
 } from '@/components/ui/sheet';
 import { Pencil } from 'lucide-react';
@@ -47,6 +48,9 @@ export function EditRentalSheet({
             <Pencil className="w-5 h-5 text-primary" />
             Editar Alquiler
           </SheetTitle>
+          <SheetDescription className="sr-only">
+            Modifica los datos del alquiler
+          </SheetDescription>
         </SheetHeader>
 
         <div className="overflow-y-auto overscroll-contain touch-pan-y h-[calc(100%-8rem)] space-y-6 pb-40">

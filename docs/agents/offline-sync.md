@@ -43,6 +43,7 @@ Any change to queue semantics must work in both processors, or explicitly state 
 
 - Mutation-enabled: customers, products (price update only, `enqueueOfflineProductPriceUpdate`), sales, sale_payment_splits, washer_rentals, rental_payment_splits, prepaid_orders, expenses, expense_payment_splits, exchange_rates, liter_pricing, washing_machines, payment_balance_transactions.
 - Read-sync-only: companies, user_profiles.
+- `rental_shifts` is not in the matrix on purpose: shifts are managed online only (the screen disables every action offline). A rental created offline still carries the snapshot of its shift, taken from the persisted catalog (`useRentalShiftStore`).
 - `tips` is enqueued (`rentalsEnqueue.ts`, `salesEnqueue.ts`) but is not listed in the matrix. Add it there if you touch tip queueing.
 
 ## Rules For Changes

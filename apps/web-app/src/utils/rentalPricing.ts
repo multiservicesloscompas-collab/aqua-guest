@@ -1,10 +1,5 @@
 import { PAYMENT_METHOD, type RentalShiftDefinition } from '@aqua-guest/domain';
-import {
-  RentalShift,
-  RentalShiftConfig,
-  PaymentMethod,
-  WasherRental,
-} from '@/types';
+import { PaymentMethod, WasherRental } from '@/types';
 import { resolveRentalShift } from './rentalShift';
 
 export function calculateShiftBasePrice(
@@ -18,14 +13,11 @@ export function calculateShiftBasePrice(
 }
 
 export function calculateRentalPrice(
-  shift: RentalShift,
+  definition: RentalShiftDefinition,
   paymentMethod: PaymentMethod,
   deliveryFee = 0
 ): number {
-  return (
-    calculateShiftBasePrice(RentalShiftConfig[shift], paymentMethod) +
-    deliveryFee
-  );
+  return calculateShiftBasePrice(definition, paymentMethod) + deliveryFee;
 }
 
 export function calculateRentalSubtotalUsd(
@@ -38,8 +30,4 @@ export function calculateRentalSubtotalUsd(
   return (
     calculateShiftBasePrice(definition, rental.paymentMethod) + deliveryFee
   );
-}
-
-export function getBaseRentalPrice(shift: RentalShift): number {
-  return RentalShiftConfig[shift].priceUsd;
 }

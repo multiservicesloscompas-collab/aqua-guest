@@ -14,6 +14,7 @@ import {
   Sheet,
   SheetContent,
   SheetHeader,
+  SheetDescription,
   SheetTitle,
 } from '@/components/ui/sheet';
 import { Textarea } from '@/components/ui/textarea';
@@ -53,6 +54,9 @@ export function EditSaleSheet({
             <Pencil className="w-5 h-5 text-primary" />
             Editar Venta #{sale.dailyNumber}
           </SheetTitle>
+          <SheetDescription className="sr-only">
+            Modifica los datos de la venta
+          </SheetDescription>
         </SheetHeader>
 
         <div className="space-y-4">

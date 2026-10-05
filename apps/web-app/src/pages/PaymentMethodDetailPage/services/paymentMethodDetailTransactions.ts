@@ -6,6 +6,7 @@ import {
   WashingMachine,
 } from 'lucide-react';
 import type { PaymentMethod } from '@/types';
+import { resolveRentalShift } from '@/utils/rentalShift';
 import {
   getRentalAmountForMethodBs,
   getRentalAmountForMethodUsd,
@@ -125,9 +126,9 @@ export function buildPaymentMethodTransactions(
       typeLabel: isMixed
         ? 'Alquiler de Lavadora · Pago mixto'
         : 'Alquiler de Lavadora',
-      description: `${rental.customerName} - ${rental.shift}${
-        isMixed ? ` · ${getMethodLabel(paymentMethod)}` : ''
-      }`,
+      description: `${rental.customerName} - ${
+        resolveRentalShift(rental).label
+      }${isMixed ? ` · ${getMethodLabel(paymentMethod)}` : ''}`,
       amountBs: getRentalAmountForMethodBs(rental, paymentMethod, exchangeRate),
       amountUsd: getRentalAmountForMethodUsd(
         rental,

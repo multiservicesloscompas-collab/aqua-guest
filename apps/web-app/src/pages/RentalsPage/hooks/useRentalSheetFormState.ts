@@ -1,13 +1,15 @@
 import { useState } from 'react';
+import { DEFAULT_RENTAL_SHIFT } from '@aqua-guest/domain';
 import type { PaymentMethod, RentalShift } from '@/types';
 import { getDefaultDeliveryTime } from './rentalSheetViewModel.helpers';
 
 export function useRentalSheetFormState() {
   const [machineId, setMachineId] = useState('');
-  const [shift, setShift] = useState<RentalShift>('completo');
+  const [shift, setShift] = useState<RentalShift>(DEFAULT_RENTAL_SHIFT);
   const [deliveryTime, setDeliveryTime] = useState('09:00');
   const [deliveryFee, setDeliveryFee] = useState(0);
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('pago_movil');
+  const [paymentMethod, setPaymentMethod] =
+    useState<PaymentMethod>('pago_movil');
   const [split2Method, setSplit2Method] = useState<PaymentMethod>('efectivo');
   const [split1Amount, setSplit1Amount] = useState('');
   const [isMixedPayment, setIsMixedPayment] = useState(false);
@@ -26,7 +28,7 @@ export function useRentalSheetFormState() {
 
   const resetForm = () => {
     setMachineId('');
-    setShift('completo');
+    setShift(DEFAULT_RENTAL_SHIFT);
     setDeliveryTime(getDefaultDeliveryTime());
     setDeliveryFee(0);
     setPaymentMethod('pago_movil');
