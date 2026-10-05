@@ -18,6 +18,7 @@ import {
   updateShiftInDb,
 } from '../support/drivers/shiftsDriver';
 import { documented, expect, test } from '../support/fixtures';
+import { captureDashboardSnapshot } from '../support/drivers/dashboardDriver';
 import { gotoDashboard } from '../support/uiNavigation';
 import { bootstrapAtDashboard } from '../support/waterSalesTipsMatrix/uiHelpers';
 
@@ -573,6 +574,86 @@ test.describe('rentals with catalog shifts', () => {
         label: 'Completo',
         priceUsd: 6,
       });
+    }
+  );
+
+  test(
+    'the income of a paid rental does not move when its shift is repriced',
+    documented({
+      titulo:
+        'El ingreso de un alquiler pagado no se mueve al repreciar su turno',
+      area: AREA,
+      intent:
+        'Comprobar la regla de dinero: el dashboard usa lo guardado, no el precio actual del turno.',
+      steps: [
+        'Registra un alquiler de Nocturno ($5) pagado en efectivo, con tasa 1000.',
+        'Lee el ingreso del mes en el dashboard.',
+        'Sube Nocturno a $9 en el catálogo y recarga.',
+      ],
+      expects: ['El ingreso del mes sigue en Bs 5.000 antes y después.'],
+    }),
+    async ({ page }) => {
+      // Arrange
+      const shiftId = await seedNocturno();
+      await bootstrapAtDashboard(page);
+      await createWasherRental(page, {
+        shift: 'Nocturno',
+        totalUsd: 5,
+        isPaid: true,
+        splits: [{ method: 'efectivo', amountBs: 0 }],
+        customerName: `Cliente pagado ${Date.now()}`,
+      });
+      const before = await captureDashboardSnapshot(page);
+
+      // Act
+      await updateShiftInDb(shiftId, { price_usd: 9 });
+      await gotoDashboard(page);
+      const after = await captureDashboardSnapshot(page);
+
+      // Assert
+      expect(before.mtdIncomeBs).toBe(5000);
+      expect(after.mtdIncomeBs).toBe(5000);
+      expect(after.methodTotals.efectivo).toBe(5000);
+    }
+  );
+
+  test(
+    'deliveries and follow-up cards show the name of the custom shift',
+    documented({
+      titulo: 'Entregas y Seguimiento muestran el nombre del turno nuevo',
+      area: AREA,
+      intent:
+        'Comprobar que las demás pantallas que muestran el turno no enseñan un id opaco.',
+      steps: [
+        'Registra un alquiler de Nocturno con entrega de $2.',
+        'Abre Entregas y luego Seguimiento.',
+      ],
+      expects: ['Ambas pantallas muestran «Nocturno».'],
+    }),
+    async ({ page }) => {
+      // Arrange
+      await seedNocturno();
+      await bootstrapAtDashboard(page);
+      await createWasherRental(page, {
+        shift: 'Nocturno',
+        deliveryFeeUsd: 2,
+        totalUsd: 0,
+        isPaid: false,
+        splits: [{ method: 'efectivo', amountBs: 0 }],
+        customerName: `Cliente entrega ${Date.now()}`,
+      });
+
+      // Act
+      await page.getByLabel('Abrir más opciones').click();
+      await page.getByLabel('Ir a Entregas').click();
+
+      // Assert
+      await expect(page.getByText('Nocturno').first()).toBeVisible();
+
+      await page.getByLabel('Ir a Lavadoras').click();
+      await page.getByLabel('Abrir submenú del módulo').click();
+      await page.getByLabel('Ir a Seguimiento').click();
+      await expect(page.getByText('Nocturno').first()).toBeVisible();
     }
   );
 });
