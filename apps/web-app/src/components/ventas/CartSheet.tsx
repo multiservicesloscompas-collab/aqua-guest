@@ -3,6 +3,7 @@ import {
   Drawer,
   DrawerContent,
   DrawerHeader,
+  DrawerDescription,
   DrawerTitle,
   DrawerClose,
 } from '@/components/ui/drawer';
@@ -147,6 +148,9 @@ export function CartSheet({ open, onOpenChange }: CartSheetProps) {
           <DrawerTitle className="text-lg font-bold">
             Carrito ({cart.length} items)
           </DrawerTitle>
+          <DrawerDescription className="sr-only">
+            Revisa los productos del carrito y registra la venta
+          </DrawerDescription>
         </DrawerHeader>
 
         {cart.length === 0 ? (

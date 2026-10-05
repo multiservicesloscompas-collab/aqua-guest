@@ -9,6 +9,7 @@ import {
   Sheet,
   SheetContent,
   SheetHeader,
+  SheetDescription,
   SheetTitle,
 } from '@/components/ui/sheet';
 import { Pencil, UserPlus, Loader2 } from 'lucide-react';
@@ -68,6 +69,9 @@ export function CustomerFormSheet({
               </>
             )}
           </SheetTitle>
+          <SheetDescription className="sr-only">
+            Registra los datos del cliente
+          </SheetDescription>
         </SheetHeader>
 
         <div className="space-y-4 pb-6">

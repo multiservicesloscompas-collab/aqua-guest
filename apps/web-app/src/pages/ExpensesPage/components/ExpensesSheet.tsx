@@ -5,6 +5,7 @@ import {
   Sheet,
   SheetContent,
   SheetHeader,
+  SheetDescription,
   SheetTitle,
 } from '@/components/ui/sheet';
 import { ExpenseSheetForm } from './ExpenseSheetForm';
@@ -77,6 +78,9 @@ export function ExpensesSheet({
               'Registrar Egreso'
             )}
           </SheetTitle>
+          <SheetDescription className="sr-only">
+            Registra los datos del egreso
+          </SheetDescription>
         </SheetHeader>
         <ExpenseSheetForm
           description={description}

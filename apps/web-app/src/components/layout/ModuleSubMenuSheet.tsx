@@ -2,6 +2,7 @@ import {
   Drawer,
   DrawerContent,
   DrawerHeader,
+  DrawerDescription,
   DrawerTitle,
   DrawerClose,
 } from '@/components/ui/drawer';
@@ -55,6 +56,9 @@ export function ModuleSubMenuSheet({
 
         <DrawerHeader className="pb-4 shrink-0">
           <DrawerTitle className="text-lg">{title}</DrawerTitle>
+          <DrawerDescription className="sr-only">
+            Opciones del módulo
+          </DrawerDescription>
         </DrawerHeader>
 
         <div className="space-y-2 overflow-y-auto px-4 pb-8 flex-1">

@@ -18,6 +18,9 @@ vi.mock('@/components/ui/sheet', () => ({
   ),
   SheetHeader: ({ children }: { children: ReactNode }) => <div>{children}</div>,
   SheetTitle: ({ children }: { children: ReactNode }) => <h2>{children}</h2>,
+  SheetDescription: ({ children }: { children: ReactNode }) => (
+    <p>{children}</p>
+  ),
 }));
 
 vi.mock('./RentalMachineSelector', () => ({

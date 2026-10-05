@@ -6,6 +6,7 @@ import {
   Sheet,
   SheetContent,
   SheetHeader,
+  SheetDescription,
   SheetTitle,
 } from '@/components/ui/sheet';
 import {
@@ -64,6 +65,9 @@ export function WashingMachineFormSheet({
             <WashingMachineIcon className="w-5 h-5 text-primary" />
             {isEditing ? 'Editar Lavadora' : 'Nueva Lavadora'}
           </SheetTitle>
+          <SheetDescription className="sr-only">
+            Registra los datos de la lavadora
+          </SheetDescription>
         </SheetHeader>
 
         <div className="space-y-4 pb-6">
